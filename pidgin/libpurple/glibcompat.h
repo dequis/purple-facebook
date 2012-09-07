@@ -39,6 +39,17 @@ static inline void g_list_free_full(GList *list, GDestroyNotify free_func)
 	g_list_free(list);
 }
 
+static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
+{
+	GSList *it = list;
+	while (it)
+	{
+		free_func(it->data);
+		it = g_slist_next(it);
+	}
+	g_slist_free(list);
+}
+
 #endif /* 2.28.0 */
 
 #endif /* _PIDGINGLIBCOMPAT_H_ */
