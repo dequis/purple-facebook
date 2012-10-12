@@ -189,11 +189,30 @@ void purple_http_cookie_jar_remove(PurpleHTTPCookieJar *cookie_jar,
 /**************************************************************************/
 /*@{*/
 
+/**
+ * Creates the new instance of HTTP request configuration.
+ *
+ * @param url The URL to request for.
+ * @return The new instance of HTTP request struct.
+ */
 PurpleHttpRequest * purple_http_request_new(const gchar *url);
 
+/**
+ * Increment the reference count.
+ *
+ * @param request The request.
+ */
 void purple_http_request_ref(PurpleHttpRequest *request);
 
-void purple_http_request_unref(PurpleHttpRequest *request); // instead of free
+/**
+ * Decrement the reference count.
+ *
+ * If the reference count reaches zero, the http request struct will be freed.
+ *
+ * @param request The request.
+ * @return @a request or @c NULL if the reference count reached zero.
+ */
+PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request);
 
 void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url); // +get
 
@@ -286,14 +305,40 @@ void purple_http_request_header_add(PurpleHttpRequest *request,
 /**************************************************************************/
 /*@{*/
 
+/**
+ * Checks, if HTTP request was performed successfully.
+ *
+ * @param response The response.
+ * @return TRUE, if request was performed successfully.
+ */
 gboolean purple_http_response_is_successfull(PurpleHttpResponse *response);
 
+/**
+ * Gets HTTP response code.
+ *
+ * @param response The response.
+ * @return HTTP response code.
+ */
 int purple_http_response_get_code(PurpleHttpResponse *response);
 
 const gchar * purple_http_response_get_error(PurpleHttpResponse *response);
 
+/**
+ * Gets HTTP response data length.
+ *
+ * @param response The response.
+ * @return Data length;
+ */
 gsize purple_http_response_get_data_len(PurpleHttpResponse *response);
 
+/**
+ * Gets HTTP response data.
+ *
+ * Response data is not written, if writer callback was set for request.
+ *
+ * @param response The response.
+ * @return The data.
+ */
 const gchar * purple_http_response_get_data(PurpleHttpResponse *response);
 
 const GList * purple_http_response_get_all_headers(PurpleHttpResponse *response);
