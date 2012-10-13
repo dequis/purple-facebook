@@ -61,6 +61,8 @@ struct _PurpleHttpConnection
 	PurpleHttpResponse *response;
 
 	PurpleHttpSocket socket;
+	GString *request_header;
+	int request_header_written;
 };
 
 struct _PurpleHttpResponse
@@ -109,6 +111,10 @@ static void purple_http_dummy_success(PurpleHttpConnection *hc)
 
 static void _purple_http_disconnect(PurpleHttpConnection *hc);
 
+static void _purple_http_gen_headers(PurpleHttpConnection *hc);
+static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond);
+static void _purple_http_recv_ssl(gpointer _hc,
+	PurpleSslConnection *ssl_connection, PurpleInputCondition cond);
 static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond);
 
 static void _purple_http_connected_raw(gpointer _hc, gint source,
@@ -138,13 +144,125 @@ static void _purple_http_error(PurpleHttpConnection *hc, const char *format,
 	purple_http_conn_cancel(hc);
 }
 
-static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
-{ // url_fetch_send_cb
+static void _purple_http_gen_headers(PurpleHttpConnection *hc)
+{
+	GString *h;
+	PurpleHttpURL *url;
+	PurpleProxyInfo *proxy;
+
+	g_return_if_fail(hc != NULL);
+
+	if (hc->request_header != NULL)
+		return;
+
+	url = hc->url;
+	proxy = purple_proxy_get_setup(hc->gc ?
+		purple_connection_get_account(hc->gc) : NULL);
+
+	hc->request_header = h = g_string_new("");
+	hc->request_header_written = 0;
+
+	g_string_append_printf(h, "GET %s HTTP/%s\r\n", url->path, "1.1");
+	g_string_append_printf(h, "Host: %s\r\n", url->host);
+	g_string_append_printf(h, "Connection: close\r\n");
+
+	/* TODO: don't put here, if exists */
+	g_string_append_printf(h, "Accept: */*\r\n");
+
+
+	if (purple_proxy_info_get_username(proxy) != NULL &&
+		(purple_proxy_info_get_type(proxy) == PURPLE_PROXY_USE_ENVVAR ||
+		purple_proxy_info_get_type(proxy) == PURPLE_PROXY_HTTP)) {
+		purple_debug_error("http",
+			"Proxy authorization is not yet supported\n");
+	}
+
+	g_string_append_printf(h, "\r\n");
+
+	if (purple_debug_is_unsafe() && purple_debug_is_verbose()) {
+		purple_debug_misc("http", "Generated request headers:\n%s",
+			h->str);
+	}
+}
+
+static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
+{
 	PurpleHttpConnection *hc = _hc;
+	PurpleHttpSocket *hs = &hc->socket;
+	int len;
+	char buf[4096];
+
+	purple_debug_misc("http", "[tmp] reading...\n");
+
+	if (hs->is_ssl)
+		len = purple_ssl_read(hs->ssl_connection, buf, sizeof(buf));
+	else
+		len = read(fd, buf, sizeof(buf));
+
+	if (len < 0 && errno == EAGAIN)
+		return;
+
+	if (len < 0) {
+		_purple_http_error(hc, _("Error reading from %s: %s"),
+			hc->url->host, g_strerror(errno));
+		return;
+	}
+
+	if (len == 0) { /* TODO: eof only? */
+		purple_http_dummy_success(hc);
+	}
+}
+
+static void _purple_http_recv_ssl(gpointer _hc,
+	PurpleSslConnection *ssl_connection, PurpleInputCondition cond)
+{
+	_purple_http_recv(_hc, -1, cond);
+}
+
+static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
+{
+	PurpleHttpConnection *hc = _hc;
+	PurpleHttpSocket *hs = &hc->socket;
+	int written, write_len;
+	const gchar *write_from;
+
+	_purple_http_gen_headers(hc);
 
 	purple_debug_misc("http", "[tmp] sending...\n");
 
-	purple_http_dummy_success(hc);
+	write_from = hc->request_header->str + hc->request_header_written;
+	write_len = hc->request_header->len - hc->request_header_written;
+
+	if (hs->is_ssl)
+		written = purple_ssl_write(hs->ssl_connection,
+			write_from, write_len);
+	else
+		written = write(hs->fd, write_from, write_len);
+
+	if (written < 0 && errno == EAGAIN)
+		return;
+
+	if (written < 0) {
+		_purple_http_error(hc, _("Error writing to %s: %s"),
+			hc->url->host, g_strerror(errno));
+		return;
+	}
+
+	hc->request_header_written += written;
+	if (hc->request_header_written < hc->request_header->len)
+		return;
+
+	/* TODO: write contents */
+
+	/* request is completely written, let's read the response */
+	purple_input_remove(hs->inpa);
+	hs->inpa = 0;
+	if (hs->is_ssl)
+		purple_ssl_input_add(hs->ssl_connection,
+			_purple_http_recv_ssl, hc);
+	else
+		hs->inpa = purple_input_add(hs->fd, PURPLE_INPUT_READ,
+			_purple_http_recv, hc);
 }
 
 static void _purple_http_connected_raw(gpointer _hc, gint fd,
@@ -164,7 +282,6 @@ static void _purple_http_connected_raw(gpointer _hc, gint fd,
 	hs->fd = fd;
 	hs->inpa = purple_input_add(fd, PURPLE_INPUT_WRITE,
 		_purple_http_send, hc);
-	_purple_http_send(hc, fd, PURPLE_INPUT_WRITE);
 }
 
 static void _purple_http_connected_ssl(gpointer _hc,
@@ -176,7 +293,6 @@ static void _purple_http_connected_ssl(gpointer _hc,
 	hs->fd = hs->ssl_connection->fd;
 	hs->inpa = purple_input_add(hs->fd, PURPLE_INPUT_WRITE,
 		_purple_http_send, hc);
-	_purple_http_send(hc, hs->fd, PURPLE_INPUT_WRITE);
 }
 
 static void _purple_http_connected_ssl_error(
@@ -196,6 +312,10 @@ static void _purple_http_disconnect(PurpleHttpConnection *hc)
 	PurpleHttpSocket *hs;
 
 	g_return_if_fail(hc != NULL);
+
+	if (hc->request_header)
+		g_string_free(hc->request_header, TRUE);
+	hc->request_header = NULL;
 
 	hs = &hc->socket;
 
@@ -246,6 +366,12 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 
 	hc->socket.is_ssl = is_ssl;
 	if (is_ssl) {
+		if (!purple_ssl_is_supported()) {
+			_purple_http_error(hc, _("Unable to connect to %s: %s"),
+				url->host, _("Server requires TLS/SSL, "
+				"but no TLS/SSL support was found."));
+			return FALSE;
+		}
 		hc->socket.ssl_connection = purple_ssl_connect(account,
 			url->host, url->port,
 			_purple_http_connected_ssl,
@@ -336,6 +462,9 @@ static void purple_http_connection_free(PurpleHttpConnection *hc)
 	purple_http_url_free(hc->url);
 	purple_http_request_unref(hc->request);
 	purple_http_response_free(hc->response);
+
+	if (hc->request_header)
+		g_string_free(hc->request_header, TRUE);
 
 	if (hc->socket.is_connected)
 		purple_debug_error("http", "Socket is still connected!");
@@ -485,6 +614,18 @@ static PurpleHttpURL * purple_http_url_parse(const char *url)
 		&parsed_url->password)) {
 		g_free(parsed_url);
 		return NULL;
+	}
+
+	if (parsed_url->host[0] != '\0' &&
+		parsed_url->path[0] != '\0') {
+		gchar *tmp = parsed_url->path;
+		parsed_url->path = g_strdup_printf("/%s", parsed_url->path);
+		g_free(tmp);
+	}
+
+	if (parsed_url->path[0] == '\0') {
+		g_free(parsed_url->path);
+		parsed_url->path = g_strdup("/");
 	}
 
 	return parsed_url;
