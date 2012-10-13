@@ -327,6 +327,12 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 {
 	gchar *eol, *delim;
 
+	if (hc->headers_got) {
+		purple_debug_error("http", "Headers already got\n");
+		_purple_http_error(hc, _("Error parsing HTTP"));
+		return FALSE;
+	}
+
 	g_string_append_len(hc->response_buffer, buf, len); //TODO: check max buffer length, not to raise to infinity
 	while ((eol = strstr(hc->response_buffer->str, "\r\n"))
 		!= NULL) {
@@ -467,7 +473,10 @@ static gboolean _purple_http_recv_body(PurpleHttpConnection *hc,
 		hc->response->contents = g_string_new("");
 
 	if (hc->is_chunked)
+	{
+		hc->length_got += len;
 		return _purple_http_recv_body_chunked(hc, buf, len);
+	}
 
 	if (hc->length_expected >= 0 &&
 		len + hc->length_got > hc->length_expected)
@@ -500,8 +509,23 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 		return;
 	}
 
-	if (len == 0 && hc->headers_got)
-		hc->length_expected = hc->length_got; /* TODO: error possible */
+	if (len == 0) {
+		if (hc->length_expected >= 0 &&
+			hc->length_got < hc->length_expected) {
+			purple_debug_warning("http", "No more data while reading"
+				" contents\n");
+			_purple_http_error(hc, _("Error parsing HTTP"));
+			return;
+		}
+		if (hc->headers_got)
+			hc->length_expected = hc->length_got;
+		else {
+			purple_debug_warning("http", "No more data while "
+				"parsing headers\n");
+			_purple_http_error(hc, _("Error parsing HTTP"));
+			return;
+		}
+	}
 
 	if (!hc->headers_got && len > 0) {
 		if (!_purple_http_recv_headers(hc, buf, len))
