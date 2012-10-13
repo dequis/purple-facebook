@@ -66,6 +66,8 @@ struct _PurpleHttpConnection
 	int request_header_written;
 	gboolean main_header_got, headers_got;
 	GString *response_buffer;
+
+	int length_expected, length_got;
 };
 
 struct _PurpleHttpResponse
@@ -73,8 +75,7 @@ struct _PurpleHttpResponse
 	int code;
 	gchar *error;
 
-	gchar *data;
-	gsize data_len;
+	GString *contents;
 	PurpleHttpHeaders *headers;
 };
 
@@ -113,6 +114,10 @@ static void purple_http_headers_free(PurpleHttpHeaders *hdrs);
 static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 	const gchar *value);
 static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs);
+static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
+	const gchar *key);
+static gboolean purple_http_headers_get_int(PurpleHttpHeaders *hdrs,
+	const gchar *key, int *dst);
 static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs);
 
 static PurpleHttpHeaders * purple_http_headers_new(void)
@@ -154,11 +159,12 @@ static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 	g_return_if_fail(value != NULL);
 
 	kvp = g_new0(PurpleKeyValuePair, 1);
-	kvp->key = g_strdup(key);
+	kvp->key = g_ascii_strdown(key, -1);
+	key = kvp->key;
 	kvp->value = g_strdup(value);
 	hdrs->list = g_list_append(hdrs->list, kvp);
 
-	named_values = g_hash_table_lookup(hdrs->by_name, value);
+	named_values = g_hash_table_lookup(hdrs->by_name, key);
 	named_values = g_list_append(named_values, kvp->value);
 	g_hash_table_replace(hdrs->by_name, g_strdup(key), named_values);
 }
@@ -166,6 +172,38 @@ static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs)
 {
 	return hdrs->list;
+}
+
+static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
+	const gchar *key)
+{
+	GList *values;
+
+	g_return_val_if_fail(hdrs != NULL, NULL);
+	g_return_val_if_fail(key != NULL, NULL);
+
+	values = g_hash_table_lookup(hdrs->by_name, key);
+	if (!values)
+		return NULL;
+
+	return values->data;
+}
+
+static gboolean purple_http_headers_get_int(PurpleHttpHeaders *hdrs,
+	const gchar *key, int *dst)
+{
+	int val;
+	const gchar *str;
+
+	str = purple_http_headers_get(hdrs, key);
+	if (!str)
+		return FALSE;
+
+	if (1 != sscanf(str, "%d", &val))
+		return FALSE;
+
+	*dst = val;
+	return TRUE;
 }
 
 static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs)
@@ -264,7 +302,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	}
 }
 
-static void _purple_http_recv_headers(PurpleHttpConnection *hc,
+static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 	const gchar *buf, int len)
 {
 	gchar *eol, *delim;
@@ -280,23 +318,37 @@ static void _purple_http_recv_headers(PurpleHttpConnection *hc,
 		if (hdrline[0] == '\0') {
 			if (!hc->main_header_got) {
 				hc->response->code = 0;
+				purple_debug_warning("http",
+					"Main header not present\n");
 				_purple_http_error(hc, _("Error parsing HTTP"));
-				return;
+				return FALSE;
 			}
 			hc->headers_got = TRUE;
+			if (purple_debug_is_verbose())
+				purple_debug_misc("http", "Got headers end\n");
 		} else if (!hc->main_header_got) {
 			hc->main_header_got = TRUE;
 			delim = strchr(hdrline, ' ');
 			if (delim == NULL || 1 != sscanf(delim + 1, "%d",
 				&hc->response->code)) {
+				purple_debug_warning("http",
+					"Invalid response code\n");
 				_purple_http_error(hc, _("Error parsing HTTP"));
-				return;
+				return FALSE;
 			}
+			if (purple_debug_is_verbose())
+				purple_debug_misc("http", "Got main header\n");
 		} else {
+			if (purple_debug_is_verbose() &&
+				purple_debug_is_unsafe())
+				purple_debug_misc("http", "Got header: %s\n",
+					hdrline);
 			delim = strchr(hdrline, ':');
 			if (delim == NULL || delim == hdrline) {
+				purple_debug_warning("http",
+					"Bad header delimiter\n");
 				_purple_http_error(hc, _("Error parsing HTTP"));
-				return;
+				return FALSE;
 			}
 			*delim++ = '\0';
 			while (*delim == ' ')
@@ -306,7 +358,25 @@ static void _purple_http_recv_headers(PurpleHttpConnection *hc,
 		}
 
 		g_string_erase(hc->response_buffer, 0, hdrline_len + 2);
+		if (hc->headers_got)
+			break;
 	}
+	return TRUE;
+}
+
+static void _purple_http_recv_body(PurpleHttpConnection *hc,
+	const gchar *buf, int len)
+{
+	if (hc->response->contents == NULL)
+		hc->response->contents = g_string_new("");
+
+	/* TODO: chunked data, body length etc */
+
+	if (len + hc->length_got > hc->length_expected)
+		len = hc->length_expected - hc->length_got;
+	hc->length_got += len;
+
+	g_string_append_len(hc->response->contents, buf, len);
 }
 
 static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
@@ -332,9 +402,33 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 		return;
 	}
 
-	if (len == 0) { /* TODO: eof only? */
+	if (len == 0 && hc->length_expected < 0 && hc->headers_got)
+		hc->length_expected = hc->length_got;
+
+	if (!hc->headers_got && len > 0) {
+		if (!_purple_http_recv_headers(hc, buf, len))
+			return;
+		if (hc->headers_got && hc->response_buffer &&
+			hc->response_buffer->len > 0) {
+			_purple_http_recv_body(hc, hc->response_buffer->str,
+				hc->response_buffer->len);
+			g_string_truncate(hc->response_buffer, 0);
+		}
+		if (hc->headers_got) {
+			if (!purple_http_headers_get_int(hc->response->headers,
+				"Content-Length", &hc->length_expected))
+				hc->length_expected = -1;
+		}
+		return;
+	}
+
+	if (len > 0)
+		_purple_http_recv_body(hc, buf, len);
+
+	if (hc->length_got >= hc->length_expected) {
 		if (!hc->headers_got) {
 			hc->response->code = 0;
+			purple_debug_warning("http", "No headers got\n");
 			_purple_http_error(hc, _("Error parsing HTTP"));
 			return;
 		}
@@ -349,12 +443,6 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 
 		_purple_http_disconnect(hc);
 		purple_http_connection_terminate(hc);
-		return;
-	}
-
-	if (!hc->headers_got) {
-		_purple_http_recv_headers(hc, buf, len);
-		/* TODO: flush hc->response_buffer to body */
 		return;
 	}
 }
@@ -539,6 +627,11 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 	hc->response_buffer = g_string_new("");
 	hc->main_header_got = FALSE;
 	hc->headers_got = FALSE;
+	if (hc->response->contents != NULL)
+		g_string_free(hc->response->contents, TRUE);
+	hc->response->contents = NULL;
+	hc->length_got = 0;
+	hc->length_expected = -1;
 
 	return TRUE;
 }
@@ -704,7 +797,8 @@ static PurpleHttpResponse * purple_http_response_new(void)
 
 static void purple_http_response_free(PurpleHttpResponse *response)
 {
-	g_free(response->data);
+	if (response->contents != NULL)
+		g_string_free(response->contents, TRUE);
 	g_free(response->error);
 	purple_http_headers_free(response->headers);
 	g_free(response);
@@ -748,14 +842,20 @@ gsize purple_http_response_get_data_len(PurpleHttpResponse *response)
 {
 	g_return_val_if_fail(response != NULL, 0);
 
-	return response->data_len;
+	if (response->contents == NULL)
+		return 0;
+
+	return response->contents->len;
 }
 
 const gchar * purple_http_response_get_data(PurpleHttpResponse *response)
 {
 	g_return_val_if_fail(response != NULL, NULL);
 
-	return response->data;
+	if (response->contents == NULL)
+		return "";
+
+	return response->contents->str;
 }
 
 /*** URL functions ************************************************************/
