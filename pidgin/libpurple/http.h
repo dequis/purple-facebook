@@ -309,7 +309,7 @@ void purple_http_request_header_add(PurpleHttpRequest *request,
  * Checks, if HTTP request was performed successfully.
  *
  * @param response The response.
- * @return TRUE, if request was performed successfully.
+ * @return         TRUE, if request was performed successfully.
  */
 gboolean purple_http_response_is_successfull(PurpleHttpResponse *response);
 
@@ -317,17 +317,23 @@ gboolean purple_http_response_is_successfull(PurpleHttpResponse *response);
  * Gets HTTP response code.
  *
  * @param response The response.
- * @return HTTP response code.
+ * @return         HTTP response code.
  */
 int purple_http_response_get_code(PurpleHttpResponse *response);
 
+/**
+ * Gets error description.
+ *
+ * @param response The response.
+ * @return         Localized error description or NULL, if there was no error.
+ */
 const gchar * purple_http_response_get_error(PurpleHttpResponse *response);
 
 /**
  * Gets HTTP response data length.
  *
  * @param response The response.
- * @return Data length;
+ * @return         Data length;
  */
 gsize purple_http_response_get_data_len(PurpleHttpResponse *response);
 
@@ -337,7 +343,7 @@ gsize purple_http_response_get_data_len(PurpleHttpResponse *response);
  * Response data is not written, if writer callback was set for request.
  *
  * @param response The response.
- * @return The data.
+ * @return         The data.
  */
 const gchar * purple_http_response_get_data(PurpleHttpResponse *response);
 
