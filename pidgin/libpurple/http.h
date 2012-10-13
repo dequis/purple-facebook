@@ -84,6 +84,7 @@ typedef void (*PurpleHttpContentReader)(PurpleHttpConnection *http_conn,
  * An callback for writting large response contents.
  *
  * @param http_conn Connection, which requests data.
+ * @param response  Response at point got so far (may change later).
  * @param buffer    Buffer to read data from (with offset ignored).
  * @param offset    Position of data got (its value is offset + length of
  *                  previous call), can be safely ignored.
@@ -91,7 +92,8 @@ typedef void (*PurpleHttpContentReader)(PurpleHttpConnection *http_conn,
  * @param user_data The user data passed with callback function.
  */
 typedef void (*PurpleHttpContentWriter)(PurpleHttpConnection *http_conn,
-	const gchar *buffer, size_t offset, size_t length, gpointer user_data);
+	PurpleHttpResponse *response, const gchar *buffer, size_t offset,
+	size_t length, gpointer user_data);
 
 G_BEGIN_DECLS
 
