@@ -68,6 +68,9 @@ struct _PurpleHttpConnection
 	GString *response_buffer;
 
 	int length_expected, length_got;
+
+	gboolean is_chunked, in_chunk, chunks_done;
+	int chunk_length, chunk_got;
 };
 
 struct _PurpleHttpResponse
@@ -118,6 +121,8 @@ static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
 	const gchar *key);
 static gboolean purple_http_headers_get_int(PurpleHttpHeaders *hdrs,
 	const gchar *key, int *dst);
+static gboolean purple_http_headers_match(PurpleHttpHeaders *hdrs,
+	const gchar *key, const gchar *value);
 static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs);
 
 static PurpleHttpHeaders * purple_http_headers_new(void)
@@ -178,11 +183,14 @@ static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
 	const gchar *key)
 {
 	GList *values;
+	gchar *key_low;
 
 	g_return_val_if_fail(hdrs != NULL, NULL);
 	g_return_val_if_fail(key != NULL, NULL);
 
-	values = g_hash_table_lookup(hdrs->by_name, key);
+	key_low = g_ascii_strdown(key, -1);
+	values = g_hash_table_lookup(hdrs->by_name, key_low);
+	g_free(key_low);
 	if (!values)
 		return NULL;
 
@@ -204,6 +212,18 @@ static gboolean purple_http_headers_get_int(PurpleHttpHeaders *hdrs,
 
 	*dst = val;
 	return TRUE;
+}
+
+static gboolean purple_http_headers_match(PurpleHttpHeaders *hdrs,
+	const gchar *key, const gchar *value)
+{
+	const gchar *str;
+
+	str = purple_http_headers_get(hdrs, key);
+	if (str == NULL || value == NULL)
+		return str == value;
+
+	return (g_ascii_strcasecmp(str, value) == 0);
 }
 
 static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs)
@@ -364,19 +384,99 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 	return TRUE;
 }
 
-static void _purple_http_recv_body(PurpleHttpConnection *hc,
+static void _purple_http_recv_body_data(PurpleHttpConnection *hc,
+	const gchar *buf, int len)
+{
+	g_string_append_len(hc->response->contents, buf, len);
+}
+
+static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
+	const gchar *buf, int len)
+{
+	gchar *eol, *line;
+	int line_len;
+
+	if (hc->chunks_done)
+		return FALSE;
+	if (!hc->response_buffer)
+		hc->response_buffer = g_string_new("");
+	g_string_append_len(hc->response_buffer, buf, len); //TODO: check max buffer length, not to raise to infinity
+
+	while (hc->response_buffer->len > 0) {
+		if (hc->in_chunk) {
+			int got_now = hc->response_buffer->len;
+			if (hc->chunk_got + got_now > hc->chunk_length)
+				got_now = hc->chunk_length - hc->chunk_got;
+			hc->chunk_got += got_now;
+			
+			_purple_http_recv_body_data(hc,
+				hc->response_buffer->str, got_now);
+			
+			g_string_erase(hc->response_buffer, 0, got_now);
+			hc->in_chunk = (hc->chunk_got < hc->chunk_length);
+
+			if (purple_debug_is_verbose())
+				purple_debug_misc("http", "Chunk (%d/%d)\n",
+					hc->chunk_got, hc->chunk_length);
+
+			continue;
+		}
+
+		line = hc->response_buffer->str;
+		eol = strstr(line, "\r\n");
+		if (eol == NULL) {
+			/* waiting for more data (unlikely, but possible) */
+			if (hc->response_buffer->len > 20) {
+				purple_debug_warning("http", "Chunk length not "
+					"found (buffer too large)\n");
+				_purple_http_error(hc, _("Error parsing HTTP"));
+				return FALSE;
+			}
+			return TRUE;
+		}
+		line_len = eol - line;
+
+		if (1 != sscanf(line, "%x", &hc->chunk_length)) {
+			purple_debug_warning("http",
+				"Chunk length not found\n");
+			_purple_http_error(hc, _("Error parsing HTTP"));
+			return FALSE;
+		}
+		hc->chunk_got = 0;
+		hc->in_chunk = TRUE;
+
+		if (purple_debug_is_verbose())
+			purple_debug_misc("http", "Found chunk of length %d\n", hc->chunk_length);
+
+		g_string_erase(hc->response_buffer, 0, line_len + 2);
+
+		if (hc->chunk_length == 0) {
+			hc->chunks_done = TRUE;
+			hc->in_chunk = FALSE;
+			return TRUE;
+		}
+	}
+
+	return TRUE;
+}
+
+static gboolean _purple_http_recv_body(PurpleHttpConnection *hc,
 	const gchar *buf, int len)
 {
 	if (hc->response->contents == NULL)
 		hc->response->contents = g_string_new("");
 
-	/* TODO: chunked data, body length etc */
+	if (hc->is_chunked)
+		return _purple_http_recv_body_chunked(hc, buf, len);
 
-	if (len + hc->length_got > hc->length_expected)
+	if (hc->length_expected >= 0 &&
+		len + hc->length_got > hc->length_expected)
 		len = hc->length_expected - hc->length_got;
 	hc->length_got += len;
 
-	g_string_append_len(hc->response->contents, buf, len);
+	_purple_http_recv_body_data(hc, buf, len);
+
+	return TRUE;
 }
 
 static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
@@ -385,8 +485,6 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 	PurpleHttpSocket *hs = &hc->socket;
 	int len;
 	gchar buf[4096];
-
-	purple_debug_misc("http", "[tmp] reading...\n");
 
 	if (hs->is_ssl)
 		len = purple_ssl_read(hs->ssl_connection, buf, sizeof(buf));
@@ -402,30 +500,39 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 		return;
 	}
 
-	if (len == 0 && hc->length_expected < 0 && hc->headers_got)
-		hc->length_expected = hc->length_got;
+	if (len == 0 && hc->headers_got)
+		hc->length_expected = hc->length_got; /* TODO: error possible */
 
 	if (!hc->headers_got && len > 0) {
 		if (!_purple_http_recv_headers(hc, buf, len))
 			return;
-		if (hc->headers_got && hc->response_buffer &&
-			hc->response_buffer->len > 0) {
-			_purple_http_recv_body(hc, hc->response_buffer->str,
-				hc->response_buffer->len);
-			g_string_truncate(hc->response_buffer, 0);
-		}
 		if (hc->headers_got) {
 			if (!purple_http_headers_get_int(hc->response->headers,
 				"Content-Length", &hc->length_expected))
 				hc->length_expected = -1;
+			hc->is_chunked = (purple_http_headers_match(
+				hc->response->headers,
+				"Transfer-Encoding", "chunked"));
+		}
+		if (hc->headers_got && hc->response_buffer &&
+			hc->response_buffer->len > 0) {
+			int buffer_len = hc->response_buffer->len;
+			gchar *buffer = g_string_free(hc->response_buffer, FALSE);
+			hc->response_buffer = NULL;
+			_purple_http_recv_body(hc, buffer, buffer_len);
 		}
 		return;
 	}
 
-	if (len > 0)
-		_purple_http_recv_body(hc, buf, len);
+	if (len > 0) {
+		if (!_purple_http_recv_body(hc, buf, len))
+			return;
+	}
 
-	if (hc->length_got >= hc->length_expected) {
+	if (hc->is_chunked && hc->chunks_done)
+		hc->length_expected = hc->length_got;
+
+	if (hc->length_expected >= 0 && hc->length_got >= hc->length_expected) {
 		if (!hc->headers_got) {
 			hc->response->code = 0;
 			purple_debug_warning("http", "No headers got\n");
@@ -461,8 +568,6 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 	const gchar *write_from;
 
 	_purple_http_gen_headers(hc);
-
-	purple_debug_misc("http", "[tmp] sending...\n");
 
 	write_from = hc->request_header->str + hc->request_header_written;
 	write_len = hc->request_header->len - hc->request_header_written;
@@ -632,6 +737,9 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 	hc->response->contents = NULL;
 	hc->length_got = 0;
 	hc->length_expected = -1;
+	hc->is_chunked = FALSE;
+	hc->in_chunk = FALSE;
+	hc->chunks_done = FALSE;
 
 	return TRUE;
 }
