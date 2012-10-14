@@ -129,9 +129,8 @@ static PurpleHttpHeaders * purple_http_headers_new(void)
 {
 	PurpleHttpHeaders *hdrs = g_new0(PurpleHttpHeaders, 1);
 
-	hdrs->by_name = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
-//	hdrs->by_name = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-//		(GDestroyNotify)g_list_free);
+	hdrs->by_name = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+		(GDestroyNotify)g_list_free);
 
 	return hdrs;
 }
@@ -158,7 +157,7 @@ static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 	const gchar *value)
 {
 	PurpleKeyValuePair *kvp;
-	GList *named_values;
+	GList *named_values, *new_values;
 
 	g_return_if_fail(hdrs != NULL);
 	g_return_if_fail(key != NULL);
@@ -171,8 +170,9 @@ static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 	hdrs->list = g_list_append(hdrs->list, kvp);
 
 	named_values = g_hash_table_lookup(hdrs->by_name, key);
-	named_values = g_list_append(named_values, kvp->value);
-	g_hash_table_replace(hdrs->by_name, g_strdup(key), named_values);
+	new_values = g_list_append(named_values, kvp->value);
+	if (!named_values)
+		g_hash_table_insert(hdrs->by_name, g_strdup(key), new_values);
 }
 
 static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs)
