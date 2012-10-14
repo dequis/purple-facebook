@@ -108,7 +108,7 @@ static void purple_http_response_free(PurpleHttpResponse *response);
 static PurpleHttpURL * purple_http_url_parse(const char *url);
 static void purple_http_url_free(PurpleHttpURL *parsed_url);
 
-//static const gchar * purple_http_url_debug(PurpleHttpURL *parsed_url);
+static gchar * purple_http_url_print(PurpleHttpURL *parsed_url);
 
 /*** Headers collection *******************************************************/
 
@@ -713,6 +713,16 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 
 	_purple_http_disconnect(hc);
 
+	if (purple_debug_is_verbose()) {
+		if (purple_debug_is_unsafe()) {
+			gchar *url = purple_http_url_print(hc->url);
+			purple_debug_misc("http", "Connecting to %s...\n", url);
+			g_free(url);
+		} else
+			purple_debug_misc("http", "Connecting to %s...\n",
+				hc->url->host);
+	}
+
 	if (hc->gc)
 		account = purple_connection_get_account(hc->gc);
 
@@ -1040,24 +1050,39 @@ static void purple_http_url_free(PurpleHttpURL *parsed_url)
 	g_free(parsed_url);
 }
 
-/*
-static const gchar * purple_http_url_debug(PurpleHttpURL *parsed_url)
+static gchar * purple_http_url_print(PurpleHttpURL *parsed_url)
 {
-	static gchar buff[512];
+	GString *url = g_string_new("");
+	gboolean before_host_printed = FALSE, host_printed = FALSE;
 
-	g_return_val_if_fail(parsed_url != NULL, "(null)");
+	if (parsed_url->protocol[0]) {
+		g_string_append_printf(url, "%s://", parsed_url->protocol);
+		before_host_printed = TRUE;
+	}
+	if (parsed_url->user[0] || parsed_url->password[0]) {
+		if (parsed_url->user[0])
+			g_string_append(url, parsed_url->user);
+		g_string_append_printf(url, ":%s", parsed_url->password);
+		g_string_append(url, "@");
+		before_host_printed = TRUE;
+	}
+	if (parsed_url->host[0] || parsed_url->port) {
+		if (!parsed_url->host[0])
+			g_string_append_printf(url, "{???}:%d",
+				parsed_url->port);
+		else {
+			g_string_append(url, parsed_url->host);
+			if (parsed_url->port)
+				g_string_append_printf(url, ":%d",
+					parsed_url->port);
+		}
+		host_printed = TRUE;
+	}
+	if (parsed_url->path[0]) {
+		if (!host_printed && before_host_printed)
+			g_string_append(url, "{???}");
+		g_string_append(url, parsed_url->path);
+	}
 
-	g_snprintf(buff, sizeof(buff), "%s://%s:%d [%s] [%s / %s]",
-		parsed_url->protocol,
-		parsed_url->host,
-		parsed_url->port,
-		parsed_url->path,
-		parsed_url->user,
-		parsed_url->password);
-
-	buff[sizeof(buff) - 1] = '\0';
-
-	return buff;
+	return g_string_free(url, FALSE);
 }
-*/
-
