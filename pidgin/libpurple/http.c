@@ -129,8 +129,9 @@ static PurpleHttpHeaders * purple_http_headers_new(void)
 {
 	PurpleHttpHeaders *hdrs = g_new0(PurpleHttpHeaders, 1);
 
-	hdrs->by_name = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-		(GDestroyNotify)g_list_free);
+	hdrs->by_name = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, NULL);
+//	hdrs->by_name = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+//		(GDestroyNotify)g_list_free);
 
 	return hdrs;
 }
@@ -406,8 +407,8 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 		return FALSE;
 	if (!hc->response_buffer)
 		hc->response_buffer = g_string_new("");
-	g_string_append_len(hc->response_buffer, buf, len); //TODO: check max buffer length, not to raise to infinity
 
+	g_string_append_len(hc->response_buffer, buf, len); //TODO: check max buffer length, not to raise to infinity
 	while (hc->response_buffer->len > 0) {
 		if (hc->in_chunk) {
 			int got_now = hc->response_buffer->len;
