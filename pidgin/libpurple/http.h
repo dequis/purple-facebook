@@ -157,9 +157,11 @@ void purple_http_conn_cancel_all(PurpleConnection *gc);
  */
 gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn);
 
+//TODO
 PurpleHttpRequest * purple_http_conn_get_request(
 	PurpleHttpConnection *http_conn);
 
+//TODO
 PurpleConnection * purple_http_conn_get_purple_connection(
 	PurpleHttpConnection *http_conn);
 
@@ -219,8 +221,10 @@ void purple_http_request_ref(PurpleHttpRequest *request);
  */
 PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request);
 
+//TODO
 void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url); // +get
 
+//TODO
 void purple_http_request_set_method(PurpleHttpRequest *request,
 	const gchar *method); // +get
 
@@ -242,6 +246,7 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
  * @param reader    The reader callback.
  * @param user_data The user data to pass to the callback function.
  */
+//TODO
 void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
 	PurpleHttpContentReader reader, gpointer user_data);
 
@@ -252,6 +257,7 @@ void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
  * @param reader    The writer callback.
  * @param user_data The user data to pass to the callback function.
  */
+//TODO
 void purple_http_request_set_response_writer(PurpleHttpRequest *request,
 	PurpleHttpContentWriter writer, gpointer user_data);
 
@@ -275,6 +281,7 @@ int purple_http_request_get_max_redirects(PurpleHttpRequest *request);
 /**
  * NULL for disabling cookie support
  */
+//TODO
 void purple_http_request_set_cookie_jar(PurpleHttpRequest *request,
 	PurpleHTTPCookieJar *cookie_jar); // +get
 
@@ -384,11 +391,14 @@ gsize purple_http_response_get_data_len(PurpleHttpResponse *response);
  */
 const gchar * purple_http_response_get_data(PurpleHttpResponse *response);
 
+//TODO
 const GList * purple_http_response_get_all_headers(PurpleHttpResponse *response);
 
+//TODO
 const GList * purple_http_response_get_headers_by_name(
 	PurpleHttpResponse *response, const gchar *name);
 
+//TODO
 const gchar * purple_http_response_get_header(PurpleHttpResponse *response,
 	const gchar *name);
 
