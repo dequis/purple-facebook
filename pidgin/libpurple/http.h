@@ -143,9 +143,16 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 void purple_http_conn_cancel(PurpleHttpConnection *http_conn);
 
 /**
+ * Cancels all HTTP connections associated with the specified handle.
+ *
+ * @param gc The handle.
+ */
+void purple_http_conn_cancel_all(PurpleConnection *gc);
+
+/**
  * Checks, if provided HTTP request is running.
  *
- * @param http_conn The HTTP connection.
+ * @param http_conn The HTTP connection (may be invalid pointer).
  * @return          TRUE, if provided connection is currently running.
  */
 gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn);
@@ -155,10 +162,6 @@ PurpleHttpRequest * purple_http_conn_get_request(
 
 PurpleConnection * purple_http_conn_get_purple_connection(
 	PurpleHttpConnection *http_conn);
-
-const GSList * purple_http_conn_get_all(PurpleConnection *gc);
-
-void purple_http_conn_cancel_all(PurpleConnection *gc);
 
 /*@}*/
 

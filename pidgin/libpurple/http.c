@@ -84,6 +84,8 @@ struct _PurpleHttpConnection
 
 	gboolean is_chunked, in_chunk, chunks_done;
 	int chunk_length, chunk_got;
+
+	GList *link_global, *link_gc;
 };
 
 struct _PurpleHttpResponse
@@ -113,7 +115,7 @@ struct _PurpleHttpHeaders
 };
 
 static PurpleHttpConnection * purple_http_connection_new(
-	PurpleHttpRequest *request);
+	PurpleHttpRequest *request, PurpleConnection *gc);
 static void purple_http_connection_terminate(PurpleHttpConnection *hc);
 
 static PurpleHttpResponse * purple_http_response_new(void);
@@ -126,6 +128,23 @@ static void purple_http_url_relative(PurpleHttpURL *base_url,
 static gchar * purple_http_url_print(PurpleHttpURL *parsed_url);
 
 static GRegex *purple_http_re_url, *purple_http_re_url_host;
+
+/**
+ * Values: pointers to running PurpleHttpConnection.
+ */
+static GList *purple_http_hc_list;
+
+/**
+ * Keys: pointers to PurpleConnection.
+ * Values: GList of pointers to running PurpleHttpConnection.
+ */
+static GHashTable *purple_http_hc_by_gc;
+
+/**
+ * Keys: pointers to PurpleHttpConnection.
+ * Values: pointers to links in purple_http_hc_list.
+ */
+static GHashTable *purple_http_hc_by_ptr;
 
 /*** Headers collection *******************************************************/
 
@@ -919,8 +938,7 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 
 	g_return_val_if_fail(request != NULL, NULL);
 
-	hc = purple_http_connection_new(request);
-	hc->gc = gc;
+	hc = purple_http_connection_new(request, gc);
 	hc->callback = callback;
 	hc->user_data = user_data;
 
@@ -948,13 +966,25 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 
 static void purple_http_connection_free(PurpleHttpConnection *hc);
 
-static PurpleHttpConnection * purple_http_connection_new(PurpleHttpRequest *request)
+static PurpleHttpConnection * purple_http_connection_new(
+	PurpleHttpRequest *request, PurpleConnection *gc)
 {
 	PurpleHttpConnection *hc = g_new0(PurpleHttpConnection, 1);
 
 	hc->request = request;
 	purple_http_request_ref(request);
 	hc->response = purple_http_response_new();
+
+	hc->link_global = purple_http_hc_list =
+		g_list_prepend(purple_http_hc_list, hc);
+	g_hash_table_insert(purple_http_hc_by_ptr, hc, hc->link_global);
+	if (gc) {
+		GList *gc_list = g_hash_table_lookup(purple_http_hc_by_gc, gc);
+		g_hash_table_steal(purple_http_hc_by_gc, gc);
+		hc->link_gc = gc_list = g_list_prepend(gc_list, hc);
+		g_hash_table_insert(purple_http_hc_by_gc, gc, gc_list);
+		hc->gc = gc;
+	}
 
 	return hc;
 }
@@ -967,6 +997,23 @@ static void purple_http_connection_free(PurpleHttpConnection *hc)
 
 	if (hc->request_header)
 		g_string_free(hc->request_header, TRUE);
+
+	purple_http_hc_list = g_list_delete_link(purple_http_hc_list,
+		hc->link_global);
+	g_hash_table_remove(purple_http_hc_by_ptr, hc);
+	if (hc->gc) {
+		GList *gc_list, *gc_list_new;
+		gc_list = g_hash_table_lookup(purple_http_hc_by_gc, hc->gc);
+		g_assert(gc_list != NULL);
+
+		gc_list_new = g_list_delete_link(gc_list, hc->link_gc);
+		if (gc_list != gc_list_new) {
+			g_hash_table_steal(purple_http_hc_by_gc, hc->gc);
+			if (gc_list_new)
+				g_hash_table_insert(purple_http_hc_by_gc,
+					hc->gc, gc_list_new);
+		}
+	}
 
 	g_free(hc);
 }
@@ -995,7 +1042,24 @@ void purple_http_conn_cancel(PurpleHttpConnection *http_conn)
 
 void purple_http_conn_cancel_all(PurpleConnection *gc)
 {
-	purple_debug_warning("http", "purple_http_conn_cancel_all: To be implemented\n");
+	GList *gc_list = g_hash_table_lookup(purple_http_hc_by_gc, gc);
+
+	while (gc_list) {
+		PurpleHttpConnection *hc = gc_list->data;
+		gc_list = g_list_next(gc_list);
+		purple_http_conn_cancel(hc);
+	}
+
+	if (NULL != g_hash_table_lookup(purple_http_hc_by_gc, gc))
+		purple_debug_error("http", "Couldn't cancel all connections "
+			"related to gc=%p\n", gc);
+}
+
+gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn)
+{
+	if (http_conn == NULL)
+		return FALSE;
+	return (NULL != g_hash_table_lookup(purple_http_hc_by_ptr, http_conn));
 }
 
 /*** Request API **************************************************************/
@@ -1435,6 +1499,17 @@ void purple_http_init(void)
 
 		"$", G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
 		G_REGEX_MATCH_NOTEMPTY, NULL);
+
+	purple_http_hc_list = NULL;
+	purple_http_hc_by_ptr = g_hash_table_new(g_direct_hash, g_direct_equal);
+	purple_http_hc_by_gc = g_hash_table_new_full(g_direct_hash,
+		g_direct_equal, NULL, (GDestroyNotify)g_list_free);
+}
+
+static void purple_http_foreach_conn_cancel(gpointer _hc, gpointer user_data)
+{
+	PurpleHttpConnection *hc = _hc;
+	purple_http_conn_cancel(hc);
 }
 
 void purple_http_uninit(void)
@@ -1443,4 +1518,20 @@ void purple_http_uninit(void)
 	purple_http_re_url = NULL;
 	g_regex_unref(purple_http_re_url_host);
 	purple_http_re_url_host = NULL;
+
+	g_list_foreach(purple_http_hc_list, purple_http_foreach_conn_cancel,
+		NULL);
+
+	if (purple_http_hc_list != NULL ||
+		0 != g_hash_table_size(purple_http_hc_by_ptr) ||
+		0 != g_hash_table_size(purple_http_hc_by_gc))
+		purple_debug_warning("http",
+			"Couldn't cleanup all connections.\n");
+
+	g_list_free(purple_http_hc_list);
+	purple_http_hc_list = NULL;
+	g_hash_table_destroy(purple_http_hc_by_gc);
+	purple_http_hc_by_gc = NULL;
+	g_hash_table_destroy(purple_http_hc_by_ptr);
+	purple_http_hc_by_ptr = NULL;
 }
