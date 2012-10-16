@@ -293,9 +293,22 @@ void purple_http_request_set_http11(PurpleHttpRequest *request,
 gboolean purple_http_request_is_http11(PurpleHttpRequest *request);
 
 /**
- * -1 for unlimited
+ * Sets maximum length of response content to read.
+ *
+ * Headers length doesn't count here.
+ *
+ * @param request The request.
+ * @param max_len Maximum length of response to read (-1 for unlimited).
  */
-void purple_http_request_set_max_len(PurpleHttpRequest *request, int max_len); // +get
+void purple_http_request_set_max_len(PurpleHttpRequest *request, int max_len);
+
+/**
+ * Gets maximum length of response content to read.
+ *
+ * @param request The request.
+ * @return        Maximum length of response to read, or -1 if unlimited.
+ */
+int purple_http_request_get_max_len(PurpleHttpRequest *request);
 
 /**
  * Sets (replaces, if exists) specified HTTP request header with provided value.

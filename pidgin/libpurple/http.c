@@ -57,6 +57,7 @@ struct _PurpleHttpRequest
 
 	int max_redirects;
 	gboolean http11;
+	int max_length;
 };
 
 struct _PurpleHttpConnection
@@ -76,6 +77,7 @@ struct _PurpleHttpConnection
 	GString *response_buffer;
 
 	int redirects_count;
+	int data_length_got;
 
 	int length_expected, length_got;
 
@@ -416,6 +418,17 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 static void _purple_http_recv_body_data(PurpleHttpConnection *hc,
 	const gchar *buf, int len)
 {
+	if (hc->request->max_length >= 0) {
+		if (hc->data_length_got + len > hc->request->max_length) {
+			len = hc->request->max_length - hc->data_length_got;
+			hc->length_expected = hc->length_got;
+		}
+		hc->data_length_got += len;
+	}
+
+	if (len == 0)
+		return;
+
 	g_string_append_len(hc->response->contents, buf, len);
 }
 
@@ -831,6 +844,7 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 		g_string_free(hc->response->contents, TRUE);
 	hc->response->contents = NULL;
 	hc->length_got = 0;
+	hc->data_length_got = 0;
 	hc->length_expected = -1;
 	hc->is_chunked = FALSE;
 	hc->in_chunk = FALSE;
@@ -1022,6 +1036,23 @@ gboolean purple_http_request_is_http11(PurpleHttpRequest *request)
 	g_return_val_if_fail(request != NULL, FALSE);
 
 	return request->http11;
+}
+
+void purple_http_request_set_max_len(PurpleHttpRequest *request, int max_len)
+{
+	g_return_if_fail(request != NULL);
+
+	if (max_len < -1)
+		max_len = -1;
+
+	request->max_length = max_len;
+}
+
+int purple_http_request_get_max_len(PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, -1);
+
+	return request->max_length;
 }
 
 /*** HTTP response API ********************************************************/
