@@ -32,6 +32,8 @@
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
 
+#define PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS 20
+
 typedef struct _PurpleHttpURL PurpleHttpURL;
 
 typedef struct _PurpleHttpSocket PurpleHttpSocket;
@@ -52,6 +54,9 @@ struct _PurpleHttpRequest
 	int ref_count;
 
 	gchar *url;
+
+	int max_redirects;
+	gboolean http11;
 };
 
 struct _PurpleHttpConnection
@@ -69,6 +74,8 @@ struct _PurpleHttpConnection
 	int request_header_written;
 	gboolean main_header_got, headers_got;
 	GString *response_buffer;
+
+	int redirects_count;
 
 	int length_expected, length_got;
 
@@ -307,7 +314,8 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	hc->request_header = h = g_string_new("");
 	hc->request_header_written = 0;
 
-	g_string_append_printf(h, "GET %s HTTP/%s\r\n", url->path, "1.1");
+	g_string_append_printf(h, "GET %s HTTP/%s\r\n", url->path,
+		hc->request->http11 ? "1.1" : "1.0");
 	g_string_append_printf(h, "Host: %s\r\n", url->host);
 	g_string_append_printf(h, "Connection: close\r\n");
 
@@ -599,8 +607,11 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 
 		redirect = purple_http_headers_get(hc->response->headers,
 			"location");
-		if (redirect) {
+		if (redirect &&
+			hc->request->max_redirects > hc->redirects_count) {
 			PurpleHttpURL *url = purple_http_url_parse(redirect);
+
+			hc->redirects_count++;
 
 			if (!url) {
 				if (purple_debug_is_unsafe())
@@ -947,6 +958,9 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 	request->ref_count = 1;
 	request->url = g_strdup(url);
 
+	request->max_redirects = PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS;
+	request->http11 = TRUE;
+
 	return request;
 }
 
@@ -976,6 +990,38 @@ PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request)
 
 	purple_http_request_free(request);
 	return NULL;
+}
+
+void purple_http_request_set_max_redirects(PurpleHttpRequest *request,
+	int max_redirects)
+{
+	g_return_if_fail(request != NULL);
+
+	if (max_redirects < -1)
+		max_redirects = -1;
+
+	request->max_redirects = max_redirects;
+}
+
+int purple_http_request_get_max_redirects(PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, -1);
+
+	return request->max_redirects;
+}
+
+void purple_http_request_set_http11(PurpleHttpRequest *request, gboolean http11)
+{
+	g_return_if_fail(request != NULL);
+
+	request->http11 = http11;
+}
+
+gboolean purple_http_request_is_http11(PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, FALSE);
+
+	return request->http11;
 }
 
 /*** HTTP response API ********************************************************/
@@ -1008,9 +1054,6 @@ gboolean purple_http_response_is_successfull(PurpleHttpResponse *response)
 		return FALSE;
 
 	if (code == 200)
-		return TRUE;
-
-	if (code / 100 == 3) /* 3xx */
 		return TRUE;
 
 	return FALSE;
