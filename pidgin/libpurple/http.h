@@ -253,10 +253,21 @@ void purple_http_request_set_response_writer(PurpleHttpRequest *request,
 	PurpleHttpContentWriter writer, gpointer user_data);
 
 /**
- * -1 for unlimited
+ * Sets maximum amount of redirects.
+ *
+ * @param request       The request.
+ * @param max_redirects Maximum amount of redirects, or -1 for unlimited.
  */
 void purple_http_request_set_max_redirects(PurpleHttpRequest *request,
-	int max_redirects); // +get
+	int max_redirects);
+
+/**
+ * Gets maximum amount of redirects.
+ *
+ * @param request The request.
+ * @return        Current maximum amount of redirects (-1 for unlimited).
+ */
+int purple_http_request_get_max_redirects(PurpleHttpRequest *request);
 
 /**
  * NULL for disabling cookie support
@@ -265,13 +276,21 @@ void purple_http_request_set_cookie_jar(PurpleHttpRequest *request,
 	PurpleHTTPCookieJar *cookie_jar); // +get
 
 /**
- * NULL for default
+ * Sets HTTP version to use.
+ *
+ * @param request The request.
+ * @param http11  TRUE for HTTP/1.1, FALSE for HTTP/1.0.
  */
-void purple_http_request_set_user_agent(PurpleHttpRequest *request,
-	const gchar *user_agent); // +get
-
 void purple_http_request_set_http11(PurpleHttpRequest *request,
-	gboolean http11); // +is
+	gboolean http11);
+
+/**
+ * Gets used HTTP version.
+ *
+ * @param request The request.
+ * @return        TRUE, if we use HTTP/1.1, FALSE for HTTP/1.0.
+ */
+gboolean purple_http_request_is_http11(PurpleHttpRequest *request);
 
 /**
  * -1 for unlimited
