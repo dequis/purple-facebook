@@ -30,6 +30,7 @@
 #include "debug.h"
 
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
+#define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
 
 typedef struct _PurpleHttpURL PurpleHttpURL;
 
@@ -340,7 +341,14 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 		return FALSE;
 	}
 
-	g_string_append_len(hc->response_buffer, buf, len); //TODO: check max buffer length, not to raise to infinity
+	g_string_append_len(hc->response_buffer, buf, len);
+	if (hc->response_buffer->len > PURPLE_HTTP_MAX_RECV_BUFFER_LEN) {
+		purple_debug_error("http",
+			"Buffer too big when parsing headers\n");
+		_purple_http_error(hc, _("Error parsing HTTP"));
+		return FALSE;
+	}
+
 	while ((eol = strstr(hc->response_buffer->str, "\r\n"))
 		!= NULL) {
 		gchar *hdrline = hc->response_buffer->str;
@@ -414,7 +422,14 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 	if (!hc->response_buffer)
 		hc->response_buffer = g_string_new("");
 
-	g_string_append_len(hc->response_buffer, buf, len); //TODO: check max buffer length, not to raise to infinity
+	g_string_append_len(hc->response_buffer, buf, len);
+	if (hc->response_buffer->len > PURPLE_HTTP_MAX_RECV_BUFFER_LEN) {
+		purple_debug_error("http",
+			"Buffer too big when searching for chunk\n");
+		_purple_http_error(hc, _("Error parsing HTTP"));
+		return FALSE;
+	}
+
 	while (hc->response_buffer->len > 0) {
 		if (hc->in_chunk) {
 			int got_now = hc->response_buffer->len;
