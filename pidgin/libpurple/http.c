@@ -607,8 +607,8 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 
 		redirect = purple_http_headers_get(hc->response->headers,
 			"location");
-		if (redirect &&
-			hc->request->max_redirects > hc->redirects_count) {
+		if (redirect && (hc->request->max_redirects == -1 ||
+			hc->request->max_redirects > hc->redirects_count)) {
 			PurpleHttpURL *url = purple_http_url_parse(redirect);
 
 			hc->redirects_count++;
