@@ -54,6 +54,7 @@ struct _PurpleHttpRequest
 	int ref_count;
 
 	gchar *url;
+	PurpleHttpHeaders *headers;
 
 	int max_redirects;
 	gboolean http11;
@@ -174,21 +175,50 @@ static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 {
 	PurpleKeyValuePair *kvp;
 	GList *named_values, *new_values;
+	gchar *key_low;
 
 	g_return_if_fail(hdrs != NULL);
 	g_return_if_fail(key != NULL);
 	g_return_if_fail(value != NULL);
 
 	kvp = g_new0(PurpleKeyValuePair, 1);
-	kvp->key = g_ascii_strdown(key, -1);
-	key = kvp->key;
+	kvp->key = g_strdup(key);
 	kvp->value = g_strdup(value);
 	hdrs->list = g_list_append(hdrs->list, kvp);
 
-	named_values = g_hash_table_lookup(hdrs->by_name, key);
+	key_low = g_ascii_strdown(key, -1);
+	named_values = g_hash_table_lookup(hdrs->by_name, key_low);
 	new_values = g_list_append(named_values, kvp->value);
-	if (!named_values)
-		g_hash_table_insert(hdrs->by_name, g_strdup(key), new_values);
+	if (named_values)
+		g_free(key_low);
+	else
+		g_hash_table_insert(hdrs->by_name, key_low, new_values);
+}
+
+static void purple_http_headers_remove(PurpleHttpHeaders *hdrs,
+	const gchar *key)
+{
+	GList *it, *curr;
+
+	g_return_if_fail(hdrs != NULL);
+	g_return_if_fail(key != NULL);
+
+	if (!g_hash_table_remove(hdrs->by_name, key))
+		return;
+
+	/* Could be optimized to O(1). */
+	it = g_list_first(hdrs->list);
+	while (it)
+	{
+		PurpleKeyValuePair *kvp = it->data;
+		curr = it;
+		it = g_list_next(it);
+		if (g_ascii_strcasecmp(kvp->key, key) != 0)
+			continue;
+
+		hdrs->list = g_list_delete_link(hdrs->list, curr);
+		purple_http_headers_free_kvp(kvp);
+	}
 }
 
 static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs)
@@ -303,6 +333,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	GString *h;
 	PurpleHttpURL *url;
 	PurpleProxyInfo *proxy;
+	const GList *hdr;
 
 	g_return_if_fail(hc != NULL);
 
@@ -318,12 +349,22 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 	g_string_append_printf(h, "GET %s HTTP/%s\r\n", url->path,
 		hc->request->http11 ? "1.1" : "1.0");
-	g_string_append_printf(h, "Host: %s\r\n", url->host);
-	g_string_append_printf(h, "Connection: close\r\n");
 
-	/* TODO: don't put here, if exists */
-	g_string_append_printf(h, "Accept: */*\r\n");
+	if (!purple_http_headers_get(hc->request->headers, "host"))
+		g_string_append_printf(h, "Host: %s\r\n", url->host);
+	if (!purple_http_headers_get(hc->request->headers, "connection"))
+		g_string_append_printf(h, "Connection: close\r\n");
+	if (!purple_http_headers_get(hc->request->headers, "accept"))
+		g_string_append_printf(h, "Accept: */*\r\n");
 
+	hdr = purple_http_headers_get_all(hc->request->headers);
+	while (hdr) {
+		PurpleKeyValuePair *kvp = hdr->data;
+		hdr = g_list_next(hdr);
+
+		g_string_append_printf(h, "%s: %s\r\n",
+			kvp->key, (gchar*)kvp->value);
+	}
 
 	if (purple_proxy_info_get_username(proxy) != NULL &&
 		(purple_proxy_info_get_type(proxy) == PURPLE_PROXY_USE_ENVVAR ||
@@ -971,6 +1012,7 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 
 	request->ref_count = 1;
 	request->url = g_strdup(url);
+	request->headers = purple_http_headers_new();
 
 	request->max_redirects = PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS;
 	request->http11 = TRUE;
@@ -980,6 +1022,7 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 
 static void purple_http_request_free(PurpleHttpRequest *request)
 {
+	purple_http_headers_free(request->headers);
 	g_free(request->url);
 	g_free(request);
 }
@@ -1053,6 +1096,26 @@ int purple_http_request_get_max_len(PurpleHttpRequest *request)
 	g_return_val_if_fail(request != NULL, -1);
 
 	return request->max_length;
+}
+
+void purple_http_request_header_set(PurpleHttpRequest *request,
+	const gchar *key, const gchar *value)
+{
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(key != NULL);
+
+	purple_http_headers_remove(request->headers, key);
+	if (value)
+		purple_http_headers_add(request->headers, key, value);
+}
+
+void purple_http_request_header_add(PurpleHttpRequest *request,
+	const gchar *key, const gchar *value)
+{
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(key != NULL);
+
+	purple_http_headers_add(request->headers, key, value);
 }
 
 /*** HTTP response API ********************************************************/
