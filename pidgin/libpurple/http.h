@@ -360,6 +360,23 @@ const gchar * purple_http_response_get_header(PurpleHttpResponse *response,
 /*@}*/
 
 
+/**************************************************************************/
+/** @name HTTP Subsystem                                                  */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Initializes the http subsystem.
+ */
+void purple_http_init(void);
+
+/**
+ * Uninitializes the http subsystem.
+ */
+void purple_http_uninit(void);
+
+/*@}*/
+
 G_END_DECLS
 
 #endif /* _PURPLE_HTTP_H_ */

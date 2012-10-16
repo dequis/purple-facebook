@@ -29,6 +29,8 @@
 #include "internal.h"
 #include "debug.h"
 
+#define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
+
 typedef struct _PurpleHttpURL PurpleHttpURL;
 
 typedef struct _PurpleHttpSocket PurpleHttpSocket;
@@ -85,11 +87,12 @@ struct _PurpleHttpResponse
 struct _PurpleHttpURL
 {
 	gchar *protocol;
+	gchar *user;
+	gchar *password;
 	gchar *host;
 	int port;
 	gchar *path;
-	gchar *user;
-	gchar *password;
+	gchar *fragment;
 };
 
 struct _PurpleHttpHeaders
@@ -107,8 +110,11 @@ static void purple_http_response_free(PurpleHttpResponse *response);
 
 static PurpleHttpURL * purple_http_url_parse(const char *url);
 static void purple_http_url_free(PurpleHttpURL *parsed_url);
-
+static void purple_http_url_relative(PurpleHttpURL *base_url,
+	PurpleHttpURL *relative_url);
 static gchar * purple_http_url_print(PurpleHttpURL *parsed_url);
+
+static GRegex *purple_http_re_url, *purple_http_re_url_host;
 
 /*** Headers collection *******************************************************/
 
@@ -510,6 +516,7 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 		return;
 	}
 
+	/* EOF */
 	if (len == 0) {
 		if (hc->length_expected >= 0 &&
 			hc->length_got < hc->length_expected) {
@@ -558,6 +565,8 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 		hc->length_expected = hc->length_got;
 
 	if (hc->length_expected >= 0 && hc->length_got >= hc->length_expected) {
+		const gchar *redirect;
+
 		if (!hc->headers_got) {
 			hc->response->code = 0;
 			purple_debug_warning("http", "No headers got\n");
@@ -571,6 +580,29 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 			purple_debug_misc("http", "Got response headers: %s\n",
 				hdrs);
 			g_free(hdrs);
+		}
+
+		redirect = purple_http_headers_get(hc->response->headers,
+			"location");
+		if (redirect) {
+			PurpleHttpURL *url = purple_http_url_parse(redirect);
+
+			if (!url) {
+				if (purple_debug_is_unsafe())
+					purple_debug_warning("http",
+						"Invalid redirect to %s\n",
+						redirect);
+				else
+					purple_debug_warning("http",
+						"Invalid redirect\n");
+				_purple_http_error(hc, _("Error parsing HTTP"));
+			}
+
+			purple_http_url_relative(hc->url, url);
+			purple_http_url_free(url);
+
+			_purple_http_reconnect(hc);
+			return;
 		}
 
 		_purple_http_disconnect(hc);
@@ -750,6 +782,8 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 			url->host, url->port,
 			_purple_http_connected_ssl,
 			_purple_http_connected_ssl_error, hc);
+//		purple_ssl_set_compatibility_level(hc->socket.ssl_connection,
+//			PURPLE_SSL_COMPATIBILITY_SECURE);
 	} else {
 		hc->socket.raw_connection = purple_proxy_connect(hc->gc, account,
 			url->host, url->port,
@@ -1003,38 +1037,116 @@ const gchar * purple_http_response_get_data(PurpleHttpResponse *response)
 
 /*** URL functions ************************************************************/
 
-static PurpleHttpURL * purple_http_url_parse(const char *url)
+static PurpleHttpURL * purple_http_url_parse(const char *raw_url)
 {
-	PurpleHttpURL *parsed_url;
+	PurpleHttpURL *url;
+	GMatchInfo *match_info;
 
-	g_return_val_if_fail(url != NULL, NULL);
+	gchar *host_full, *tmp;
 
-	parsed_url = g_new0(PurpleHttpURL, 1);
+	g_return_val_if_fail(raw_url != NULL, NULL);
 
-	if (!purple_url_parse(url,
-		&parsed_url->protocol,
-		&parsed_url->host,
-		&parsed_url->port,
-		&parsed_url->path,
-		&parsed_url->user,
-		&parsed_url->password)) {
-		g_free(parsed_url);
+	url = g_new0(PurpleHttpURL, 1);
+
+	if (!g_regex_match(purple_http_re_url, raw_url, 0, &match_info)) {
+		if (purple_debug_is_verbose() && purple_debug_is_unsafe()) {
+			purple_debug_warning("http",
+				"Invalid URL provided: %s\n",
+				raw_url);
+		}
 		return NULL;
 	}
 
-	if (parsed_url->host[0] != '\0' &&
-		parsed_url->path[0] != '\0') {
-		gchar *tmp = parsed_url->path;
-		parsed_url->path = g_strdup_printf("/%s", parsed_url->path);
+	url->protocol = g_match_info_fetch(match_info, 1);
+	host_full = g_match_info_fetch(match_info, 2);
+	url->path = g_match_info_fetch(match_info, 3);
+	url->fragment = g_match_info_fetch(match_info, 4);
+	g_match_info_free(match_info);
+
+	if (url->protocol[0] == '\0') {
+		g_free(url->protocol);
+		url->protocol = NULL;
+	} else if (url->protocol != NULL) {
+		tmp = url->protocol;
+		url->protocol = g_ascii_strdown(url->protocol, -1);
 		g_free(tmp);
 	}
+	if (host_full[0] == '\0') {
+		g_free(host_full);
+		host_full = NULL;
+	}
+	if (url->path[0] == '\0') {
+		g_free(url->path);
+		url->path = NULL;
+	}
+	if ((url->protocol == NULL) != (host_full == NULL))
+		purple_debug_warning("http", "Protocol or host not present "
+			"(unlikely case)\n");
 
-	if (parsed_url->path[0] == '\0') {
-		g_free(parsed_url->path);
-		parsed_url->path = g_strdup("/");
+	if (host_full) {
+		gchar *port_str;
+
+		if (!g_regex_match(purple_http_re_url_host, host_full, 0,
+			&match_info)) {
+			if (purple_debug_is_verbose() &&
+				purple_debug_is_unsafe()) {
+				purple_debug_warning("http",
+					"Invalid host provided for URL: %s\n",
+					raw_url);
+			}
+
+			g_free(host_full);
+			purple_http_url_free(url);
+			return NULL;
+		}
+
+		url->user = g_match_info_fetch(match_info, 1);
+		url->password = g_match_info_fetch(match_info, 2);
+		url->host = g_match_info_fetch(match_info, 3);
+		port_str = g_match_info_fetch(match_info, 4);
+
+		if (port_str && port_str[0])
+			url->port = atoi(port_str);
+
+		if (url->user[0] == '\0') {
+			g_free(url->user);
+			url->user = NULL;
+		}
+		if (url->password[0] == '\0') {
+			g_free(url->password);
+			url->password = NULL;
+		}
+		if (url->host[0] == '\0') {
+			g_free(url->host);
+			url->host = NULL;
+		} else if (url->host != NULL) {
+			tmp = url->host;
+			url->host = g_ascii_strdown(url->host, -1);
+			g_free(tmp);
+		}
+
+		g_free(port_str);
+		g_match_info_free(match_info);
+
+		g_free(host_full);
+		host_full = NULL;
 	}
 
-	return parsed_url;
+	if (url->host != NULL) {
+		if (url->protocol == NULL)
+			url->protocol = g_strdup("http");
+		if (url->port == 0 && 0 == strcmp(url->protocol, "http"))
+			url->port = 80;
+		if (url->port == 0 && 0 == strcmp(url->protocol, "https"))
+			url->port = 443;
+		if (url->path == NULL)
+			url->path = g_strdup("/");
+		if (url->path[0] != '/')
+			purple_debug_warning("http",
+				"URL path doesn't start with slash\n");
+	}
+
+	return url;
 }
 
 static void purple_http_url_free(PurpleHttpURL *parsed_url)
@@ -1043,46 +1155,140 @@ static void purple_http_url_free(PurpleHttpURL *parsed_url)
 		return;
 
 	g_free(parsed_url->protocol);
-	g_free(parsed_url->host);
-	g_free(parsed_url->path);
 	g_free(parsed_url->user);
 	g_free(parsed_url->password);
+	g_free(parsed_url->host);
+	g_free(parsed_url->path);
+	g_free(parsed_url->fragment);
 	g_free(parsed_url);
+}
+
+static void purple_http_url_relative(PurpleHttpURL *base_url,
+	PurpleHttpURL *relative_url)
+{
+	g_return_if_fail(base_url != NULL);
+	g_return_if_fail(relative_url != NULL);
+
+	if (relative_url->host) {
+		g_free(base_url->protocol);
+		base_url->protocol = g_strdup(relative_url->protocol);
+		g_free(base_url->user);
+		base_url->user = g_strdup(relative_url->user);
+		g_free(base_url->password);
+		base_url->password = g_strdup(relative_url->password);
+		g_free(base_url->host);
+		base_url->host = g_strdup(relative_url->host);
+		base_url->port = relative_url->port;
+
+		g_free(base_url->path);
+		base_url->path = NULL;
+	}
+
+	if (relative_url->path) {
+		if (relative_url->path[0] == '/' ||
+			base_url->path == NULL) {
+			g_free(base_url->path);
+			base_url->path = g_strdup(relative_url->path);
+		} else {
+			gchar *last_slash = strrchr(base_url->path, '/');
+			gchar *tmp;
+			if (last_slash == NULL)
+				base_url->path[0] = '\0';
+			else
+				last_slash[1] = '\0';
+			tmp = base_url->path;
+			base_url->path = g_strconcat(base_url->path,
+				relative_url->path, NULL);
+			g_free(tmp);
+		}
+	}
+
+	g_free(base_url->fragment);
+	base_url->fragment = g_strdup(relative_url->fragment);
 }
 
 static gchar * purple_http_url_print(PurpleHttpURL *parsed_url)
 {
 	GString *url = g_string_new("");
 	gboolean before_host_printed = FALSE, host_printed = FALSE;
+	gboolean port_is_default = FALSE;
 
-	if (parsed_url->protocol[0]) {
+	if (parsed_url->protocol) {
 		g_string_append_printf(url, "%s://", parsed_url->protocol);
 		before_host_printed = TRUE;
+		if (parsed_url->port == 80 && 0 == strcmp(parsed_url->protocol,
+			"http"))
+			port_is_default = TRUE;
+		if (parsed_url->port == 443 && 0 == strcmp(parsed_url->protocol,
+			"https"))
+			port_is_default = TRUE;
 	}
-	if (parsed_url->user[0] || parsed_url->password[0]) {
-		if (parsed_url->user[0])
+	if (parsed_url->user || parsed_url->password) {
+		if (parsed_url->user)
 			g_string_append(url, parsed_url->user);
 		g_string_append_printf(url, ":%s", parsed_url->password);
 		g_string_append(url, "@");
 		before_host_printed = TRUE;
 	}
-	if (parsed_url->host[0] || parsed_url->port) {
-		if (!parsed_url->host[0])
+	if (parsed_url->host || parsed_url->port) {
+		if (!parsed_url->host)
 			g_string_append_printf(url, "{???}:%d",
 				parsed_url->port);
 		else {
 			g_string_append(url, parsed_url->host);
-			if (parsed_url->port)
+			if (!port_is_default)
 				g_string_append_printf(url, ":%d",
 					parsed_url->port);
 		}
 		host_printed = TRUE;
 	}
-	if (parsed_url->path[0]) {
+	if (parsed_url->path) {
 		if (!host_printed && before_host_printed)
 			g_string_append(url, "{???}");
 		g_string_append(url, parsed_url->path);
 	}
+	if (parsed_url->fragment)
+		g_string_append_printf(url, "#%s", parsed_url->fragment);
 
 	return g_string_free(url, FALSE);
+}
+
+/*** HTTP Subsystem ***********************************************************/
+
+void purple_http_init(void)
+{
+	purple_http_re_url = g_regex_new("^"
+
+		"(?:" /* host part beginning */
+		"([a-z]+)\\:/*" /* protocol */
+		"([^/]+)" /* username, password, host, port */
+		")?" /* host part ending */
+
+		"([^#]*)" /* path */
+
+		"(?:#" "(.*)" ")?" /* fragment */
+
+		"$", G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
+		G_REGEX_MATCH_NOTEMPTY, NULL);
+
+	purple_http_re_url_host = g_regex_new("^"
+
+		"(?:" /* user credentials part beginning */
+		"([" PURPLE_HTTP_URL_CREDENTIALS_CHARS "]+)" /* username */
+		"(?::([" PURPLE_HTTP_URL_CREDENTIALS_CHARS "]+))" /* password */
+		"@)?" /* user credentials part ending */
+
+		"([a-z0-9.-]+)" /* host */
+		"(?::([0-9]+))?" /* port*/
+
+		"$", G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
+		G_REGEX_MATCH_NOTEMPTY, NULL);
+}
+
+void purple_http_uninit(void)
+{
+	g_regex_unref(purple_http_re_url);
+	purple_http_re_url = NULL;
+	g_regex_unref(purple_http_re_url_host);
+	purple_http_re_url_host = NULL;
 }
