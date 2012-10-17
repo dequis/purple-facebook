@@ -157,11 +157,21 @@ void purple_http_conn_cancel_all(PurpleConnection *gc);
  */
 gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn);
 
-//TODO
+/**
+ * Gets PurpleHttpRequest used for specified HTTP connection.
+ *
+ * @param http_conn The HTTP connection.
+ * @return          The PurpleHttpRequest object.
+ */
 PurpleHttpRequest * purple_http_conn_get_request(
 	PurpleHttpConnection *http_conn);
 
-//TODO
+/**
+ * Gets PurpleConnection tied with specified HTTP connection.
+ *
+ * @param http_conn The HTTP connection.
+ * @return          The PurpleConnection object.
+ */
 PurpleConnection * purple_http_conn_get_purple_connection(
 	PurpleHttpConnection *http_conn);
 
@@ -221,12 +231,38 @@ void purple_http_request_ref(PurpleHttpRequest *request);
  */
 PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request);
 
-//TODO
-void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url); // +get
+/**
+ * Sets URL for HTTP request.
+ *
+ * @param request The request.
+ * @param url     The url.
+ */
+void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url);
 
-//TODO
+/**
+ * Gets URL set for the HTTP request.
+ *
+ * @param request The request.
+ * @return        URL set for this request.
+ */
+const gchar * purple_http_request_get_url(PurpleHttpRequest *request);
+
+/**
+ * Sets custom HTTP method used for the request.
+ *
+ * @param request The request.
+ * @param method  The method, or NULL for default.
+ */
 void purple_http_request_set_method(PurpleHttpRequest *request,
-	const gchar *method); // +get
+	const gchar *method);
+
+/**
+ * Gets HTTP method set for the request.
+ *
+ * @param request The request.
+ * @return        The method.
+ */
+const gchar * purple_http_request_get_method(PurpleHttpRequest *request);
 
 /**
  * Sets contents of HTTP request (for example, POST data).
@@ -236,7 +272,7 @@ void purple_http_request_set_method(PurpleHttpRequest *request,
  * @param length   The length of contents (-1 if it's a NULL-terminated string)
  */
 void purple_http_request_set_contents(PurpleHttpRequest *request,
-	const gchar *contents, int length); // +get
+	const gchar *contents, int length);
 
 /**
  * Sets contents reader for HTTP request, used mainly for possible large
@@ -408,14 +444,35 @@ gsize purple_http_response_get_data_len(PurpleHttpResponse *response);
  */
 const gchar * purple_http_response_get_data(PurpleHttpResponse *response);
 
-//TODO
+/**
+ * Gets all headers got with response.
+ *
+ * @param response The response.
+ * @return         GList of PurpleKeyValuePair, which keys are header field
+ *                 names (gchar*) and values are its contents (gchar*).
+ */
 const GList * purple_http_response_get_all_headers(PurpleHttpResponse *response);
 
-//TODO
+/**
+ * Gets all headers with specified name got with response.
+ *
+ * @param response The response.
+ * @param name     The name of header field.
+ * @return         GList of header field records contents (gchar*).
+ */
 const GList * purple_http_response_get_headers_by_name(
 	PurpleHttpResponse *response, const gchar *name);
 
-//TODO
+/**
+ * Gets one header contents with specified name got with response.
+ *
+ * To get all headers with the same name, use
+ * purple_http_response_get_headers_by_name instead.
+ *
+ * @param response The response.
+ * @param name     The name of header field.
+ * @return         Header field contents or NULL, if there is no such one.
+ */
 const gchar * purple_http_response_get_header(PurpleHttpResponse *response,
 	const gchar *name);
 
