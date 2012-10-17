@@ -729,8 +729,10 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 			gchar *buffer = g_string_free(hc->response_buffer, FALSE);
 			hc->response_buffer = NULL;
 			_purple_http_recv_body(hc, buffer, buffer_len);
+			len = 0;
 		}
-		return;
+		if (!hc->headers_got)
+			return;
 	}
 
 	if (len > 0) {
@@ -1339,6 +1341,24 @@ void purple_http_request_header_set(PurpleHttpRequest *request,
 	purple_http_headers_remove(request->headers, key);
 	if (value)
 		purple_http_headers_add(request->headers, key, value);
+}
+
+void purple_http_request_header_set_printf(PurpleHttpRequest *request,
+	const gchar *key, const gchar *format, ...)
+{
+	va_list args;
+	gchar *value;
+
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(key != NULL);
+	g_return_if_fail(format != NULL);
+
+	va_start(args, format);
+	value = g_strdup_vprintf(format, args);
+	va_end(args);
+
+	purple_http_request_header_set(request, key, value);
+	g_free(value);
 }
 
 void purple_http_request_header_add(PurpleHttpRequest *request,
