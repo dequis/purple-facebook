@@ -282,7 +282,7 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
  * @param reader    The reader callback.
  * @param user_data The user data to pass to the callback function.
  */
-//TODO
+/* TODO */
 void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
 	PurpleHttpContentReader reader, gpointer user_data);
 
@@ -293,7 +293,7 @@ void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
  * @param reader    The writer callback.
  * @param user_data The user data to pass to the callback function.
  */
-//TODO
+/* TODO */
 void purple_http_request_set_response_writer(PurpleHttpRequest *request,
 	PurpleHttpContentWriter writer, gpointer user_data);
 
@@ -334,9 +334,9 @@ int purple_http_request_get_max_redirects(PurpleHttpRequest *request);
 /**
  * NULL for disabling cookie support
  */
-//TODO
+/* TODO + get */
 void purple_http_request_set_cookie_jar(PurpleHttpRequest *request,
-	PurpleHTTPCookieJar *cookie_jar); // +get
+	PurpleHTTPCookieJar *cookie_jar);
 
 /**
  * Sets HTTP version to use.
