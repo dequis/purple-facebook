@@ -51,7 +51,7 @@ typedef struct _PurpleHttpResponse PurpleHttpResponse;
  * An collection of cookies, got from HTTP response or provided for HTTP
  * request.
  */
-typedef struct _PurpleHTTPCookieJar PurpleHTTPCookieJar;
+typedef struct _PurpleHttpCookieJar PurpleHttpCookieJar;
 
 /**
  * An callback called after performing (successfully or not) HTTP request.
@@ -167,6 +167,15 @@ PurpleHttpRequest * purple_http_conn_get_request(
 	PurpleHttpConnection *http_conn);
 
 /**
+ * Gets cookie jar used within connection.
+ *
+ * @param http_conn The HTTP connection.
+ * @return          The cookie jar.
+ */
+PurpleHttpCookieJar * purple_http_conn_get_cookie_jar(
+	PurpleHttpConnection *http_conn);
+
+/**
  * Gets PurpleConnection tied with specified HTTP connection.
  *
  * @param http_conn The HTTP connection.
@@ -183,20 +192,58 @@ PurpleConnection * purple_http_conn_get_purple_connection(
 /**************************************************************************/
 /*@{*/
 
-PurpleHTTPCookieJar * purple_http_cookie_jar_new(void);
+/**
+ * Creates new cookie jar,
+ *
+ * @return empty cookie jar.
+ */
+PurpleHttpCookieJar * purple_http_cookie_jar_new(void);
 
-void purple_http_cookie_jar_ref(PurpleHTTPCookieJar *cookie_jar);
+/**
+ * Increment the reference count.
+ *
+ * @param cookie_jar The cookie jar.
+ */
+void purple_http_cookie_jar_ref(PurpleHttpCookieJar *cookie_jar);
 
-void purple_http_cookie_jar_unref(PurpleHTTPCookieJar *cookie_jar);
+/**
+ * Decrement the reference count.
+ *
+ * If the reference count reaches zero, the cookie jar will be freed.
+ *
+ * @param cookie_jar The cookie jar.
+ * @return @a cookie_jar or @c NULL if the reference count reached zero.
+ */
+PurpleHttpCookieJar * purple_http_cookie_jar_unref(
+	PurpleHttpCookieJar *cookie_jar);
 
-void purple_http_cookie_jar_set(PurpleHTTPCookieJar *cookie_jar,
+/**
+ * Sets the cookie.
+ *
+ * @param cookie_jar The cookie jar.
+ * @param name       Cookie name.
+ * @param value      Cookie contents.
+ */
+void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name, const gchar *value);
 
-const gchar * purple_http_cookie_jar_get(PurpleHTTPCookieJar *cookie_jar,
+/**
+ * Gets the cookie.
+ *
+ * @param cookie_jar The cookie jar.
+ * @param name       Cookie name.
+ * @return           Cookie contents, or NULL, if cookie doesn't exists.
+ */
+const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name);
 
-void purple_http_cookie_jar_remove(PurpleHTTPCookieJar *cookie_jar,
-	const gchar *name);
+/**
+ * Checks, if the cookie jar contains any cookies.
+ *
+ * @param cookie_jar The cookie jar.
+ * @return           TRUE, if cookie jar contains any cookie, FALSE otherwise.
+ */
+gboolean purple_http_cookie_jar_is_empty(PurpleHttpCookieJar *cookie_jar);
 
 /*@}*/
 
@@ -332,11 +379,22 @@ void purple_http_request_set_max_redirects(PurpleHttpRequest *request,
 int purple_http_request_get_max_redirects(PurpleHttpRequest *request);
 
 /**
- * NULL for disabling cookie support
+ * Sets cookie jar used for the request.
+ *
+ * @param request    The request.
+ * @param cookie_jar The cookie jar.
  */
-/* TODO + get */
 void purple_http_request_set_cookie_jar(PurpleHttpRequest *request,
-	PurpleHTTPCookieJar *cookie_jar);
+	PurpleHttpCookieJar *cookie_jar);
+
+/**
+ * Gets cookie jar used for the request.
+ *
+ * @param request The request.
+ * @return        The cookie jar.
+ */
+PurpleHttpCookieJar * purple_http_request_get_cookie_jar(
+	PurpleHttpRequest *request);
 
 /**
  * Sets HTTP version to use.
