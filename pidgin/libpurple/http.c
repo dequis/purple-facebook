@@ -27,7 +27,9 @@
 #include "http.h"
 
 #include "internal.h"
+
 #include "debug.h"
+#include "ntlm.h"
 
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
@@ -367,10 +369,14 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 {
 	GString *h;
 	PurpleHttpURL *url;
-	PurpleProxyInfo *proxy;
 	const GList *hdr;
 	PurpleHttpRequest *req;
 	PurpleHttpHeaders *hdrs;
+	gchar *request_url, *tmp_url = NULL;
+
+	PurpleProxyInfo *proxy;
+	gboolean proxy_http = FALSE;
+	const gchar *proxy_username, *proxy_password;
 
 	g_return_if_fail(hc != NULL);
 
@@ -383,20 +389,70 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	proxy = purple_proxy_get_setup(hc->gc ?
 		purple_connection_get_account(hc->gc) : NULL);
 
+	proxy_http = (purple_proxy_info_get_type(proxy) == PURPLE_PROXY_HTTP ||
+		purple_proxy_info_get_type(proxy) == PURPLE_PROXY_USE_ENVVAR);
+
 	hc->request_header = h = g_string_new("");
 	hc->request_header_written = 0;
 
+	if (proxy_http)
+		request_url = tmp_url = purple_http_url_print(url);
+	else
+		request_url = url->path;
+
 	g_string_append_printf(h, "%s %s HTTP/%s\r\n",
 		req->method ? req->method : "GET",
-		url->path,
+		request_url,
 		req->http11 ? "1.1" : "1.0");
+
+	if (tmp_url)
+		g_free(tmp_url);
 
 	if (!purple_http_headers_get(hdrs, "host"))
 		g_string_append_printf(h, "Host: %s\r\n", url->host);
 	if (!purple_http_headers_get(hdrs, "connection"))
-		g_string_append_printf(h, "Connection: close\r\n");
+		g_string_append(h, "Connection: close\r\n");
 	if (!purple_http_headers_get(hdrs, "accept"))
-		g_string_append_printf(h, "Accept: */*\r\n");
+		g_string_append(h, "Accept: */*\r\n");
+
+	if (proxy_http)
+		g_string_append(h, "Proxy-Connection: close\r\n");
+
+	proxy_username = purple_proxy_info_get_username(proxy);
+	if (proxy_http && proxy_username != NULL && proxy_username[0] != '\0') {
+		char hostname[256];
+		gchar *proxy_auth, *ntlm_type1, *tmp;
+		int len;
+
+		if (gethostname(hostname, sizeof(hostname)) < 0 ||
+			hostname[0] == '\0') {
+			purple_debug_warning("http", "gethostname() failed "
+				"- is your hostname set?");
+			strcpy(hostname, "localhost");
+		}
+
+		proxy_password = purple_proxy_info_get_password(proxy);
+		if (proxy_password == NULL)
+			proxy_password = "";
+
+		tmp = g_strdup_printf("%s:%s", proxy_username, proxy_password);
+		len = strlen(tmp);
+		proxy_auth = purple_base64_encode((const guchar *)tmp, len);
+		memset(tmp, 0, len);
+		g_free(tmp);
+
+		ntlm_type1 = purple_ntlm_gen_type1(hostname, "");
+
+		g_string_append_printf(h, "Proxy-Authorization: Basic %s\r\n",
+			proxy_auth);
+		g_string_append_printf(h, "Proxy-Authorization: NTLM %s\r\n",
+			ntlm_type1);
+		g_string_append(h, "Proxy-Connection: Close\r\n");
+
+		memset(proxy_auth, 0, strlen(proxy_auth));
+		g_free(proxy_auth);
+		g_free(ntlm_type1);
+	}
 
 	hdr = purple_http_headers_get_all(hdrs);
 	while (hdr) {
@@ -405,13 +461,6 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 		g_string_append_printf(h, "%s: %s\r\n",
 			kvp->key, (gchar*)kvp->value);
-	}
-
-	if (purple_proxy_info_get_username(proxy) != NULL &&
-		(purple_proxy_info_get_type(proxy) == PURPLE_PROXY_USE_ENVVAR ||
-		purple_proxy_info_get_type(proxy) == PURPLE_PROXY_HTTP)) {
-		purple_debug_error("http",
-			"Proxy authorization is not yet supported\n");
 	}
 
 	g_string_append_printf(h, "\r\n");
@@ -470,7 +519,9 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 				return FALSE;
 			}
 			if (purple_debug_is_verbose())
-				purple_debug_misc("http", "Got main header\n");
+				purple_debug_misc("http",
+					"Got main header with code %d\n",
+					hc->response->code);
 		} else {
 			if (purple_debug_is_verbose() &&
 				purple_debug_is_unsafe())
@@ -703,6 +754,11 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 			purple_debug_misc("http", "Got response headers: %s\n",
 				hdrs);
 			g_free(hdrs);
+		}
+
+		if (hc->response->code == 407) {
+			_purple_http_error(hc, _("Invalid proxy credentials"));
+			return;
 		}
 
 		redirect = purple_http_headers_get(hc->response->headers,
