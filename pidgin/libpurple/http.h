@@ -262,6 +262,23 @@ void purple_http_request_set_response_writer(PurpleHttpRequest *request,
 	PurpleHttpContentWriter writer, gpointer user_data);
 
 /**
+ * Set maximum amount of time, that request is allowed to run.
+ *
+ * @param request The request.
+ * @param timeout Time (in seconds) after that timeout will be cancelled,
+ *                -1 for infinite time.
+ */
+void purple_http_request_set_timeout(PurpleHttpRequest *request, int timeout);
+
+/**
+ * Get maximum amount of time, that request is allowed to run.
+ *
+ * @param request The request.
+ * @return        Timeout currently set (-1 for infinite).
+ */
+int purple_http_request_get_timeout(PurpleHttpRequest *request);
+
+/**
  * Sets maximum amount of redirects.
  *
  * @param request       The request.

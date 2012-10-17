@@ -33,6 +33,7 @@
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
 
 #define PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS 20
+#define PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT 30
 
 typedef struct _PurpleHttpURL PurpleHttpURL;
 
@@ -56,6 +57,7 @@ struct _PurpleHttpRequest
 	gchar *url;
 	PurpleHttpHeaders *headers;
 
+	int timeout;
 	int max_redirects;
 	gboolean http11;
 	int max_length;
@@ -86,6 +88,8 @@ struct _PurpleHttpConnection
 	int chunk_length, chunk_got;
 
 	GList *link_global, *link_gc;
+
+	guint timeout_handle;
 };
 
 struct _PurpleHttpResponse
@@ -546,8 +550,13 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 		line_len = eol - line;
 
 		if (1 != sscanf(line, "%x", &hc->chunk_length)) {
-			purple_debug_warning("http",
-				"Chunk length not found\n");
+			if (purple_debug_is_unsafe())
+				purple_debug_warning("http",
+					"Chunk length not found in [%s]\n",
+					line);
+			else
+				purple_debug_warning("http",
+					"Chunk length not found\n");
 			_purple_http_error(hc, _("Error parsing HTTP"));
 			return FALSE;
 		}
@@ -915,6 +924,17 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 
 /*** Performing HTTP requests *************************************************/
 
+static gboolean purple_http_request_timeout(gpointer _hc)
+{
+	PurpleHttpConnection *hc = _hc;
+
+	purple_debug_warning("http", "Timeout reached for request %p\n", hc);
+
+	purple_http_conn_cancel(hc);
+
+	return FALSE;
+}
+
 PurpleHttpConnection * purple_http_get(PurpleConnection *gc, const gchar *url,
 	PurpleHttpCallback callback, gpointer user_data)
 {
@@ -957,7 +977,8 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 
 	_purple_http_reconnect(hc);
 
-	/* TODO: timeout */
+	hc->timeout_handle = purple_timeout_add_seconds(request->timeout,
+		purple_http_request_timeout, hc);
 
 	return hc;
 }
@@ -991,6 +1012,9 @@ static PurpleHttpConnection * purple_http_connection_new(
 
 static void purple_http_connection_free(PurpleHttpConnection *hc)
 {
+	if (hc->timeout_handle)
+		purple_timeout_remove(hc->timeout_handle);
+
 	purple_http_url_free(hc->url);
 	purple_http_request_unref(hc->request);
 	purple_http_response_free(hc->response);
@@ -1078,8 +1102,10 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 	request->url = g_strdup(url);
 	request->headers = purple_http_headers_new();
 
+	request->timeout = PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT;
 	request->max_redirects = PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS;
 	request->http11 = TRUE;
+	request->max_length = -1;
 
 	return request;
 }
@@ -1111,6 +1137,23 @@ PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request)
 
 	purple_http_request_free(request);
 	return NULL;
+}
+
+void purple_http_request_set_timeout(PurpleHttpRequest *request, int timeout)
+{
+	g_return_if_fail(request != NULL);
+
+	if (timeout < -1)
+		timeout = -1;
+
+	request->timeout = timeout;
+}
+
+int purple_http_request_get_timeout(PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, -1);
+
+	return request->timeout;
 }
 
 void purple_http_request_set_max_redirects(PurpleHttpRequest *request,
