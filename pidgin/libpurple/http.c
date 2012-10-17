@@ -55,6 +55,7 @@ struct _PurpleHttpRequest
 	int ref_count;
 
 	gchar *url;
+	gchar *method;
 	PurpleHttpHeaders *headers;
 
 	int timeout;
@@ -157,6 +158,8 @@ static void purple_http_headers_free(PurpleHttpHeaders *hdrs);
 static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 	const gchar *value);
 static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs);
+static const GList * purple_http_headers_get_all_by_name(
+	PurpleHttpHeaders *hdrs, const gchar *key);
 static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
 	const gchar *key);
 static gboolean purple_http_headers_get_int(PurpleHttpHeaders *hdrs,
@@ -249,8 +252,8 @@ static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs)
 	return hdrs->list;
 }
 
-static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
-	const gchar *key)
+static const GList * purple_http_headers_get_all_by_name(
+	PurpleHttpHeaders *hdrs, const gchar *key)
 {
 	GList *values;
 	gchar *key_low;
@@ -261,6 +264,15 @@ static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
 	key_low = g_ascii_strdown(key, -1);
 	values = g_hash_table_lookup(hdrs->by_name, key_low);
 	g_free(key_low);
+
+	return values;
+}
+
+static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
+	const gchar *key)
+{
+	const GList *values = purple_http_headers_get_all_by_name(hdrs, key);
+
 	if (!values)
 		return NULL;
 
@@ -357,30 +369,36 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	PurpleHttpURL *url;
 	PurpleProxyInfo *proxy;
 	const GList *hdr;
+	PurpleHttpRequest *req;
+	PurpleHttpHeaders *hdrs;
 
 	g_return_if_fail(hc != NULL);
 
 	if (hc->request_header != NULL)
 		return;
 
+	req = hc->request;
 	url = hc->url;
+	hdrs = req->headers;
 	proxy = purple_proxy_get_setup(hc->gc ?
 		purple_connection_get_account(hc->gc) : NULL);
 
 	hc->request_header = h = g_string_new("");
 	hc->request_header_written = 0;
 
-	g_string_append_printf(h, "GET %s HTTP/%s\r\n", url->path,
-		hc->request->http11 ? "1.1" : "1.0");
+	g_string_append_printf(h, "%s %s HTTP/%s\r\n",
+		req->method ? req->method : "GET",
+		url->path,
+		req->http11 ? "1.1" : "1.0");
 
-	if (!purple_http_headers_get(hc->request->headers, "host"))
+	if (!purple_http_headers_get(hdrs, "host"))
 		g_string_append_printf(h, "Host: %s\r\n", url->host);
-	if (!purple_http_headers_get(hc->request->headers, "connection"))
+	if (!purple_http_headers_get(hdrs, "connection"))
 		g_string_append_printf(h, "Connection: close\r\n");
-	if (!purple_http_headers_get(hc->request->headers, "accept"))
+	if (!purple_http_headers_get(hdrs, "accept"))
 		g_string_append_printf(h, "Accept: */*\r\n");
 
-	hdr = purple_http_headers_get_all(hc->request->headers);
+	hdr = purple_http_headers_get_all(hdrs);
 	while (hdr) {
 		PurpleKeyValuePair *kvp = hdr->data;
 		hdr = g_list_next(hdr);
@@ -1086,6 +1104,21 @@ gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn)
 	return (NULL != g_hash_table_lookup(purple_http_hc_by_ptr, http_conn));
 }
 
+PurpleHttpRequest * purple_http_conn_get_request(PurpleHttpConnection *http_conn)
+{
+	g_return_val_if_fail(http_conn != NULL, NULL);
+
+	return http_conn->request;
+}
+
+PurpleConnection * purple_http_conn_get_purple_connection(
+	PurpleHttpConnection *http_conn)
+{
+	g_return_val_if_fail(http_conn != NULL, NULL);
+
+	return http_conn->gc;
+}
+
 /*** Request API **************************************************************/
 
 static void purple_http_request_free(PurpleHttpRequest *request);
@@ -1137,6 +1170,37 @@ PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request)
 
 	purple_http_request_free(request);
 	return NULL;
+}
+
+void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url)
+{
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(url != NULL);
+
+	g_free(request->url);
+	request->url = g_strdup(url);
+}
+
+const gchar * purple_http_request_get_url(PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, NULL);
+
+	return request->url;
+}
+
+void purple_http_request_set_method(PurpleHttpRequest *request, const gchar *method)
+{
+	g_return_if_fail(request != NULL);
+
+	g_free(request->method);
+	request->method = g_strdup(method);
+}
+
+const gchar * purple_http_request_get_method(PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, NULL);
+
+	return request->method;
 }
 
 void purple_http_request_set_timeout(PurpleHttpRequest *request, int timeout)
@@ -1292,6 +1356,31 @@ const gchar * purple_http_response_get_data(PurpleHttpResponse *response)
 		return "";
 
 	return response->contents->str;
+}
+
+const GList * purple_http_response_get_all_headers(PurpleHttpResponse *response)
+{
+	g_return_val_if_fail(response != NULL, NULL);
+
+	return purple_http_headers_get_all(response->headers);
+}
+
+const GList * purple_http_response_get_headers_by_name(
+	PurpleHttpResponse *response, const gchar *name)
+{
+	g_return_val_if_fail(response != NULL, NULL);
+	g_return_val_if_fail(name != NULL, NULL);
+
+	return purple_http_headers_get_all_by_name(response->headers, name);
+}
+
+const gchar * purple_http_response_get_header(PurpleHttpResponse *response,
+	const gchar *name)
+{
+	g_return_val_if_fail(response != NULL, NULL);
+	g_return_val_if_fail(name != NULL, NULL);
+
+	return purple_http_headers_get(response->headers, name);
 }
 
 /*** URL functions ************************************************************/
