@@ -391,6 +391,9 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 	proxy_http = (purple_proxy_info_get_type(proxy) == PURPLE_PROXY_HTTP ||
 		purple_proxy_info_get_type(proxy) == PURPLE_PROXY_USE_ENVVAR);
+	/* this is HTTP proxy, but used with tunelling with CONNECT */
+	if (proxy_http && url->port != 80)
+		proxy_http = FALSE;
 
 	hc->request_header = h = g_string_new("");
 	hc->request_header_written = 0;
