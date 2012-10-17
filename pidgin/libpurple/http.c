@@ -908,8 +908,10 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 			url->host, url->port,
 			_purple_http_connected_ssl,
 			_purple_http_connected_ssl_error, hc);
-//		purple_ssl_set_compatibility_level(hc->socket.ssl_connection,
-//			PURPLE_SSL_COMPATIBILITY_SECURE);
+/* TODO
+		purple_ssl_set_compatibility_level(hc->socket.ssl_connection,
+			PURPLE_SSL_COMPATIBILITY_SECURE);
+*/
 	} else {
 		hc->socket.raw_connection = purple_proxy_connect(hc->gc, account,
 			url->host, url->port,
