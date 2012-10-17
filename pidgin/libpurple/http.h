@@ -384,6 +384,9 @@ int purple_http_request_get_max_len(PurpleHttpRequest *request);
 void purple_http_request_header_set(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
 
+void purple_http_request_header_set_printf(PurpleHttpRequest *request,
+	const gchar *key, const gchar *format, ...) G_GNUC_PRINTF(3, 4);
+
 /**
  * Adds (without replacing, if exists) an HTTP request header.
  *
