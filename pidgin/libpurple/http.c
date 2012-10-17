@@ -59,6 +59,7 @@ struct _PurpleHttpRequest
 	gchar *url;
 	gchar *method;
 	PurpleHttpHeaders *headers;
+	PurpleHttpCookieJar *cookie_jar;
 
 	int timeout;
 	int max_redirects;
@@ -121,12 +122,23 @@ struct _PurpleHttpHeaders
 	GHashTable *by_name;
 };
 
+struct _PurpleHttpCookieJar
+{
+	int ref_count;
+
+	GHashTable *tab;
+};
+
 static PurpleHttpConnection * purple_http_connection_new(
 	PurpleHttpRequest *request, PurpleConnection *gc);
 static void purple_http_connection_terminate(PurpleHttpConnection *hc);
 
 static PurpleHttpResponse * purple_http_response_new(void);
 static void purple_http_response_free(PurpleHttpResponse *response);
+
+static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
+	GList *values);
+gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar);
 
 static PurpleHttpURL * purple_http_url_parse(const char *url);
 static void purple_http_url_free(PurpleHttpURL *parsed_url);
@@ -160,7 +172,7 @@ static void purple_http_headers_free(PurpleHttpHeaders *hdrs);
 static void purple_http_headers_add(PurpleHttpHeaders *hdrs, const gchar *key,
 	const gchar *value);
 static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs);
-static const GList * purple_http_headers_get_all_by_name(
+static GList * purple_http_headers_get_all_by_name(
 	PurpleHttpHeaders *hdrs, const gchar *key);
 static const gchar * purple_http_headers_get(PurpleHttpHeaders *hdrs,
 	const gchar *key);
@@ -254,7 +266,8 @@ static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs)
 	return hdrs->list;
 }
 
-static const GList * purple_http_headers_get_all_by_name(
+/* return const */
+static GList * purple_http_headers_get_all_by_name(
 	PurpleHttpHeaders *hdrs, const gchar *key)
 {
 	GList *values;
@@ -465,6 +478,8 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		g_string_append_printf(h, "%s: %s\r\n",
 			kvp->key, (gchar*)kvp->value);
 	}
+
+	/* TODO: sending cookies */
 
 	g_string_append_printf(h, "\r\n");
 
@@ -759,6 +774,19 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 			purple_debug_misc("http", "Got response headers: %s\n",
 				hdrs);
 			g_free(hdrs);
+		}
+
+		purple_http_cookie_jar_parse(hc->request->cookie_jar,
+			purple_http_headers_get_all_by_name(
+				hc->response->headers, "Set-Cookie"));
+
+		if (purple_debug_is_unsafe() && purple_debug_is_verbose() &&
+			!purple_http_cookie_jar_is_empty(
+				hc->request->cookie_jar)) {
+			gchar *cookies = purple_http_cookie_jar_dump(
+				hc->request->cookie_jar);
+			purple_debug_misc("http", "Cookies: %s\n", cookies);
+			g_free(cookies);
 		}
 
 		if (hc->response->code == 407) {
@@ -1174,12 +1202,140 @@ PurpleHttpRequest * purple_http_conn_get_request(PurpleHttpConnection *http_conn
 	return http_conn->request;
 }
 
+PurpleHttpCookieJar * purple_http_conn_get_cookie_jar(
+	PurpleHttpConnection *http_conn)
+{
+	return purple_http_request_get_cookie_jar(purple_http_conn_get_request(
+		http_conn));
+}
+
 PurpleConnection * purple_http_conn_get_purple_connection(
 	PurpleHttpConnection *http_conn)
 {
 	g_return_val_if_fail(http_conn != NULL, NULL);
 
 	return http_conn->gc;
+}
+
+/*** Cookie jar API ***********************************************************/
+
+void purple_http_cookie_jar_free(PurpleHttpCookieJar *cookie_jar);
+
+PurpleHttpCookieJar * purple_http_cookie_jar_new(void)
+{
+	PurpleHttpCookieJar *cjar = g_new0(PurpleHttpCookieJar, 1);
+
+	cjar->ref_count = 1;
+	cjar->tab = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+		g_free);
+
+	return cjar;
+}
+
+void purple_http_cookie_jar_free(PurpleHttpCookieJar *cookie_jar)
+{
+	g_hash_table_destroy(cookie_jar->tab);
+	g_free(cookie_jar);
+}
+
+void purple_http_cookie_jar_ref(PurpleHttpCookieJar *cookie_jar)
+{
+	g_return_if_fail(cookie_jar != NULL);
+
+	cookie_jar->ref_count++;
+}
+
+PurpleHttpCookieJar * purple_http_cookie_jar_unref(
+	PurpleHttpCookieJar *cookie_jar)
+{
+	if (cookie_jar == NULL)
+		return NULL;
+
+	g_return_val_if_fail(cookie_jar->ref_count > 0, NULL);
+
+	cookie_jar->ref_count--;
+	if (cookie_jar->ref_count > 0)
+		return cookie_jar;
+
+	purple_http_cookie_jar_free(cookie_jar);
+	return NULL;
+}
+
+static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
+	GList *values)
+{
+	values = g_list_first(values);
+	while (values) {
+		const gchar *cookie = values->data;
+		const gchar *eqsign, *semicolon;
+		gchar *name, *value;
+		values = g_list_next(values);
+
+		eqsign = strchr(cookie, '=');
+		semicolon = strchr(cookie, ';');
+
+		if (eqsign == NULL || eqsign == cookie ||
+			(semicolon != NULL && semicolon < eqsign)) {
+			if (purple_debug_is_unsafe())
+				purple_debug_warning("http",
+					"Invalid cookie: [%s]\n", cookie);
+			else
+				purple_debug_warning("http", "Invalid cookie.");
+		}
+
+		name = g_strndup(cookie, eqsign - cookie);
+		eqsign++;
+		if (semicolon != NULL)
+			value = g_strndup(eqsign, semicolon - eqsign);
+		else
+			value = g_strdup(eqsign);
+
+		/* TODO: parse removing a cookie */
+		purple_http_cookie_jar_set(cookie_jar, name, value);
+
+		g_free(name);
+		g_free(value);
+	}
+}
+
+void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
+	const gchar *name, const gchar *value)
+{
+	g_return_if_fail(cookie_jar != NULL);
+	g_return_if_fail(name != NULL);
+
+	if (value != NULL)
+		g_hash_table_insert(cookie_jar->tab, g_strdup(name), g_strdup(value));
+	else
+		g_hash_table_remove(cookie_jar->tab, name);
+}
+
+const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
+	const gchar *name)
+{
+	return g_hash_table_lookup(cookie_jar->tab, name);
+}
+
+gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar)
+{
+	GHashTableIter it;
+	gchar *key, *value;
+	GString *str = g_string_new("");
+
+	g_hash_table_iter_init(&it, cjar->tab);
+	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&value))
+		g_string_append_printf(str, "%s: %s\n", key, value);
+
+	if (str->len > 0)
+		g_string_truncate(str, str->len - 1);
+	return g_string_free(str, FALSE);
+}
+
+gboolean purple_http_cookie_jar_is_empty(PurpleHttpCookieJar *cookie_jar)
+{
+	g_return_val_if_fail(cookie_jar != NULL, TRUE);
+
+	return g_hash_table_size(cookie_jar->tab) == 0;
 }
 
 /*** Request API **************************************************************/
@@ -1197,6 +1353,7 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 	request->ref_count = 1;
 	request->url = g_strdup(url);
 	request->headers = purple_http_headers_new();
+	request->cookie_jar = purple_http_cookie_jar_new();
 
 	request->timeout = PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT;
 	request->max_redirects = PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS;
@@ -1209,6 +1366,7 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 static void purple_http_request_free(PurpleHttpRequest *request)
 {
 	purple_http_headers_free(request->headers);
+	purple_http_cookie_jar_unref(request->cookie_jar);
 	g_free(request->url);
 	g_free(request);
 }
@@ -1299,6 +1457,25 @@ int purple_http_request_get_max_redirects(PurpleHttpRequest *request)
 	g_return_val_if_fail(request != NULL, -1);
 
 	return request->max_redirects;
+}
+
+void purple_http_request_set_cookie_jar(PurpleHttpRequest *request,
+	PurpleHttpCookieJar *cookie_jar)
+{
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(cookie_jar != NULL);
+
+	purple_http_cookie_jar_ref(cookie_jar);
+	purple_http_cookie_jar_unref(request->cookie_jar);
+	request->cookie_jar = cookie_jar;
+}
+
+PurpleHttpCookieJar * purple_http_request_get_cookie_jar(
+	PurpleHttpRequest *request)
+{
+	g_return_val_if_fail(request != NULL, NULL);
+
+	return request->cookie_jar;
 }
 
 void purple_http_request_set_http11(PurpleHttpRequest *request, gboolean http11)
