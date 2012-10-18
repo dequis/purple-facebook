@@ -125,6 +125,12 @@ struct _PurpleHttpHeaders
 	GHashTable *by_name;
 };
 
+typedef struct
+{
+	time_t expires;
+	gchar *value;
+} PurpleHttpCookie;
+
 struct _PurpleHttpCookieJar
 {
 	int ref_count;
@@ -625,7 +631,7 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 			
 			_purple_http_recv_body_data(hc,
 				hc->response_buffer->str, got_now);
-			
+
 			g_string_erase(hc->response_buffer, 0, got_now);
 			hc->in_chunk = (hc->chunk_got < hc->chunk_length);
 
@@ -638,6 +644,11 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 
 		line = hc->response_buffer->str;
 		eol = strstr(line, "\r\n");
+		if (eol == line) {
+			g_string_erase(hc->response_buffer, 0, 2);
+			line = hc->response_buffer->str;
+			eol = strstr(line, "\r\n");
+		}
 		if (eol == NULL) {
 			/* waiting for more data (unlikely, but possible) */
 			if (hc->response_buffer->len > 20) {
@@ -744,6 +755,7 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 	if (!hc->headers_got && len > 0) {
 		if (!_purple_http_recv_headers(hc, buf, len))
 			return;
+		len = 0;
 		if (hc->headers_got) {
 			if (!purple_http_headers_get_int(hc->response->headers,
 				"Content-Length", &hc->length_expected))
@@ -758,7 +770,6 @@ static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
 			gchar *buffer = g_string_free(hc->response_buffer, FALSE);
 			hc->response_buffer = NULL;
 			_purple_http_recv_body(hc, buffer, buffer_len);
-			len = 0;
 		}
 		if (!hc->headers_got)
 			return;
@@ -1255,6 +1266,28 @@ PurpleConnection * purple_http_conn_get_purple_connection(
 
 /*** Cookie jar API ***********************************************************/
 
+static PurpleHttpCookie * purple_http_cookie_new(const gchar *value);
+void purple_http_cookie_free(PurpleHttpCookie *cookie);
+
+static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
+	const gchar *name, const gchar *value, time_t expires);
+
+static PurpleHttpCookie * purple_http_cookie_new(const gchar *value)
+{
+	PurpleHttpCookie *cookie = g_new0(PurpleHttpCookie, 1);
+
+	cookie->value = g_strdup(value);
+	cookie->expires = -1;
+
+	return cookie;
+}
+
+void purple_http_cookie_free(PurpleHttpCookie *cookie)
+{
+	g_free(cookie->value);
+	g_free(cookie);
+}
+
 void purple_http_cookie_jar_free(PurpleHttpCookieJar *cookie_jar);
 
 PurpleHttpCookieJar * purple_http_cookie_jar_new(void)
@@ -1263,7 +1296,7 @@ PurpleHttpCookieJar * purple_http_cookie_jar_new(void)
 
 	cjar->ref_count = 1;
 	cjar->tab = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-		g_free);
+		(GDestroyNotify)purple_http_cookie_free);
 
 	return cjar;
 }
@@ -1326,7 +1359,13 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 		else
 			value = g_strdup(eqsign);
 
+		if (semicolon != NULL) {
 		/* TODO: parse removing a cookie */
+//			GRegex * re_expires = g_regex_new(""
+//			G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
+//		G_REGEX_MATCH_NOTEMPTY, NULL);
+		}
+
 		purple_http_cookie_jar_set(cookie_jar, name, value);
 
 		g_free(name);
@@ -1337,7 +1376,8 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 {
 	GHashTableIter it;
-	gchar *key, *value;
+	gchar *key;
+	PurpleHttpCookie *cookie;
 	GString *str;
 
 	g_return_val_if_fail(cookie_jar != NULL, NULL);
@@ -1345,8 +1385,8 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 	str = g_string_new("");
 
 	g_hash_table_iter_init(&it, cookie_jar->tab);
-	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&value))
-		g_string_append_printf(str, "%s=%s; ", key, value);
+	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&cookie))
+		g_string_append_printf(str, "%s=%s; ", key, cookie->value);
 
 	if (str->len > 0)
 		g_string_truncate(str, str->len - 2);
@@ -1356,30 +1396,52 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name, const gchar *value)
 {
+	purple_http_cookie_jar_set_ext(cookie_jar, name, value, -1);
+}
+
+static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
+	const gchar *name, const gchar *value, time_t expires)
+{
 	g_return_if_fail(cookie_jar != NULL);
 	g_return_if_fail(name != NULL);
 
-	if (value != NULL)
-		g_hash_table_insert(cookie_jar->tab, g_strdup(name), g_strdup(value));
-	else
+	if (expires != -1 && time(NULL) > expires)
+		value = NULL;
+
+	if (value != NULL) {
+		PurpleHttpCookie *cookie = purple_http_cookie_new(value);
+		cookie->expires = expires;
+		g_hash_table_insert(cookie_jar->tab, g_strdup(name), cookie);
+	} else
 		g_hash_table_remove(cookie_jar->tab, name);
 }
 
 const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name)
 {
-	return g_hash_table_lookup(cookie_jar->tab, name);
+	PurpleHttpCookie *cookie;
+
+	g_return_val_if_fail(cookie_jar != NULL, NULL);
+	g_return_val_if_fail(name != NULL, NULL);
+
+	cookie = g_hash_table_lookup(cookie_jar->tab, name);
+	if (!cookie)
+		return NULL;
+
+	return cookie->value;
 }
 
 gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar)
 {
 	GHashTableIter it;
-	gchar *key, *value;
+	gchar *key;
+	PurpleHttpCookie *cookie;
 	GString *str = g_string_new("");
 
 	g_hash_table_iter_init(&it, cjar->tab);
-	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&value))
-		g_string_append_printf(str, "%s: %s\n", key, value);
+	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&cookie))
+		g_string_append_printf(str, "%s: %s (expires: %lld)\n", key,
+			cookie->value, (long long int)cookie->expires);
 
 	if (str->len > 0)
 		g_string_truncate(str, str->len - 1);
