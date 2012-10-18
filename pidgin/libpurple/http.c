@@ -141,6 +141,7 @@ static void purple_http_response_free(PurpleHttpResponse *response);
 
 static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 	GList *values);
+static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar);
 gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar);
 
 static PurpleHttpURL * purple_http_url_parse(const char *url);
@@ -488,7 +489,11 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 			kvp->key, (gchar*)kvp->value);
 	}
 
-	/* TODO: sending cookies */
+	if (!purple_http_cookie_jar_is_empty(req->cookie_jar)) {
+		gchar * cookies = purple_http_cookie_jar_gen(req->cookie_jar);
+		g_string_append_printf(h, "Cookie: %s\r\n", cookies);
+		g_free(cookies);
+	}
 
 	g_string_append_printf(h, "\r\n");
 
@@ -1329,6 +1334,25 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 	}
 }
 
+static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
+{
+	GHashTableIter it;
+	gchar *key, *value;
+	GString *str;
+
+	g_return_val_if_fail(cookie_jar != NULL, NULL);
+
+	str = g_string_new("");
+
+	g_hash_table_iter_init(&it, cookie_jar->tab);
+	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&value))
+		g_string_append_printf(str, "%s=%s; ", key, value);
+
+	if (str->len > 0)
+		g_string_truncate(str, str->len - 2);
+	return g_string_free(str, FALSE);
+}
+
 void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 	const gchar *name, const gchar *value)
 {
@@ -1626,7 +1650,7 @@ gboolean purple_http_response_is_successfull(PurpleHttpResponse *response)
 	if (code <= 0)
 		return FALSE;
 
-	if (code == 200)
+	if (code / 100 == 2)
 		return TRUE;
 
 	return FALSE;
