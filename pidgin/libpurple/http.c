@@ -61,6 +61,9 @@ struct _PurpleHttpRequest
 	PurpleHttpHeaders *headers;
 	PurpleHttpCookieJar *cookie_jar;
 
+	gchar *contents;
+	int contents_length;
+
 	int timeout;
 	int max_redirects;
 	gboolean http11;
@@ -79,7 +82,7 @@ struct _PurpleHttpConnection
 
 	PurpleHttpSocket socket;
 	GString *request_header;
-	int request_header_written;
+	int request_header_written, request_contents_written;
 	gboolean main_header_got, headers_got;
 	GString *response_buffer;
 
@@ -410,6 +413,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 	hc->request_header = h = g_string_new("");
 	hc->request_header_written = 0;
+	hc->request_contents_written = 0;
 
 	if (proxy_http)
 		request_url = tmp_url = purple_http_url_print(url);
@@ -430,6 +434,11 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		g_string_append(h, "Connection: close\r\n");
 	if (!purple_http_headers_get(hdrs, "accept"))
 		g_string_append(h, "Accept: */*\r\n");
+
+	if (req->contents_length > 0 && !purple_http_headers_get(hdrs,
+		"content-length"))
+		g_string_append_printf(h, "Content-Length: %u\r\n",
+			req->contents_length);
 
 	if (proxy_http)
 		g_string_append(h, "Proxy-Connection: close\r\n");
@@ -838,13 +847,29 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 	PurpleHttpSocket *hs = &hc->socket;
 	int written, write_len;
 	const gchar *write_from;
+	gboolean writing_headers;
 
 	_purple_http_gen_headers(hc);
 
-	write_from = hc->request_header->str + hc->request_header_written;
-	write_len = hc->request_header->len - hc->request_header_written;
+	writing_headers =
+		(hc->request_header_written < hc->request_header->len);
+	if (writing_headers) {
+		write_from = hc->request_header->str +
+			hc->request_header_written;
+		write_len = hc->request_header->len -
+			hc->request_header_written;
+	} else {
+		/* TODO: write_from - other write methods */
+		write_from = hc->request->contents +
+			hc->request_contents_written;
+		write_len = hc->request->contents_length -
+			hc->request_contents_written;
+	}
 
-	if (hs->is_ssl)
+	if (write_len == 0) {
+		purple_debug_warning("http", "Nothing to write\n");
+		written = 0;
+	} else if (hs->is_ssl)
 		written = purple_ssl_write(hs->ssl_connection,
 			write_from, write_len);
 	else
@@ -859,11 +884,17 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 		return;
 	}
 
-	hc->request_header_written += written;
-	if (hc->request_header_written < hc->request_header->len)
-		return;
-
-	/* TODO: write contents */
+	if (writing_headers) {
+		hc->request_header_written += written;
+		if (hc->request_header_written < hc->request_header->len)
+			return;
+		if (hc->request->contents_length > 0)
+			return;
+	} else {
+		hc->request_contents_written += written;
+		if (hc->request_contents_written < hc->request->contents_length)
+			return;
+	}
 
 	/* request is completely written, let's read the response */
 	purple_input_remove(hs->inpa);
@@ -1422,6 +1453,25 @@ const gchar * purple_http_request_get_method(PurpleHttpRequest *request)
 	g_return_val_if_fail(request != NULL, NULL);
 
 	return request->method;
+}
+
+void purple_http_request_set_contents(PurpleHttpRequest *request,
+	const gchar *contents, int length)
+{
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(length >= -1);
+
+	g_free(request->contents);
+	if (contents == NULL || length == 0) {
+		request->contents = NULL;
+		request->contents_length = 0;
+		return;
+	}
+
+	if (length == -1)
+		length = strlen(contents);
+	request->contents = g_memdup(contents, length);
+	request->contents_length = length;
 }
 
 void purple_http_request_set_timeout(PurpleHttpRequest *request, int timeout)
