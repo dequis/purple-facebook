@@ -156,7 +156,8 @@ static void purple_http_url_relative(PurpleHttpURL *base_url,
 	PurpleHttpURL *relative_url);
 static gchar * purple_http_url_print(PurpleHttpURL *parsed_url);
 
-static GRegex *purple_http_re_url, *purple_http_re_url_host;
+static GRegex *purple_http_re_url, *purple_http_re_url_host,
+	*purple_http_re_rfc1123;
 
 /**
  * Values: pointers to running PurpleHttpConnection.
@@ -174,6 +175,64 @@ static GHashTable *purple_http_hc_by_gc;
  * Values: pointers to links in purple_http_hc_list.
  */
 static GHashTable *purple_http_hc_by_ptr;
+
+/*** Helper functions *********************************************************/
+
+static time_t purple_http_rfc1123_to_time(const gchar *str);
+
+static time_t purple_http_rfc1123_to_time(const gchar *str)
+{
+	static const gchar *months[13] = {"jan", "feb", "mar", "apr", "may", "jun",
+		"jul", "aug", "sep", "oct", "nov", "dec", NULL};
+	GMatchInfo *match_info;
+	gchar *d_date, *d_month, *d_year, *d_time;
+	int month;
+	gchar *iso_date;
+	time_t t;
+
+	g_return_val_if_fail(str != NULL, 0);
+
+	g_regex_match(purple_http_re_rfc1123, str, 0, &match_info);
+	if (!g_match_info_matches(match_info)) {
+		g_match_info_free(match_info);
+		return 0;
+	}
+	g_match_info_free(match_info);
+
+	d_date = g_match_info_fetch(match_info, 1);
+	d_month = g_match_info_fetch(match_info, 2);
+	d_year = g_match_info_fetch(match_info, 3);
+	d_time = g_match_info_fetch(match_info, 4);
+
+	month = 0;
+	while (months[month] != NULL)
+	{
+		if (0 == g_ascii_strcasecmp(d_month, months[month]))
+			break;
+		month++;
+	}
+	month++;
+
+	iso_date = g_strdup_printf("%s-%02d-%sT%s+00:00", 
+		d_year, month, d_date, d_time);
+
+	g_free(d_date);
+	g_free(d_month);
+	g_free(d_year);
+	g_free(d_time);
+
+	if (month > 12) {
+		purple_debug_warning("http", "Invalid month: %s\n", d_month);
+		g_free(iso_date);
+		return 0;
+	}
+
+	t = purple_str_to_time(iso_date, TRUE, NULL, NULL, NULL);
+
+	g_free(iso_date);
+
+	return t;
+}
 
 /*** Headers collection *******************************************************/
 
@@ -1338,6 +1397,7 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 		const gchar *cookie = values->data;
 		const gchar *eqsign, *semicolon;
 		gchar *name, *value;
+		time_t expires = -1;
 		values = g_list_next(values);
 
 		eqsign = strchr(cookie, '=');
@@ -1360,13 +1420,26 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 			value = g_strdup(eqsign);
 
 		if (semicolon != NULL) {
-		/* TODO: parse removing a cookie */
-//			GRegex * re_expires = g_regex_new(""
-//			G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
-//		G_REGEX_MATCH_NOTEMPTY, NULL);
+			GMatchInfo *match_info;
+			GRegex *re_expires = g_regex_new(
+				"expires=([a-z0-9, :]+)",
+				G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
+				G_REGEX_MATCH_NOTEMPTY, NULL);
+
+			g_regex_match(re_expires, semicolon, 0, &match_info);
+			if (g_match_info_matches(match_info)) {
+				gchar *expire_date =
+					g_match_info_fetch(match_info, 1);
+				expires = purple_http_rfc1123_to_time(
+					expire_date);
+				g_free(expire_date);
+			}
+			g_match_info_free(match_info);
+
+			g_regex_unref(re_expires);
 		}
 
-		purple_http_cookie_jar_set(cookie_jar, name, value);
+		purple_http_cookie_jar_set_ext(cookie_jar, name, value, expires);
 
 		g_free(name);
 		g_free(value);
@@ -1379,14 +1452,19 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 	gchar *key;
 	PurpleHttpCookie *cookie;
 	GString *str;
+	time_t now = time(NULL);
 
 	g_return_val_if_fail(cookie_jar != NULL, NULL);
 
 	str = g_string_new("");
 
 	g_hash_table_iter_init(&it, cookie_jar->tab);
-	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&cookie))
+	while (g_hash_table_iter_next(&it, (gpointer*)&key,
+		(gpointer*)&cookie)) {
+		if (cookie->expires != -1 && cookie->expires <= now)
+			continue;
 		g_string_append_printf(str, "%s=%s; ", key, cookie->value);
+	}
 
 	if (str->len > 0)
 		g_string_truncate(str, str->len - 2);
@@ -1405,7 +1483,7 @@ static void purple_http_cookie_jar_set_ext(PurpleHttpCookieJar *cookie_jar,
 	g_return_if_fail(cookie_jar != NULL);
 	g_return_if_fail(name != NULL);
 
-	if (expires != -1 && time(NULL) > expires)
+	if (expires != -1 && time(NULL) >= expires)
 		value = NULL;
 
 	if (value != NULL) {
@@ -2026,6 +2104,16 @@ void purple_http_init(void)
 		"$", G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
 		G_REGEX_MATCH_NOTEMPTY, NULL);
 
+	purple_http_re_rfc1123 = g_regex_new(
+		"^[a-z]+, " /* weekday */
+		"([0-9]+) " /* date */
+		"([a-z]+) " /* month */
+		"([0-9]+) " /* year */
+		"([0-9]+:[0-9]+:[0-9]+) " /* time */
+		"(?:GMT|UTC)$",
+		G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
+		G_REGEX_MATCH_NOTEMPTY, NULL);
+
 	purple_http_hc_list = NULL;
 	purple_http_hc_by_ptr = g_hash_table_new(g_direct_hash, g_direct_equal);
 	purple_http_hc_by_gc = g_hash_table_new_full(g_direct_hash,
@@ -2044,6 +2132,8 @@ void purple_http_uninit(void)
 	purple_http_re_url = NULL;
 	g_regex_unref(purple_http_re_url_host);
 	purple_http_re_url_host = NULL;
+	g_regex_unref(purple_http_re_rfc1123);
+	purple_http_re_rfc1123 = NULL;
 
 	g_list_foreach(purple_http_hc_list, purple_http_foreach_conn_cancel,
 		NULL);
