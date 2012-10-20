@@ -138,6 +138,8 @@ struct _PurpleHttpCookieJar
 	GHashTable *tab;
 };
 
+static time_t purple_http_rfc1123_to_time(const gchar *str);
+
 static PurpleHttpConnection * purple_http_connection_new(
 	PurpleHttpRequest *request, PurpleConnection *gc);
 static void purple_http_connection_terminate(PurpleHttpConnection *hc);
@@ -177,8 +179,6 @@ static GHashTable *purple_http_hc_by_gc;
 static GHashTable *purple_http_hc_by_ptr;
 
 /*** Helper functions *********************************************************/
-
-static time_t purple_http_rfc1123_to_time(const gchar *str);
 
 static time_t purple_http_rfc1123_to_time(const gchar *str)
 {
