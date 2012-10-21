@@ -1274,6 +1274,9 @@ static void purple_http_connection_terminate(PurpleHttpConnection *hc)
 
 void purple_http_conn_cancel(PurpleHttpConnection *http_conn)
 {
+	if (http_conn == NULL)
+		return;
+
 	http_conn->response->code = 0;
 	_purple_http_disconnect(http_conn);
 	purple_http_connection_terminate(http_conn);
