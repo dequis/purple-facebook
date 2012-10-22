@@ -33,6 +33,7 @@
 
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
+#define PURPLE_HTTP_MAX_READ_BUFFER_LEN 10240
 
 #define PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS 20
 #define PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT 30
@@ -63,6 +64,8 @@ struct _PurpleHttpRequest
 
 	gchar *contents;
 	int contents_length;
+	PurpleHttpContentReader contents_reader;
+	gpointer contents_reader_data;
 
 	int timeout;
 	int max_redirects;
@@ -85,6 +88,9 @@ struct _PurpleHttpConnection
 	int request_header_written, request_contents_written;
 	gboolean main_header_got, headers_got;
 	GString *response_buffer;
+
+	GString *contents_reader_buffer;
+	gboolean contents_reader_requested;
 
 	int redirects_count;
 	int data_length_got;
@@ -916,6 +922,33 @@ static void _purple_http_recv_ssl(gpointer _hc,
 	_purple_http_recv(_hc, -1, cond);
 }
 
+static void _purple_http_send_got_data(PurpleHttpConnection *hc,
+	gboolean success, gboolean eof, size_t stored)
+{
+	int estimated_length;
+
+	g_return_if_fail(hc != NULL);
+
+	if (!success) {
+		_purple_http_error(hc, _("Error requesting data to write"));
+		return;
+	}
+
+	hc->contents_reader_requested = FALSE;
+	g_string_set_size(hc->contents_reader_buffer, stored);
+	if (!eof)
+		return;
+
+	estimated_length = hc->request_contents_written + stored;
+
+	if (hc->request->contents_length != -1 &&
+		hc->request->contents_length != estimated_length) {
+		purple_debug_warning("http",
+			"Invalid amount of data has been written\n");
+	}
+	hc->request->contents_length = estimated_length;
+}
+
 static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 {
 	PurpleHttpConnection *hc = _hc;
@@ -923,6 +956,11 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 	int written, write_len;
 	const gchar *write_from;
 	gboolean writing_headers;
+
+	/* Waiting for data. This could be written more efficiently, by removing
+	 * (and later, adding) hs->inpa. */
+	if (hc->contents_reader_requested)
+		return;
 
 	_purple_http_gen_headers(hc);
 
@@ -933,8 +971,26 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 			hc->request_header_written;
 		write_len = hc->request_header->len -
 			hc->request_header_written;
+	} else if (hc->request->contents_reader) {
+		if (hc->contents_reader_requested)
+			return; /* waiting for data */
+		if (!hc->contents_reader_buffer)
+			hc->contents_reader_buffer = g_string_new("");
+		if (hc->contents_reader_buffer->len == 0) {
+			hc->contents_reader_requested = TRUE;
+			g_string_set_size(hc->contents_reader_buffer,
+				PURPLE_HTTP_MAX_READ_BUFFER_LEN);
+			hc->request->contents_reader(hc,
+				hc->contents_reader_buffer->str,
+				hc->request_contents_written,
+				PURPLE_HTTP_MAX_READ_BUFFER_LEN,
+				hc->request->contents_reader_data,
+				_purple_http_send_got_data);
+			return;
+		}
+		write_from = hc->contents_reader_buffer->str;
+		write_len = hc->contents_reader_buffer->len;
 	} else {
-		/* TODO: write_from - other write methods */
 		write_from = hc->request->contents +
 			hc->request_contents_written;
 		write_len = hc->request->contents_length -
@@ -967,6 +1023,8 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 			return;
 	} else {
 		hc->request_contents_written += written;
+		if (hc->contents_reader_buffer)
+			g_string_erase(hc->contents_reader_buffer, 0, written);
 		if (hc->request_contents_written < hc->request->contents_length)
 			return;
 	}
@@ -1233,6 +1291,9 @@ static void purple_http_connection_free(PurpleHttpConnection *hc)
 	purple_http_url_free(hc->url);
 	purple_http_request_unref(hc->request);
 	purple_http_response_free(hc->response);
+
+	if (hc->contents_reader_buffer)
+		g_string_free(hc->contents_reader_buffer, TRUE);
 
 	if (hc->request_header)
 		g_string_free(hc->request_header, TRUE);
@@ -1628,6 +1689,9 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
 	g_return_if_fail(request != NULL);
 	g_return_if_fail(length >= -1);
 
+	request->contents_reader = NULL;
+	request->contents_reader_data = NULL;
+
 	g_free(request->contents);
 	if (contents == NULL || length == 0) {
 		request->contents = NULL;
@@ -1639,6 +1703,20 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
 		length = strlen(contents);
 	request->contents = g_memdup(contents, length);
 	request->contents_length = length;
+}
+
+void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
+	PurpleHttpContentReader reader, int contents_length, gpointer user_data)
+{
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(reader != NULL);
+	g_return_if_fail(contents_length >= -1);
+
+	g_free(request->contents);
+	request->contents = NULL;
+	request->contents_length = contents_length;
+	request->contents_reader = reader;
+	request->contents_reader_data = user_data;
 }
 
 void purple_http_request_set_timeout(PurpleHttpRequest *request, int timeout)

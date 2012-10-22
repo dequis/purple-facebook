@@ -63,7 +63,7 @@ typedef void (*PurpleHttpCallback)(PurpleHttpConnection *http_conn,
  * An callback called after storing data requested by PurpleHttpContentReader.
  */
 typedef void (*PurpleHttpContentReaderCb)(PurpleHttpConnection *http_conn,
-	gboolean success, size_t stored);
+	gboolean success, gboolean eof, size_t stored);
 
 /**
  * An callback for getting large request contents (ie. from file stored on
@@ -325,13 +325,13 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
  * Sets contents reader for HTTP request, used mainly for possible large
  * uploads.
  *
- * @param request   The request.
- * @param reader    The reader callback.
- * @param user_data The user data to pass to the callback function.
+ * @param request       The request.
+ * @param reader        The reader callback.
+ * @param contents_size The size of all contents.
+ * @param user_data     The user data to pass to the callback function.
  */
-/* TODO */
 void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
-	PurpleHttpContentReader reader, gpointer user_data);
+	PurpleHttpContentReader reader, int contents_length, gpointer user_data);
 
 /**
  * Set contents writer for HTTP response.
