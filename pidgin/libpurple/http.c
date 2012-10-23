@@ -524,16 +524,8 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 	proxy_username = purple_proxy_info_get_username(proxy);
 	if (proxy_http && proxy_username != NULL && proxy_username[0] != '\0') {
-		char hostname[256];
 		gchar *proxy_auth, *ntlm_type1, *tmp;
 		int len;
-
-		if (gethostname(hostname, sizeof(hostname)) < 0 ||
-			hostname[0] == '\0') {
-			purple_debug_warning("http", "gethostname() failed "
-				"- is your hostname set?");
-			strcpy(hostname, "localhost");
-		}
 
 		proxy_password = purple_proxy_info_get_password(proxy);
 		if (proxy_password == NULL)
@@ -545,7 +537,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		memset(tmp, 0, len);
 		g_free(tmp);
 
-		ntlm_type1 = purple_ntlm_gen_type1(hostname, "");
+		ntlm_type1 = purple_ntlm_gen_type1(purple_get_host_name(), "");
 
 		g_string_append_printf(h, "Proxy-Authorization: Basic %s\r\n",
 			proxy_auth);
