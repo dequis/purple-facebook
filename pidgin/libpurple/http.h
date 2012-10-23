@@ -95,6 +95,19 @@ typedef void (*PurpleHttpContentWriter)(PurpleHttpConnection *http_conn,
 	PurpleHttpResponse *response, const gchar *buffer, size_t offset,
 	size_t length, gpointer user_data);
 
+/**
+ * An callback for watching HTTP connection progress.
+ *
+ * @param http_conn     The HTTP Connection.
+ * @param reading_state FALSE, is we are sending the request, TRUE, when reading
+ *                      the response.
+ * @param processed     The amount of data already processed.
+ * @param total         Total amount of data (in current state).
+ * @param user_data     The user data passed with callback function.
+ */
+typedef void (*PurpleHttpProgressWatcher)(PurpleHttpConnection *http_conn,
+	gboolean reading_state, int processed, int total, gpointer user_data);
+
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -183,6 +196,20 @@ PurpleHttpCookieJar * purple_http_conn_get_cookie_jar(
  */
 PurpleConnection * purple_http_conn_get_purple_connection(
 	PurpleHttpConnection *http_conn);
+
+/**
+ * Sets the watcher, called after writing or reading data to/from HTTP stream.
+ * May be used for updating transfer progress gauge.
+ *
+ * @param http_conn          The HTTP connection.
+ * @param watcher            The watcher.
+ * @param user_data          The user data to pass to the callback function.
+ * @param interval_threshold Minimum interval (in microseconds) of calls to
+ *                           watcher.
+ */
+void purple_http_conn_set_progress_watcher(PurpleHttpConnection *http_conn,
+	PurpleHttpProgressWatcher watcher, gpointer user_data,
+	guint interval_threshold);
 
 /*@}*/
 

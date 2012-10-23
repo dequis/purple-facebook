@@ -78,6 +78,7 @@ struct _PurpleHttpConnection
 	PurpleConnection *gc;
 	PurpleHttpCallback callback;
 	gpointer user_data;
+	gboolean is_reading;
 
 	PurpleHttpURL *url;
 	PurpleHttpRequest *request;
@@ -103,6 +104,11 @@ struct _PurpleHttpConnection
 	GList *link_global, *link_gc;
 
 	guint timeout_handle;
+
+	PurpleHttpProgressWatcher watcher;
+	gpointer watcher_user_data;
+	guint watcher_interval_threshold;
+	gint64 watcher_last_call;
 };
 
 struct _PurpleHttpResponse
@@ -149,6 +155,7 @@ static time_t purple_http_rfc1123_to_time(const gchar *str);
 static PurpleHttpConnection * purple_http_connection_new(
 	PurpleHttpRequest *request, PurpleConnection *gc);
 static void purple_http_connection_terminate(PurpleHttpConnection *hc);
+static void purple_http_conn_notify_progress_watcher(PurpleHttpConnection *hc);
 
 static PurpleHttpResponse * purple_http_response_new(void);
 static void purple_http_response_free(PurpleHttpResponse *response);
@@ -662,6 +669,8 @@ static void _purple_http_recv_body_data(PurpleHttpConnection *hc,
 		hc->data_length_got += len;
 	}
 
+	purple_http_conn_notify_progress_watcher(hc);
+
 	if (len == 0)
 		return;
 
@@ -1017,12 +1026,14 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 
 	if (writing_headers) {
 		hc->request_header_written += written;
+		purple_http_conn_notify_progress_watcher(hc);
 		if (hc->request_header_written < hc->request_header->len)
 			return;
 		if (hc->request->contents_length > 0)
 			return;
 	} else {
 		hc->request_contents_written += written;
+		purple_http_conn_notify_progress_watcher(hc);
 		if (hc->contents_reader_buffer)
 			g_string_erase(hc->contents_reader_buffer, 0, written);
 		if (hc->request_contents_written < hc->request->contents_length)
@@ -1030,6 +1041,7 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 	}
 
 	/* request is completely written, let's read the response */
+	hc->is_reading = TRUE;
 	purple_input_remove(hs->inpa);
 	hs->inpa = 0;
 	if (hs->is_ssl)
@@ -1191,6 +1203,8 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 	hc->is_chunked = FALSE;
 	hc->in_chunk = FALSE;
 	hc->chunks_done = FALSE;
+
+	purple_http_conn_notify_progress_watcher(hc);
 
 	return TRUE;
 }
@@ -1385,6 +1399,52 @@ PurpleConnection * purple_http_conn_get_purple_connection(
 	g_return_val_if_fail(http_conn != NULL, NULL);
 
 	return http_conn->gc;
+}
+
+void purple_http_conn_set_progress_watcher(PurpleHttpConnection *http_conn,
+	PurpleHttpProgressWatcher watcher, gpointer user_data,
+	guint interval_threshold)
+{
+	g_return_if_fail(http_conn != NULL);
+
+	http_conn->watcher = watcher;
+	http_conn->watcher_user_data = user_data;
+	http_conn->watcher_interval_threshold = interval_threshold;
+}
+
+static void purple_http_conn_notify_progress_watcher(
+	PurpleHttpConnection *hc)
+{
+	gint64 now;
+	gboolean reading_state;
+	int processed, total;
+
+	g_return_if_fail(hc != NULL);
+
+	if (hc->watcher == NULL)
+		return;
+
+	reading_state = hc->is_reading;
+	if (reading_state) {
+		total = hc->length_expected;
+		processed = hc->length_got;
+	} else {
+		total = hc->request->contents_length;
+		processed = hc->request_contents_written;
+		if (total == 0)
+			total = -1;
+	}
+	if (total != -1 && total < processed) {
+		purple_debug_warning("http", "Processed too much\n");
+		total = processed;
+	}
+
+	now = g_get_monotonic_time();
+	if (hc->watcher_last_call + hc->watcher_interval_threshold
+		> now && processed != total)
+		return;
+	hc->watcher_last_call = now;
+	hc->watcher(hc, reading_state, processed, total, hc->watcher_user_data);
 }
 
 /*** Cookie jar API ***********************************************************/
