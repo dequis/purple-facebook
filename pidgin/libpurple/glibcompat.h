@@ -25,31 +25,34 @@
  * Also, any public API should not depend on this file.
  */
 
+#if !GLIB_CHECK_VERSION(2, 20, 0)
+
+#define G_OFFSET_FORMAT G_GINT64_FORMAT
+
 #if !GLIB_CHECK_VERSION(2, 28, 0)
+
+static inline gint64 g_get_monotonic_time(void)
+{
+	GTimeVal time_s;
+
+	g_get_current_time(&time_s);
+
+	return ((gint64)time_s.tv_sec << 32) | time_s.tv_usec;
+}
 
 static inline void g_list_free_full(GList *list, GDestroyNotify free_func)
 {
-	GList *it;
-	it = g_list_first(list);
-	while (it)
-	{
-		free_func(it->data);
-		it = g_list_next(it);
-	}
+	g_list_foreach(list, (GFunc)free_func, NULL);
 	g_list_free(list);
 }
 
 static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
 {
-	GSList *it = list;
-	while (it)
-	{
-		free_func(it->data);
-		it = g_slist_next(it);
-	}
+	g_slist_foreach(list, (GFunc)free_func, NULL);
 	g_slist_free(list);
 }
 
 #endif /* 2.28.0 */
+#endif /* 2.20.0 */
 
 #endif /* _PIDGINGLIBCOMPAT_H_ */
