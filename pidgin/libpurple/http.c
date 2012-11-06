@@ -111,6 +111,7 @@ struct _PurpleHttpConnection
 	gpointer watcher_user_data;
 	guint watcher_interval_threshold;
 	gint64 watcher_last_call;
+	guint watcher_delayed_handle;
 };
 
 struct _PurpleHttpResponse
@@ -1281,6 +1282,7 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 /*** HTTP connection API ******************************************************/
 
 static void purple_http_connection_free(PurpleHttpConnection *hc);
+static gboolean purple_http_conn_notify_progress_watcher_timeout(gpointer _hc);
 
 static PurpleHttpConnection * purple_http_connection_new(
 	PurpleHttpRequest *request, PurpleConnection *gc)
@@ -1309,6 +1311,8 @@ static void purple_http_connection_free(PurpleHttpConnection *hc)
 {
 	if (hc->timeout_handle)
 		purple_timeout_remove(hc->timeout_handle);
+	if (hc->watcher_delayed_handle)
+		purple_timeout_remove(hc->watcher_delayed_handle);
 
 	purple_http_url_free(hc->url);
 	purple_http_request_unref(hc->request);
@@ -1449,10 +1453,30 @@ static void purple_http_conn_notify_progress_watcher(
 
 	now = g_get_monotonic_time();
 	if (hc->watcher_last_call + hc->watcher_interval_threshold
-		> now && processed != total)
+		> now && processed != total) {
+		if (hc->watcher_delayed_handle)
+			return;
+		hc->watcher_delayed_handle = purple_timeout_add_seconds(
+			1 + hc->watcher_interval_threshold / 1000000,
+			purple_http_conn_notify_progress_watcher_timeout, hc);
 		return;
+	}
+
+	if (hc->watcher_delayed_handle)
+		purple_timeout_remove(hc->watcher_delayed_handle);
+	hc->watcher_delayed_handle = 0;
+
 	hc->watcher_last_call = now;
 	hc->watcher(hc, reading_state, processed, total, hc->watcher_user_data);
+}
+
+static gboolean purple_http_conn_notify_progress_watcher_timeout(gpointer _hc)
+{
+	PurpleHttpConnection *hc = _hc;
+
+	purple_http_conn_notify_progress_watcher(hc);
+
+	return FALSE;
 }
 
 /*** Cookie jar API ***********************************************************/
