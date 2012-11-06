@@ -90,8 +90,9 @@ typedef void (*PurpleHttpContentReader)(PurpleHttpConnection *http_conn,
  *                  previous call), can be safely ignored.
  * @param length    Length of data read.
  * @param user_data The user data passed with callback function.
+ * @return          TRUE, if succeeded, FALSE otherwise.
  */
-typedef void (*PurpleHttpContentWriter)(PurpleHttpConnection *http_conn,
+typedef gboolean (*PurpleHttpContentWriter)(PurpleHttpConnection *http_conn,
 	PurpleHttpResponse *response, const gchar *buffer, size_t offset,
 	size_t length, gpointer user_data);
 
@@ -364,10 +365,9 @@ void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
  * Set contents writer for HTTP response.
  *
  * @param request   The request.
- * @param reader    The writer callback.
+ * @param reader    The writer callback, or NULL to remove existing.
  * @param user_data The user data to pass to the callback function.
  */
-/* TODO */
 void purple_http_request_set_response_writer(PurpleHttpRequest *request,
 	PurpleHttpContentWriter writer, gpointer user_data);
 
