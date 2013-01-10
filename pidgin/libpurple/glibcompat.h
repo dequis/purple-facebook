@@ -25,10 +25,6 @@
  * Also, any public API should not depend on this file.
  */
 
-#if !GLIB_CHECK_VERSION(2, 20, 0)
-
-#define G_OFFSET_FORMAT G_GINT64_FORMAT
-
 #if !GLIB_CHECK_VERSION(2, 28, 0)
 
 static inline gint64 g_get_monotonic_time(void)
@@ -53,6 +49,5 @@ static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
 }
 
 #endif /* 2.28.0 */
-#endif /* 2.20.0 */
 
 #endif /* _PIDGINGLIBCOMPAT_H_ */
