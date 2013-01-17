@@ -2016,14 +2016,22 @@ gsize purple_http_response_get_data_len(PurpleHttpResponse *response)
 	return response->contents->len;
 }
 
-const gchar * purple_http_response_get_data(PurpleHttpResponse *response)
+const gchar * purple_http_response_get_data(PurpleHttpResponse *response, size_t *len)
 {
+	const gchar *ret = "";
+
 	g_return_val_if_fail(response != NULL, NULL);
 
-	if (response->contents == NULL)
-		return "";
+	if (response->contents != NULL) {
+		ret = response->contents->str;
+		if(len)
+			*len = response->contents->len;
+	} else {
+		if(len)
+			*len = 0;
+	}
 
-	return response->contents->str;
+	return ret;
 }
 
 const GList * purple_http_response_get_all_headers(PurpleHttpResponse *response)

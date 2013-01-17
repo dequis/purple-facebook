@@ -528,9 +528,10 @@ gsize purple_http_response_get_data_len(PurpleHttpResponse *response);
  * Response data is not written, if writer callback was set for request.
  *
  * @param response The response.
+ * @param len      Return address for the size of the data.  Can be NULL.
  * @return         The data.
  */
-const gchar * purple_http_response_get_data(PurpleHttpResponse *response);
+const gchar * purple_http_response_get_data(PurpleHttpResponse *response, size_t *len);
 
 /**
  * Gets all headers got with response.
