@@ -27,6 +27,7 @@
 #include "http.h"
 
 #include "internal.h"
+#include "glibcompat.h"
 
 #include "debug.h"
 #include "ntlm.h"
