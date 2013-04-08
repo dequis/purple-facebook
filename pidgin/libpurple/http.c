@@ -1687,8 +1687,8 @@ gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar)
 
 	g_hash_table_iter_init(&it, cjar->tab);
 	while (g_hash_table_iter_next(&it, (gpointer*)&key, (gpointer*)&cookie))
-		g_string_append_printf(str, "%s: %s (expires: %lld)\n", key,
-			cookie->value, (long long int)cookie->expires);
+		g_string_append_printf(str, "%s: %s (expires: %" G_GINT64_FORMAT
+		")\n", key, cookie->value, (gint64)cookie->expires);
 
 	if (str->len > 0)
 		g_string_truncate(str, str->len - 1);
