@@ -25,6 +25,13 @@
  * Also, any public API should not depend on this file.
  */
 
+#if GLIB_CHECK_VERSION(2, 36, 0)
+
+#define g_type_init()
+
+#endif /* >= 2.36.0 */
+
+
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
@@ -53,9 +60,8 @@ static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
 	g_slist_free(list);
 }
 
-#endif /* 2.28.0 */
+#endif /* < 2.28.0 */
 
-#endif /* 2.32.0 */
+#endif /* < 2.32.0 */
 
 #endif /* _PIDGINGLIBCOMPAT_H_ */
-
