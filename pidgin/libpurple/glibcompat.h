@@ -37,6 +37,12 @@
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 #define G_GNUC_END_IGNORE_DEPRECATIONS
 
+static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
+	gpointer data, GError **error)
+{
+	return g_thread_create(func, data, TRUE, error);
+}
+
 #if !GLIB_CHECK_VERSION(2, 28, 0)
 
 static inline gint64 g_get_monotonic_time(void)
