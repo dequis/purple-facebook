@@ -25,19 +25,6 @@
  * Also, any public API should not depend on this file.
  */
 
-#if GLIB_CHECK_VERSION(2, 32, 0)
-
-#define g_thread_init(vtable) {}
-
-#if GLIB_CHECK_VERSION(2, 36, 0)
-
-#define g_type_init() {}
-
-#endif /* >= 2.36.0 */
-
-#endif /* >= 2.32.0 */
-
-
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
