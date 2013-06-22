@@ -48,6 +48,11 @@ typedef struct _PurpleHttpConnection PurpleHttpConnection;
 typedef struct _PurpleHttpResponse PurpleHttpResponse;
 
 /**
+ * Parsed representation for the URL.
+ */
+typedef struct _PurpleHttpURL PurpleHttpURL;
+
+/**
  * An collection of cookies, got from HTTP response or provided for HTTP
  * request.
  */
@@ -211,6 +216,120 @@ PurpleConnection * purple_http_conn_get_purple_connection(
 void purple_http_conn_set_progress_watcher(PurpleHttpConnection *http_conn,
 	PurpleHttpProgressWatcher watcher, gpointer user_data,
 	guint interval_threshold);
+
+/*@}*/
+
+
+/**************************************************************************/
+/** @name URL processing API                                              */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Parses a URL.
+ *
+ * The returned data must be freed with purple_http_url_free.
+ *
+ * @param url The URL to parse.
+ * @return    The parsed url or NULL, if the URL is invalid.
+ */
+PurpleHttpURL *
+purple_http_url_parse(const char *url);
+
+/**
+ * Frees the parsed URL struct.
+ *
+ * @param parsed_url The parsed URL struct, or NULL.
+ */
+void
+purple_http_url_free(PurpleHttpURL *parsed_url);
+
+/**
+ * Converts the base URL to the absolute form of the provided relative URL.
+ *
+ * Example: "https://example.com/path/to/file.html" + "subdir/other-file.html" =
+ *          "https://example.com/path/to/subdir/another-file.html"
+ *
+ * @param base_url     The base URL. The result is stored here.
+ * @param relative_url The relative URL.
+ */
+void
+purple_http_url_relative(PurpleHttpURL *base_url, PurpleHttpURL *relative_url);
+
+/**
+ * Converts the URL struct to the printable form. The result may not be a valid
+ * URL (in cases, when the struct doesn't have all fields filled properly).
+ *
+ * The result must be g_free'd.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The printable form of the URL.
+ */
+gchar *
+purple_http_url_print(PurpleHttpURL *parsed_url);
+
+/**
+ * Gets the protocol part of URL.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The protocol.
+ */
+const gchar *
+purple_http_url_get_protocol(const PurpleHttpURL *parsed_url);
+
+/**
+ * Gets the username part of URL.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The username.
+ */
+const gchar *
+purple_http_url_get_user(const PurpleHttpURL *parsed_url);
+
+/**
+ * Gets the password part of URL.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The password.
+ */
+const gchar *
+purple_http_url_get_password(const PurpleHttpURL *parsed_url);
+
+/**
+ * Gets the hostname part of URL.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The hostname.
+ */
+const gchar *
+purple_http_url_get_host(const PurpleHttpURL *parsed_url);
+
+/**
+ * Gets the port part of URL.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The port number.
+ */
+int
+purple_http_url_get_port(const PurpleHttpURL *parsed_url);
+
+/**
+ * Gets the path part of URL.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The path.
+ */
+const gchar *
+purple_http_url_get_path(const PurpleHttpURL *parsed_url);
+
+/**
+ * Gets the fragment part of URL.
+ *
+ * @param parsed_url The URL struct.
+ * @return           The fragment.
+ */
+const gchar *
+purple_http_url_get_fragment(const PurpleHttpURL *parsed_url);
 
 /*@}*/
 
