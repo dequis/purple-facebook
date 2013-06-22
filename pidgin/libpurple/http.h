@@ -284,7 +284,7 @@ purple_http_url_get_protocol(const PurpleHttpURL *parsed_url);
  * @return           The username.
  */
 const gchar *
-purple_http_url_get_user(const PurpleHttpURL *parsed_url);
+purple_http_url_get_username(const PurpleHttpURL *parsed_url);
 
 /**
  * Gets the password part of URL.

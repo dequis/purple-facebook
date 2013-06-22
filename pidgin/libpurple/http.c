@@ -125,7 +125,7 @@ struct _PurpleHttpResponse
 struct _PurpleHttpURL
 {
 	gchar *protocol;
-	gchar *user;
+	gchar *username;
 	gchar *password;
 	gchar *host;
 	int port;
@@ -2118,7 +2118,7 @@ purple_http_url_parse(const char *raw_url)
 			return NULL;
 		}
 
-		url->user = g_match_info_fetch(match_info, 1);
+		url->username = g_match_info_fetch(match_info, 1);
 		url->password = g_match_info_fetch(match_info, 2);
 		url->host = g_match_info_fetch(match_info, 3);
 		port_str = g_match_info_fetch(match_info, 4);
@@ -2126,9 +2126,9 @@ purple_http_url_parse(const char *raw_url)
 		if (port_str && port_str[0])
 			url->port = atoi(port_str);
 
-		if (url->user[0] == '\0') {
-			g_free(url->user);
-			url->user = NULL;
+		if (url->username[0] == '\0') {
+			g_free(url->username);
+			url->username = NULL;
 		}
 		if (url->password[0] == '\0') {
 			g_free(url->password);
@@ -2174,7 +2174,7 @@ purple_http_url_free(PurpleHttpURL *parsed_url)
 		return;
 
 	g_free(parsed_url->protocol);
-	g_free(parsed_url->user);
+	g_free(parsed_url->username);
 	g_free(parsed_url->password);
 	g_free(parsed_url->host);
 	g_free(parsed_url->path);
@@ -2191,8 +2191,8 @@ purple_http_url_relative(PurpleHttpURL *base_url, PurpleHttpURL *relative_url)
 	if (relative_url->host) {
 		g_free(base_url->protocol);
 		base_url->protocol = g_strdup(relative_url->protocol);
-		g_free(base_url->user);
-		base_url->user = g_strdup(relative_url->user);
+		g_free(base_url->username);
+		base_url->username = g_strdup(relative_url->username);
 		g_free(base_url->password);
 		base_url->password = g_strdup(relative_url->password);
 		g_free(base_url->host);
@@ -2243,9 +2243,9 @@ purple_http_url_print(PurpleHttpURL *parsed_url)
 			"https"))
 			port_is_default = TRUE;
 	}
-	if (parsed_url->user || parsed_url->password) {
-		if (parsed_url->user)
-			g_string_append(url, parsed_url->user);
+	if (parsed_url->username || parsed_url->password) {
+		if (parsed_url->username)
+			g_string_append(url, parsed_url->username);
 		g_string_append_printf(url, ":%s", parsed_url->password);
 		g_string_append(url, "@");
 		before_host_printed = TRUE;
@@ -2282,11 +2282,11 @@ purple_http_url_get_protocol(const PurpleHttpURL *parsed_url)
 }
 
 const gchar *
-purple_http_url_get_user(const PurpleHttpURL *parsed_url)
+purple_http_url_get_username(const PurpleHttpURL *parsed_url)
 {
 	g_return_val_if_fail(parsed_url != NULL, NULL);
 
-	return parsed_url->user;
+	return parsed_url->username;
 }
 
 const gchar *
