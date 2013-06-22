@@ -39,8 +39,6 @@
 #define PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS 20
 #define PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT 30
 
-typedef struct _PurpleHttpURL PurpleHttpURL;
-
 typedef struct _PurpleHttpSocket PurpleHttpSocket;
 
 typedef struct _PurpleHttpHeaders PurpleHttpHeaders;
@@ -168,12 +166,6 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 	GList *values);
 static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar);
 gchar * purple_http_cookie_jar_dump(PurpleHttpCookieJar *cjar);
-
-static PurpleHttpURL * purple_http_url_parse(const char *url);
-static void purple_http_url_free(PurpleHttpURL *parsed_url);
-static void purple_http_url_relative(PurpleHttpURL *base_url,
-	PurpleHttpURL *relative_url);
-static gchar * purple_http_url_print(PurpleHttpURL *parsed_url);
 
 static GRegex *purple_http_re_url, *purple_http_re_url_host,
 	*purple_http_re_rfc1123;
@@ -1278,7 +1270,7 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 		purple_debug_misc("http", "Performing new request %p.\n", hc);
 
 	hc->url = purple_http_url_parse(request->url);
-	if (!hc->url || hc->url->host[0] == '\0') {
+	if (!hc->url || hc->url->host == NULL || hc->url->host[0] == '\0') {
 		purple_debug_error("http", "Invalid URL requested.\n");
 		purple_http_connection_terminate(hc);
 		return NULL;
@@ -2062,7 +2054,8 @@ const gchar * purple_http_response_get_header(PurpleHttpResponse *response,
 
 /*** URL functions ************************************************************/
 
-static PurpleHttpURL * purple_http_url_parse(const char *raw_url)
+PurpleHttpURL *
+purple_http_url_parse(const char *raw_url)
 {
 	PurpleHttpURL *url;
 	GMatchInfo *match_info;
@@ -2174,7 +2167,8 @@ static PurpleHttpURL * purple_http_url_parse(const char *raw_url)
 	return url;
 }
 
-static void purple_http_url_free(PurpleHttpURL *parsed_url)
+void
+purple_http_url_free(PurpleHttpURL *parsed_url)
 {
 	if (parsed_url == NULL)
 		return;
@@ -2188,8 +2182,8 @@ static void purple_http_url_free(PurpleHttpURL *parsed_url)
 	g_free(parsed_url);
 }
 
-static void purple_http_url_relative(PurpleHttpURL *base_url,
-	PurpleHttpURL *relative_url)
+void
+purple_http_url_relative(PurpleHttpURL *base_url, PurpleHttpURL *relative_url)
 {
 	g_return_if_fail(base_url != NULL);
 	g_return_if_fail(relative_url != NULL);
@@ -2232,7 +2226,8 @@ static void purple_http_url_relative(PurpleHttpURL *base_url,
 	base_url->fragment = g_strdup(relative_url->fragment);
 }
 
-static gchar * purple_http_url_print(PurpleHttpURL *parsed_url)
+gchar *
+purple_http_url_print(PurpleHttpURL *parsed_url)
 {
 	GString *url = g_string_new("");
 	gboolean before_host_printed = FALSE, host_printed = FALSE;
@@ -2276,6 +2271,62 @@ static gchar * purple_http_url_print(PurpleHttpURL *parsed_url)
 		g_string_append_printf(url, "#%s", parsed_url->fragment);
 
 	return g_string_free(url, FALSE);
+}
+
+const gchar *
+purple_http_url_get_protocol(const PurpleHttpURL *parsed_url)
+{
+	g_return_val_if_fail(parsed_url != NULL, NULL);
+
+	return parsed_url->protocol;
+}
+
+const gchar *
+purple_http_url_get_user(const PurpleHttpURL *parsed_url)
+{
+	g_return_val_if_fail(parsed_url != NULL, NULL);
+
+	return parsed_url->user;
+}
+
+const gchar *
+purple_http_url_get_password(const PurpleHttpURL *parsed_url)
+{
+	g_return_val_if_fail(parsed_url != NULL, NULL);
+
+	return parsed_url->password;
+}
+
+const gchar *
+purple_http_url_get_host(const PurpleHttpURL *parsed_url)
+{
+	g_return_val_if_fail(parsed_url != NULL, NULL);
+
+	return parsed_url->host;
+}
+
+int
+purple_http_url_get_port(const PurpleHttpURL *parsed_url)
+{
+	g_return_val_if_fail(parsed_url != NULL, 0);
+
+	return parsed_url->port;
+}
+
+const gchar *
+purple_http_url_get_path(const PurpleHttpURL *parsed_url)
+{
+	g_return_val_if_fail(parsed_url != NULL, NULL);
+
+	return parsed_url->path;
+}
+
+const gchar *
+purple_http_url_get_fragment(const PurpleHttpURL *parsed_url)
+{
+	g_return_val_if_fail(parsed_url != NULL, NULL);
+
+	return parsed_url->fragment;
 }
 
 /*** HTTP Subsystem ***********************************************************/
