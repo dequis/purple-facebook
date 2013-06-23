@@ -38,6 +38,7 @@
 
 #define PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS 20
 #define PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT 30
+#define PURPLE_HTTP_REQUEST_DEFAULT_MAX_LENGTH 1048576
 
 typedef struct _PurpleHttpSocket PurpleHttpSocket;
 
@@ -1714,7 +1715,7 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 	request->timeout = PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT;
 	request->max_redirects = PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS;
 	request->http11 = TRUE;
-	request->max_length = -1;
+	request->max_length = PURPLE_HTTP_REQUEST_DEFAULT_MAX_LENGTH;
 
 	return request;
 }
