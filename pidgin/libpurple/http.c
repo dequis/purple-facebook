@@ -2058,7 +2058,23 @@ const gchar * purple_http_response_get_error(PurpleHttpResponse *response)
 {
 	g_return_val_if_fail(response != NULL, NULL);
 
-	return response->error;
+	if (response->error != NULL)
+		return response->error;
+
+	if (!purple_http_response_is_successfull(response)) {
+		static gchar errmsg[200];
+		if (response->code <= 0) {
+			g_snprintf(errmsg, sizeof(errmsg),
+				_("Unknown HTTP error"));
+		} else {
+			g_snprintf(errmsg, sizeof(errmsg),
+				_("Invalid HTTP response code (%d)"),
+				response->code);
+		}
+		return errmsg;
+	}
+
+	return NULL;
 }
 
 gsize purple_http_response_get_data_len(PurpleHttpResponse *response)
