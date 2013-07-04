@@ -155,6 +155,9 @@ struct _PurpleHttpCookieJar
 
 static time_t purple_http_rfc1123_to_time(const gchar *str);
 
+static gboolean purple_http_request_is_method(PurpleHttpRequest *request,
+	const gchar *method);
+
 static PurpleHttpConnection * purple_http_connection_new(
 	PurpleHttpRequest *request, PurpleConnection *gc);
 static void purple_http_connection_terminate(PurpleHttpConnection *hc);
@@ -513,10 +516,13 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	if (!purple_http_headers_get(hdrs, "accept"))
 		g_string_append(h, "Accept: */*\r\n");
 
-	if (req->contents_length > 0 && !purple_http_headers_get(hdrs,
-		"content-length"))
+	if (!purple_http_headers_get(hdrs, "content-length") && (
+		req->contents_length > 0 ||
+		purple_http_request_is_method(req, "post")))
+	{
 		g_string_append_printf(h, "Content-Length: %u\r\n",
 			req->contents_length);
+	}
 
 	if (proxy_http)
 		g_string_append(h, "Proxy-Connection: close\r\n");
@@ -1237,8 +1243,8 @@ static gboolean purple_http_request_timeout(gpointer _hc)
 	return FALSE;
 }
 
-PurpleHttpConnection * purple_http_get(PurpleConnection *gc, const gchar *url,
-	PurpleHttpCallback callback, gpointer user_data)
+PurpleHttpConnection * purple_http_get(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data, const gchar *url)
 {
 	PurpleHttpRequest *request;
 	PurpleHttpConnection *hc;
@@ -1252,6 +1258,26 @@ PurpleHttpConnection * purple_http_get(PurpleConnection *gc, const gchar *url,
 	return hc;
 }
 
+PurpleHttpConnection * purple_http_get_printf(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data,
+	const gchar *format, ...)
+{
+	va_list args;
+	gchar *value;
+	PurpleHttpConnection *ret;
+
+	g_return_val_if_fail(format != NULL, NULL);
+
+	va_start(args, format);
+	value = g_strdup_vprintf(format, args);
+	va_end(args);
+
+	ret = purple_http_get(gc, callback, user_data, value);
+	g_free(value);
+
+	return ret;
+}
+
 PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 	PurpleHttpRequest *request, PurpleHttpCallback callback,
 	gpointer user_data)
@@ -1259,6 +1285,12 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 	PurpleHttpConnection *hc;
 
 	g_return_val_if_fail(request != NULL, NULL);
+
+	if (request->url == NULL) {
+		purple_debug_error("http", "Cannot perform new request - "
+			"URL is not set\n");
+		return NULL;
+	}
 
 	hc = purple_http_connection_new(request, gc);
 	hc->callback = callback;
@@ -1703,8 +1735,6 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 {
 	PurpleHttpRequest *request;
 
-	g_return_val_if_fail(url != NULL, NULL);
-
 	request = g_new0(PurpleHttpRequest, 1);
 
 	request->ref_count = 1;
@@ -1759,6 +1789,23 @@ void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url)
 	request->url = g_strdup(url);
 }
 
+void purple_http_request_set_url_printf(PurpleHttpRequest *request,
+	const gchar *format, ...)
+{
+	va_list args;
+	gchar *value;
+
+	g_return_if_fail(request != NULL);
+	g_return_if_fail(format != NULL);
+
+	va_start(args, format);
+	value = g_strdup_vprintf(format, args);
+	va_end(args);
+
+	purple_http_request_set_url(request, value);
+	g_free(value);
+}
+
 const gchar * purple_http_request_get_url(PurpleHttpRequest *request)
 {
 	g_return_val_if_fail(request != NULL, NULL);
@@ -1779,6 +1826,20 @@ const gchar * purple_http_request_get_method(PurpleHttpRequest *request)
 	g_return_val_if_fail(request != NULL, NULL);
 
 	return request->method;
+}
+
+static gboolean purple_http_request_is_method(PurpleHttpRequest *request,
+	const gchar *method)
+{
+	const gchar *rmethod;
+
+	g_return_val_if_fail(request != NULL, FALSE);
+	g_return_val_if_fail(method != NULL, FALSE);
+
+	rmethod = purple_http_request_get_method(request);
+	if (rmethod == NULL)
+		return (g_ascii_strcasecmp(method, "get") == 0);
+	return (g_ascii_strcasecmp(method, rmethod) == 0);
 }
 
 void purple_http_request_set_contents(PurpleHttpRequest *request,
@@ -2014,7 +2075,7 @@ const gchar * purple_http_response_get_data(PurpleHttpResponse *response, size_t
 {
 	const gchar *ret = "";
 
-	g_return_val_if_fail(response != NULL, NULL);
+	g_return_val_if_fail(response != NULL, "");
 
 	if (response->contents != NULL) {
 		ret = response->contents->str;

@@ -125,14 +125,28 @@ G_BEGIN_DECLS
  * Fetches the data from a URL with GET request, and passes it to a callback
  * function.
  *
- * @param gc       The connection for which the request is needed, or NULL.
- * @param url      The URL.
- * @param callback The callback function.
- * @param data     The user data to pass to the callback function.
- * @return         The HTTP connection struct.
+ * @param gc        The connection for which the request is needed, or NULL.
+ * @param callback  The callback function.
+ * @param user_data The user data to pass to the callback function.
+ * @param url       The URL.
+ * @return          The HTTP connection struct.
  */
-PurpleHttpConnection * purple_http_get(PurpleConnection *gc, const gchar *url,
-	PurpleHttpCallback callback, gpointer user_data);
+PurpleHttpConnection * purple_http_get(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data, const gchar *url);
+
+/**
+ * Constructs an URL and fetches the data from it with GET request, then passes
+ * it to a callback function.
+ *
+ * @param gc        The connection for which the request is needed, or NULL.
+ * @param callback  The callback function.
+ * @param user_data The user data to pass to the callback function.
+ * @param format    The format string.
+ * @return          The HTTP connection struct.
+ */
+PurpleHttpConnection * purple_http_get_printf(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data,
+	const gchar *format, ...) G_GNUC_PRINTF(4, 5);
 
 /**
  * Fetches a HTTP request and passes the response to a callback function.
@@ -403,7 +417,8 @@ gboolean purple_http_cookie_jar_is_empty(PurpleHttpCookieJar *cookie_jar);
 /**
  * Creates the new instance of HTTP request configuration.
  *
- * @param url The URL to request for.
+ * @param url The URL to request for, or NULL to leave empty (to be set with
+ *            purple_http_request_set_url).
  * @return The new instance of HTTP request struct.
  */
 PurpleHttpRequest * purple_http_request_new(const gchar *url);
@@ -432,6 +447,15 @@ PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request);
  * @param url     The url.
  */
 void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url);
+
+/**
+ * Constructs and sets an URL for HTTP request.
+ *
+ * @param request The request.
+ * @param format  The format string.
+ */
+void purple_http_request_set_url_printf(PurpleHttpRequest *request,
+	const gchar *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
  * Gets URL set for the HTTP request.
@@ -580,14 +604,22 @@ int purple_http_request_get_max_len(PurpleHttpRequest *request);
 /**
  * Sets (replaces, if exists) specified HTTP request header with provided value.
  *
- * @param key   A header to be set.
- * @param value A value to set, or NULL to remove specified header from request.
+ * @param request The request.
+ * @param key     A header to be set.
+ * @param value   A value to set, or NULL to remove specified header.
  *
  * @see purple_http_request_header_add
  */
 void purple_http_request_header_set(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
 
+/**
+ * Constructs and sets (replaces, if exists) specified HTTP request header.
+ *
+ * @param request The request.
+ * @param key     A header to be set.
+ * @param format  The format string.
+ */
 void purple_http_request_header_set_printf(PurpleHttpRequest *request,
 	const gchar *key, const gchar *format, ...) G_GNUC_PRINTF(3, 4);
 
