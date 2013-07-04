@@ -125,14 +125,28 @@ G_BEGIN_DECLS
  * Fetches the data from a URL with GET request, and passes it to a callback
  * function.
  *
- * @param gc       The connection for which the request is needed, or NULL.
- * @param url      The URL.
- * @param callback The callback function.
- * @param data     The user data to pass to the callback function.
- * @return         The HTTP connection struct.
+ * @param gc        The connection for which the request is needed, or NULL.
+ * @param callback  The callback function.
+ * @param user_data The user data to pass to the callback function.
+ * @param url       The URL.
+ * @return          The HTTP connection struct.
  */
-PurpleHttpConnection * purple_http_get(PurpleConnection *gc, const gchar *url,
-	PurpleHttpCallback callback, gpointer user_data);
+PurpleHttpConnection * purple_http_get(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data, const gchar *url);
+
+/**
+ * Constructs an URL and fetches the data from it with GET request, then passes
+ * it to a callback function.
+ *
+ * @param gc        The connection for which the request is needed, or NULL.
+ * @param callback  The callback function.
+ * @param user_data The user data to pass to the callback function.
+ * @param format    The format string.
+ * @return          The HTTP connection struct.
+ */
+PurpleHttpConnection * purple_http_get_printf(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data,
+	const gchar *format, ...) G_GNUC_PRINTF(4, 5);
 
 /**
  * Fetches a HTTP request and passes the response to a callback function.
