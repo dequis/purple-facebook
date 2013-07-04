@@ -403,7 +403,8 @@ gboolean purple_http_cookie_jar_is_empty(PurpleHttpCookieJar *cookie_jar);
 /**
  * Creates the new instance of HTTP request configuration.
  *
- * @param url The URL to request for.
+ * @param url The URL to request for, or NULL to leave empty (to be set with
+ *            purple_http_request_set_url).
  * @return The new instance of HTTP request struct.
  */
 PurpleHttpRequest * purple_http_request_new(const gchar *url);
@@ -432,6 +433,15 @@ PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request);
  * @param url     The url.
  */
 void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url);
+
+/**
+ * Constructs and sets an URL for HTTP request.
+ *
+ * @param request The request.
+ * @param format  The format string.
+ */
+void purple_http_request_set_url_printf(PurpleHttpRequest *request,
+	const gchar *format, ...) G_GNUC_PRINTF(2, 3);
 
 /**
  * Gets URL set for the HTTP request.
@@ -580,14 +590,22 @@ int purple_http_request_get_max_len(PurpleHttpRequest *request);
 /**
  * Sets (replaces, if exists) specified HTTP request header with provided value.
  *
- * @param key   A header to be set.
- * @param value A value to set, or NULL to remove specified header from request.
+ * @param request The request.
+ * @param key     A header to be set.
+ * @param value   A value to set, or NULL to remove specified header.
  *
  * @see purple_http_request_header_add
  */
 void purple_http_request_header_set(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
 
+/**
+ * Constructs and sets (replaces, if exists) specified HTTP request header.
+ *
+ * @param request The request.
+ * @param key     A header to be set.
+ * @param format  The format string.
+ */
 void purple_http_request_header_set_printf(PurpleHttpRequest *request,
 	const gchar *key, const gchar *format, ...) G_GNUC_PRINTF(3, 4);
 
