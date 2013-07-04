@@ -1243,8 +1243,8 @@ static gboolean purple_http_request_timeout(gpointer _hc)
 	return FALSE;
 }
 
-PurpleHttpConnection * purple_http_get(PurpleConnection *gc, const gchar *url,
-	PurpleHttpCallback callback, gpointer user_data)
+PurpleHttpConnection * purple_http_get(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data, const gchar *url)
 {
 	PurpleHttpRequest *request;
 	PurpleHttpConnection *hc;
@@ -1256,6 +1256,26 @@ PurpleHttpConnection * purple_http_get(PurpleConnection *gc, const gchar *url,
 	purple_http_request_unref(request);
 
 	return hc;
+}
+
+PurpleHttpConnection * purple_http_get_printf(PurpleConnection *gc,
+	PurpleHttpCallback callback, gpointer user_data,
+	const gchar *format, ...)
+{
+	va_list args;
+	gchar *value;
+	PurpleHttpConnection *ret;
+
+	g_return_val_if_fail(format != NULL, NULL);
+
+	va_start(args, format);
+	value = g_strdup_vprintf(format, args);
+	va_end(args);
+
+	ret = purple_http_get(gc, callback, user_data, value);
+	g_free(value);
+
+	return ret;
 }
 
 PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
