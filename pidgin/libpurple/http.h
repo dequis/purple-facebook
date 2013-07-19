@@ -59,6 +59,11 @@ typedef struct _PurpleHttpURL PurpleHttpURL;
 typedef struct _PurpleHttpCookieJar PurpleHttpCookieJar;
 
 /**
+ * An pool of TCP connections for HTTP Keep-Alive session.
+ */
+typedef struct _PurpleHttpKeepalivePool PurpleHttpKeepalivePool;
+
+/**
  * An callback called after performing (successfully or not) HTTP request.
  */
 typedef void (*PurpleHttpCallback)(PurpleHttpConnection *http_conn,
@@ -483,6 +488,29 @@ void purple_http_request_set_method(PurpleHttpRequest *request,
 const gchar * purple_http_request_get_method(PurpleHttpRequest *request);
 
 /**
+ * Sets HTTP KeepAlive connections pool for the request.
+ *
+ * It increases pool's reference count.
+ *
+ * @param request The request.
+ * @param pool    The new KeepAlive pool, or NULL to reset.
+ */
+void
+purple_http_request_set_keepalive_pool(PurpleHttpRequest *request,
+	PurpleHttpKeepalivePool *pool);
+
+/**
+ * Gets HTTP KeepAlive connections pool associated with the request.
+ *
+ * It doesn't affect pool's reference count.
+ *
+ * @param request The request.
+ * @return        The KeepAlive pool, used for the request.
+ */
+PurpleHttpKeepalivePool *
+purple_http_request_get_keepalive_pool(PurpleHttpRequest *request);
+
+/**
  * Sets contents of HTTP request (for example, POST data).
  *
  * @param request  The request.
@@ -635,6 +663,41 @@ void purple_http_request_header_add(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
 
 /*@}*/
+
+
+/**************************************************************************/
+/** @name HTTP Keep-Alive pool API                                        */
+/**************************************************************************/
+/*@{*/
+
+/**
+ * Creates a new HTTP KeepAlive pool.
+ */
+PurpleHttpKeepalivePool *
+purple_http_keepalive_pool_new(void);
+
+/**
+ * Increment the reference count.
+ *
+ * @param pool The HTTP KeepAlive pool.
+ */
+void
+purple_http_keepalive_pool_ref(PurpleHttpKeepalivePool *pool);
+
+/**
+ * Decrement the reference count.
+ *
+ * If the reference count reaches zero, the pool will be freed and all
+ * connections will be closed.
+ *
+ * @param pool The HTTP KeepAlive pool.
+ * @return @a pool or @c NULL if the reference count reached zero.
+ */
+PurpleHttpKeepalivePool *
+purple_http_keepalive_pool_unref(PurpleHttpKeepalivePool *pool);
+
+/*@}*/
+
 
 /**************************************************************************/
 /** @name HTTP response API                                               */
