@@ -2058,6 +2058,7 @@ PurpleHttpRequest * purple_http_request_new(const gchar *url)
 	request->url = g_strdup(url);
 	request->headers = purple_http_headers_new();
 	request->cookie_jar = purple_http_cookie_jar_new();
+	request->keepalive_pool = purple_http_keepalive_pool_new();
 
 	request->timeout = PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT;
 	request->max_redirects = PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS;
