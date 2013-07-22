@@ -216,6 +216,12 @@ static GList *purple_http_hc_list;
 static GHashTable *purple_http_hc_by_gc;
 
 /**
+ * Keys: pointers to PurpleConnection.
+ * Values: gboolean TRUE.
+ */
+static GHashTable *purple_http_cancelling_gc;
+
+/**
  * Keys: pointers to PurpleHttpConnection.
  * Values: pointers to links in purple_http_hc_list.
  */
@@ -448,6 +454,8 @@ purple_http_socket_dontwatch(PurpleHttpSocket *hs)
 	if (hs->inpa > 0)
 		purple_input_remove(hs->inpa);
 	hs->inpa = 0;
+	if (hs->ssl_connection)
+		purple_ssl_input_remove(hs->ssl_connection);
 }
 
 static void
@@ -1451,6 +1459,13 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 		return NULL;
 	}
 
+	if (g_hash_table_lookup(purple_http_cancelling_gc, gc)) {
+		purple_debug_warning("http", "Cannot perform another HTTP "
+			"request while cancelling all related with this "
+			"PurpleConnection\n");
+		return NULL;
+	}
+
 	hc = purple_http_connection_new(request, gc);
 	hc->callback = callback;
 	hc->user_data = user_data;
@@ -1589,15 +1604,19 @@ void purple_http_conn_cancel_all(PurpleConnection *gc)
 {
 	GList *gc_list = g_hash_table_lookup(purple_http_hc_by_gc, gc);
 
+	g_hash_table_insert(purple_http_cancelling_gc, gc, GINT_TO_POINTER(TRUE));
+
 	while (gc_list) {
 		PurpleHttpConnection *hc = gc_list->data;
 		gc_list = g_list_next(gc_list);
 		purple_http_conn_cancel(hc);
 	}
 
+	g_hash_table_remove(purple_http_cancelling_gc, gc);
+
 	if (NULL != g_hash_table_lookup(purple_http_hc_by_gc, gc))
-		purple_debug_error("http", "Couldn't cancel all connections "
-			"related to gc=%p\n", gc);
+		purple_debug_fatal("http", "Couldn't cancel all connections "
+			"related to gc=%p (it shouldn't happen)\n", gc);
 }
 
 gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn)
@@ -2011,6 +2030,9 @@ purple_http_keepalive_pool_request(PurpleHttpKeepalivePool *pool,
 
 	g_free(hash);
 
+	if (purple_debug_is_verbose())
+		purple_debug_misc("http", "locking a socket: %p\n", hs);
+
 	return hs;
 }
 
@@ -2024,6 +2046,9 @@ purple_http_keepalive_pool_release(PurpleHttpSocket *hs, gboolean invalidate)
 		purple_http_socket_close_free(hs);
 		return;
 	}
+
+	if (purple_debug_is_verbose())
+		purple_debug_misc("http", "releasing a socket: %p\n", hs);
 
 	purple_http_socket_dontwatch(hs);
 	hs->is_busy = FALSE;
@@ -2385,6 +2410,8 @@ gboolean purple_http_response_is_successfull(PurpleHttpResponse *response)
 
 	if (code <= 0)
 		return FALSE;
+
+	/* TODO: HTTP/1.1 100 Continue */
 
 	if (code / 100 == 2)
 		return TRUE;
@@ -2797,6 +2824,7 @@ void purple_http_init(void)
 	purple_http_hc_by_ptr = g_hash_table_new(g_direct_hash, g_direct_equal);
 	purple_http_hc_by_gc = g_hash_table_new_full(g_direct_hash,
 		g_direct_equal, NULL, (GDestroyNotify)g_list_free);
+	purple_http_cancelling_gc = g_hash_table_new(g_direct_hash, g_direct_equal);
 }
 
 static void purple_http_foreach_conn_cancel(gpointer _hc, gpointer user_data)
@@ -2829,4 +2857,6 @@ void purple_http_uninit(void)
 	purple_http_hc_by_gc = NULL;
 	g_hash_table_destroy(purple_http_hc_by_ptr);
 	purple_http_hc_by_ptr = NULL;
+	g_hash_table_destroy(purple_http_cancelling_gc);
+	purple_http_cancelling_gc = NULL;
 }
