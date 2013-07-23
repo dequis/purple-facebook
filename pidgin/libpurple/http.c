@@ -703,6 +703,9 @@ static void _purple_http_error(PurpleHttpConnection *hc, const char *format,
 	hc->response->error = g_strdup_vprintf(format, args);
 	va_end(args);
 
+	if (purple_debug_is_verbose())
+		purple_debug_warning("http", "error: %s\n", hc->response->error);
+
 	purple_http_conn_cancel(hc);
 }
 
@@ -1084,7 +1087,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			hc->length_expected = hc->length_got;
 		else if (hc->length_got == 0 && hc->socket->use_count > 1) {
 			purple_debug_info("http", "Keep-alive connection "
-				"expired, retrying...\n");
+				"expired (when reading), retrying...\n");
 			purple_http_conn_retry(hc);
 			return FALSE;
 		} else {
@@ -1289,6 +1292,15 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 		return;
 
 	if (written < 0) {
+		if (hc->request_header_written == 0 &&
+			hc->socket->use_count > 1)
+		{
+			purple_debug_info("http", "Keep-alive connection "
+				"expired (when writing), retrying...\n");
+			purple_http_conn_retry(hc);
+			return;
+		}
+
 		_purple_http_error(hc, _("Error writing to %s: %s"),
 			hc->url->host, g_strerror(errno));
 		return;
@@ -1635,7 +1647,14 @@ purple_http_conn_retry(PurpleHttpConnection *http_conn)
 
 void purple_http_conn_cancel_all(PurpleConnection *gc)
 {
-	GList *gc_list = g_hash_table_lookup(purple_http_hc_by_gc, gc);
+	GList *gc_list;
+
+	if (purple_debug_is_verbose()) {
+		purple_debug_misc("http", "Cancelling all running HTTP "
+			"connections\n");
+	}
+
+	gc_list = g_hash_table_lookup(purple_http_hc_by_gc, gc);
 
 	g_hash_table_insert(purple_http_cancelling_gc, gc, GINT_TO_POINTER(TRUE));
 
