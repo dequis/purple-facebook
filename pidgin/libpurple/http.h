@@ -671,7 +671,7 @@ void purple_http_request_header_add(PurpleHttpRequest *request,
 /*@{*/
 
 /**
- * Creates a new HTTP KeepAlive pool.
+ * Creates a new HTTP Keep-Alive pool.
  */
 PurpleHttpKeepalivePool *
 purple_http_keepalive_pool_new(void);
@@ -679,7 +679,7 @@ purple_http_keepalive_pool_new(void);
 /**
  * Increment the reference count.
  *
- * @param pool The HTTP KeepAlive pool.
+ * @param pool The HTTP Keep-Alive pool.
  */
 void
 purple_http_keepalive_pool_ref(PurpleHttpKeepalivePool *pool);
@@ -690,11 +690,32 @@ purple_http_keepalive_pool_ref(PurpleHttpKeepalivePool *pool);
  * If the reference count reaches zero, the pool will be freed and all
  * connections will be closed.
  *
- * @param pool The HTTP KeepAlive pool.
+ * @param pool The HTTP Keep-Alive pool.
  * @return @a pool or @c NULL if the reference count reached zero.
  */
 PurpleHttpKeepalivePool *
 purple_http_keepalive_pool_unref(PurpleHttpKeepalivePool *pool);
+
+/**
+ * Sets maximum allowed number of connections to specific host-triple (is_ssl +
+ * hostname + port).
+ *
+ * @param pool  The HTTP Keep-Alive pool.
+ * @param limit The new limit, 0 for unlimited.
+ */
+void
+purple_http_keepalive_pool_set_limit_per_host(PurpleHttpKeepalivePool *pool,
+	guint limit);
+
+/**
+ * Gets maximum allowed number of connections to specific host-triple (is_ssl +
+ * hostname + port).
+ *
+ * @param pool The HTTP Keep-Alive pool.
+ * @return     The limit.
+ */
+guint
+purple_http_keepalive_pool_get_limit_per_host(PurpleHttpKeepalivePool *pool);
 
 /*@}*/
 
