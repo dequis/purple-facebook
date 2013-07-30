@@ -114,7 +114,6 @@ struct _PurpleHttpConnection
 	gboolean contents_reader_requested;
 
 	int redirects_count;
-	int data_length_got;
 
 	int length_expected, length_got;
 
@@ -917,15 +916,20 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 static gboolean _purple_http_recv_body_data(PurpleHttpConnection *hc,
 	const gchar *buf, int len)
 {
-	int current_offset = hc->data_length_got;
+	int current_offset = hc->length_got;
 
+	if (hc->length_expected >= 0 &&
+		len + hc->length_got > hc->length_expected)
+	{
+		len = hc->length_expected - hc->length_got;
+	}
 	if (hc->request->max_length >= 0) {
-		if (hc->data_length_got + len > hc->request->max_length) {
-			len = hc->request->max_length - hc->data_length_got;
-			hc->length_expected = hc->length_got;
+		if (hc->length_got + len > hc->request->max_length) {
+			len = hc->request->max_length - hc->length_got;
+			hc->length_expected = hc->request->max_length;
 		}
 	}
-	hc->data_length_got += len;
+	hc->length_got += len;
 
 	if (len == 0)
 		return TRUE;
@@ -1043,15 +1047,7 @@ static gboolean _purple_http_recv_body(PurpleHttpConnection *hc,
 	const gchar *buf, int len)
 {
 	if (hc->is_chunked)
-	{
-		hc->length_got += len;
 		return _purple_http_recv_body_chunked(hc, buf, len);
-	}
-
-	if (hc->length_expected >= 0 &&
-		len + hc->length_got > hc->length_expected)
-		len = hc->length_expected - hc->length_got;
-	hc->length_got += len;
 
 	return _purple_http_recv_body_data(hc, buf, len);
 }
@@ -1126,11 +1122,19 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			return FALSE;
 	}
 
-	if (hc->is_chunked && hc->chunks_done)
+	if (hc->is_chunked && hc->chunks_done && hc->length_expected < 0)
 		hc->length_expected = hc->length_got;
 
 	if (hc->length_expected >= 0 && hc->length_got >= hc->length_expected) {
 		const gchar *redirect;
+
+		if (hc->is_chunked && !hc->chunks_done) {
+			if (purple_debug_is_verbose()) {
+				purple_debug_misc("http",
+					"I need the terminating empty chunk\n");
+			}
+			return TRUE;
+		}
 
 		if (!hc->headers_got) {
 			hc->response->code = 0;
@@ -1427,7 +1431,6 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 		g_string_free(hc->response->contents, TRUE);
 	hc->response->contents = NULL;
 	hc->length_got = 0;
-	hc->data_length_got = 0;
 	hc->length_expected = -1;
 	hc->is_chunked = FALSE;
 	hc->in_chunk = FALSE;
