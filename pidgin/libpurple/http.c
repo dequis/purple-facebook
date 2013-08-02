@@ -55,7 +55,7 @@ struct _PurpleHttpSocket
 {
 	gboolean is_ssl;
 	gboolean is_busy;
-	uint use_count;
+	guint use_count;
 	PurpleHttpKeepaliveHost *host;
 
 	PurpleSslConnection *ssl_connection;
