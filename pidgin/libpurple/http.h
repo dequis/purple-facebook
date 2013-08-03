@@ -59,9 +59,14 @@ typedef struct _PurpleHttpURL PurpleHttpURL;
 typedef struct _PurpleHttpCookieJar PurpleHttpCookieJar;
 
 /**
- * An pool of TCP connections for HTTP Keep-Alive session.
+ * A pool of TCP connections for HTTP Keep-Alive session.
  */
 typedef struct _PurpleHttpKeepalivePool PurpleHttpKeepalivePool;
+
+/**
+ * A set of running HTTP requests. Can be used to cancel all of them at once.
+ */
+typedef struct _PurpleHttpConnectionSet PurpleHttpConnectionSet;
 
 /**
  * An callback called after performing (successfully or not) HTTP request.
@@ -716,6 +721,24 @@ purple_http_keepalive_pool_set_limit_per_host(PurpleHttpKeepalivePool *pool,
  */
 guint
 purple_http_keepalive_pool_get_limit_per_host(PurpleHttpKeepalivePool *pool);
+
+/*@}*/
+
+
+/**************************************************************************/
+/** @name HTTP connection set API                                         */
+/**************************************************************************/
+/*@{*/
+
+PurpleHttpConnectionSet *
+purple_http_connection_set_new(void);
+
+void
+purple_http_connection_set_destroy(PurpleHttpConnectionSet *set);
+
+void
+purple_http_connection_set_add(PurpleHttpConnectionSet *set,
+	PurpleHttpConnection *http_conn);
 
 /*@}*/
 
