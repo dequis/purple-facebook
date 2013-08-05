@@ -235,11 +235,11 @@ PurpleConnection * purple_http_conn_get_purple_connection(
  * @param watcher            The watcher.
  * @param user_data          The user data to pass to the callback function.
  * @param interval_threshold Minimum interval (in microseconds) of calls to
- *                           watcher.
+ *                           watcher, or -1 for default.
  */
 void purple_http_conn_set_progress_watcher(PurpleHttpConnection *http_conn,
 	PurpleHttpProgressWatcher watcher, gpointer user_data,
-	guint interval_threshold);
+	gint interval_threshold);
 
 /*@}*/
 
