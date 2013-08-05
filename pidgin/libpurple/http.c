@@ -40,6 +40,8 @@
 #define PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT 30
 #define PURPLE_HTTP_REQUEST_DEFAULT_MAX_LENGTH 1048576
 
+#define PURPLE_HTTP_PROGRESS_WATCHER_DEFAULT_INTERVAL 250000
+
 typedef struct _PurpleHttpSocket PurpleHttpSocket;
 
 typedef struct _PurpleHttpHeaders PurpleHttpHeaders;
@@ -1722,9 +1724,14 @@ PurpleConnection * purple_http_conn_get_purple_connection(
 
 void purple_http_conn_set_progress_watcher(PurpleHttpConnection *http_conn,
 	PurpleHttpProgressWatcher watcher, gpointer user_data,
-	guint interval_threshold)
+	gint interval_threshold)
 {
 	g_return_if_fail(http_conn != NULL);
+
+	if (interval_threshold < 0) {
+		interval_threshold =
+			PURPLE_HTTP_PROGRESS_WATCHER_DEFAULT_INTERVAL;
+	}
 
 	http_conn->watcher = watcher;
 	http_conn->watcher_user_data = user_data;
