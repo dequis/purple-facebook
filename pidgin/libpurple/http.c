@@ -1645,7 +1645,7 @@ static void purple_http_connection_terminate(PurpleHttpConnection *hc)
 	g_return_if_fail(hc != NULL);
 
 	purple_debug_misc("http", "Request %p performed %s.\n", hc,
-		purple_http_response_is_successfull(hc->response) ?
+		purple_http_response_is_successful(hc->response) ?
 		"successfully" : "without success");
 
 	if (hc->callback)
@@ -2693,7 +2693,7 @@ static void purple_http_response_free(PurpleHttpResponse *response)
 	g_free(response);
 }
 
-gboolean purple_http_response_is_successfull(PurpleHttpResponse *response)
+gboolean purple_http_response_is_successful(PurpleHttpResponse *response)
 {
 	int code;
 
@@ -2726,7 +2726,7 @@ const gchar * purple_http_response_get_error(PurpleHttpResponse *response)
 	if (response->error != NULL)
 		return response->error;
 
-	if (!purple_http_response_is_successfull(response)) {
+	if (!purple_http_response_is_successful(response)) {
 		static gchar errmsg[200];
 		if (response->code <= 0) {
 			g_snprintf(errmsg, sizeof(errmsg),
