@@ -1004,10 +1004,6 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 			g_string_erase(hc->response_buffer, 0, got_now);
 			hc->in_chunk = (hc->chunk_got < hc->chunk_length);
 
-			if (purple_debug_is_verbose())
-				purple_debug_misc("http", "Chunk (%d/%d)\n",
-					hc->chunk_got, hc->chunk_length);
-
 			continue;
 		}
 
