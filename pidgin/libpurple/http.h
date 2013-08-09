@@ -754,7 +754,7 @@ purple_http_connection_set_add(PurpleHttpConnectionSet *set,
  * @param response The response.
  * @return         TRUE, if request was performed successfully.
  */
-gboolean purple_http_response_is_successfull(PurpleHttpResponse *response);
+gboolean purple_http_response_is_successful(PurpleHttpResponse *response);
 
 /**
  * Gets HTTP response code.

@@ -868,18 +868,18 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 		hdrline[hdrline_len] = '\0';
 
 		if (hdrline[0] == '\0') {
-			if (!hc->main_header_got && hc->is_keepalive) {
-				if (purple_debug_is_verbose()) {
+			if (!hc->main_header_got) {
+				if (purple_debug_is_verbose() &&
+					hc->is_keepalive)
+				{
 					purple_debug_misc("http", "Got keep-"
 						"alive terminator from previous"
 						" request\n");
+				} else {
+					purple_debug_warning("http", "Got empty"
+						" line at the beginning - this "
+						"may be a HTTP server quirk\n");
 				}
-			} else if (!hc->main_header_got) {
-				hc->response->code = 0;
-				purple_debug_warning("http",
-					"Main header not present\n");
-				_purple_http_error(hc, _("Error parsing HTTP"));
-				return FALSE;
 			} else /* hc->main_header_got */ {
 				hc->headers_got = TRUE;
 				if (purple_debug_is_verbose()) {
@@ -939,6 +939,8 @@ static gboolean _purple_http_recv_body_data(PurpleHttpConnection *hc,
 	}
 	if (hc->request->max_length >= 0) {
 		if (hc->length_got + len > hc->request->max_length) {
+			purple_debug_warning("http",
+				"Maximum length exceeded, truncating\n");
 			len = hc->request->max_length - hc->length_got;
 			hc->length_expected = hc->request->max_length;
 		}
@@ -1001,10 +1003,6 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 
 			g_string_erase(hc->response_buffer, 0, got_now);
 			hc->in_chunk = (hc->chunk_got < hc->chunk_length);
-
-			if (purple_debug_is_verbose())
-				purple_debug_misc("http", "Chunk (%d/%d)\n",
-					hc->chunk_got, hc->chunk_length);
 
 			continue;
 		}
@@ -1086,6 +1084,12 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 
 	/* EOF */
 	if (len == 0) {
+		if (hc->request->max_length == 0) {
+			/* It's definitely YHttpServer quirk. */
+			purple_debug_warning("http", "Got EOF, but no data was "
+				"expected (this may be a server quirk)\n");
+			hc->length_expected = hc->length_got;
+		}
 		if (hc->length_expected >= 0 &&
 			hc->length_got < hc->length_expected) {
 			purple_debug_warning("http", "No more data while reading"
@@ -1101,10 +1105,21 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			purple_http_conn_retry(hc);
 			return FALSE;
 		} else {
-			purple_debug_warning("http", "No more data while "
-				"parsing headers\n");
-			_purple_http_error(hc, _("Error parsing HTTP"));
-			return FALSE;
+			if (g_ascii_strcasecmp(purple_http_headers_get(
+				hc->response->headers, "Server"),
+				"YHttpServer") == 0)
+			{
+				purple_debug_warning("http", "No more data "
+					"while parsing headers (YHttpServer "
+					"quirk)\n");
+				hc->headers_got = TRUE;
+				hc->length_expected = hc->length_got = 0;
+			} else {
+				purple_debug_warning("http", "No more data "
+					"while parsing headers\n");
+				_purple_http_error(hc, _("Error parsing HTTP"));
+				return FALSE;
+			}
 		}
 	}
 
@@ -1626,7 +1641,7 @@ static void purple_http_connection_terminate(PurpleHttpConnection *hc)
 	g_return_if_fail(hc != NULL);
 
 	purple_debug_misc("http", "Request %p performed %s.\n", hc,
-		purple_http_response_is_successfull(hc->response) ?
+		purple_http_response_is_successful(hc->response) ?
 		"successfully" : "without success");
 
 	if (hc->callback)
@@ -2252,13 +2267,17 @@ purple_http_keepalive_pool_release(PurpleHttpSocket *hs, gboolean invalidate)
 	hs->is_busy = FALSE;
 	host = hs->host;
 
+	if (host == NULL) {
+		purple_http_socket_close_free(hs);
+		return;
+	}
+
 	if (invalidate) {
 		host->sockets = g_slist_remove(host->sockets, hs);
 		purple_http_socket_close_free(hs);
 	}
 
-	if (host != NULL)
-		purple_http_keepalive_host_process_queue(host);
+	purple_http_keepalive_host_process_queue(host);
 }
 
 void
@@ -2670,7 +2689,7 @@ static void purple_http_response_free(PurpleHttpResponse *response)
 	g_free(response);
 }
 
-gboolean purple_http_response_is_successfull(PurpleHttpResponse *response)
+gboolean purple_http_response_is_successful(PurpleHttpResponse *response)
 {
 	int code;
 
@@ -2703,7 +2722,7 @@ const gchar * purple_http_response_get_error(PurpleHttpResponse *response)
 	if (response->error != NULL)
 		return response->error;
 
-	if (!purple_http_response_is_successfull(response)) {
+	if (!purple_http_response_is_successful(response)) {
 		static gchar errmsg[200];
 		if (response->code <= 0) {
 			g_snprintf(errmsg, sizeof(errmsg),
