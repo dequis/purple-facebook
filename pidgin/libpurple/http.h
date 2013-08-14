@@ -622,7 +622,8 @@ gboolean purple_http_request_is_http11(PurpleHttpRequest *request);
  * Headers length doesn't count here.
  *
  * @param request The request.
- * @param max_len Maximum length of response to read (-1 for unlimited).
+ * @param max_len Maximum length of response to read (-1 for the maximum
+ *                supported amount).
  */
 void purple_http_request_set_max_len(PurpleHttpRequest *request, int max_len);
 
