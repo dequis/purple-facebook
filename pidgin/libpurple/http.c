@@ -115,7 +115,7 @@ struct _PurpleHttpConnection
 	PurpleHttpConnectionSet *connection_set;
 	PurpleHttpSocket *socket;
 	GString *request_header;
-	int request_header_written, request_contents_written;
+	guint request_header_written, request_contents_written;
 	gboolean main_header_got, headers_got;
 	GString *response_buffer;
 	PurpleHttpGzStream *gz_stream;
@@ -125,7 +125,8 @@ struct _PurpleHttpConnection
 
 	int redirects_count;
 
-	int length_expected, length_got, length_got_decompressed;
+	int length_expected;
+	guint length_got, length_got_decompressed;
 
 	gboolean is_chunked, in_chunk, chunks_done;
 	int chunk_length, chunk_got;
@@ -1065,7 +1066,7 @@ static gboolean _purple_http_recv_body_data(PurpleHttpConnection *hc,
 	GString *decompressed = NULL;
 
 	if (hc->length_expected >= 0 &&
-		len + hc->length_got > hc->length_expected)
+		len + hc->length_got > (guint)hc->length_expected)
 	{
 		len = hc->length_expected - hc->length_got;
 	}
@@ -1246,7 +1247,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			hc->length_expected = hc->length_got;
 		}
 		if (hc->length_expected >= 0 &&
-			hc->length_got < hc->length_expected) {
+			hc->length_got < (guint)hc->length_expected) {
 			purple_debug_warning("http", "No more data while reading"
 				" contents\n");
 			_purple_http_error(hc, _("Error parsing HTTP"));
@@ -1269,6 +1270,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 					"quirk)\n");
 				hc->headers_got = TRUE;
 				hc->length_expected = hc->length_got = 0;
+				hc->length_got_decompressed = 0;
 			} else {
 				purple_debug_warning("http", "No more data "
 					"while parsing headers\n");
@@ -1322,7 +1324,9 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 	if (hc->is_chunked && hc->chunks_done && hc->length_expected < 0)
 		hc->length_expected = hc->length_got;
 
-	if (hc->length_expected >= 0 && hc->length_got >= hc->length_expected) {
+	if (hc->length_expected >= 0 &&
+		hc->length_got >= (guint)hc->length_expected)
+	{
 		const gchar *redirect;
 
 		if (hc->is_chunked && !hc->chunks_done) {
@@ -1519,8 +1523,12 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 		purple_http_conn_notify_progress_watcher(hc);
 		if (hc->contents_reader_buffer)
 			g_string_erase(hc->contents_reader_buffer, 0, written);
-		if (hc->request_contents_written < hc->request->contents_length)
+		if (hc->request->contents_length > 0 &&
+			hc->request_contents_written <
+			(guint)hc->request->contents_length)
+		{
 			return;
+		}
 	}
 
 	/* request is completely written, let's read the response */
@@ -1628,6 +1636,7 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 		g_string_free(hc->response->contents, TRUE);
 	hc->response->contents = NULL;
 	hc->length_got = 0;
+	hc->length_got_decompressed = 0;
 	hc->length_expected = -1;
 	hc->is_chunked = FALSE;
 	hc->in_chunk = FALSE;
@@ -2326,7 +2335,7 @@ _purple_http_keepalive_host_process_queue_cb(gpointer _host)
 	PurpleHttpKeepaliveHost *host = _host;
 	PurpleHttpSocket *hs = NULL;
 	GSList *it;
-	int sockets_count;
+	guint sockets_count;
 
 	g_return_val_if_fail(host != NULL, FALSE);
 
