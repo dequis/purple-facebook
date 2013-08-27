@@ -531,10 +531,6 @@ purple_http_socket_connect_new(PurpleConnection *gc, const gchar *host, int port
 			host, port,
 			_purple_http_socket_connected_ssl,
 			_purple_http_socket_connected_ssl_error, hs);
-/* TODO
-		purple_ssl_set_compatibility_level(hs->ssl_connection,
-			PURPLE_SSL_COMPATIBILITY_SECURE);
-*/
 	} else {
 		hs->raw_connection = purple_proxy_connect(gc, account,
 			host, port,
@@ -577,34 +573,14 @@ purple_http_socket_write(PurpleHttpSocket *hs, const gchar *buf, size_t len)
 		return write(hs->fd, buf, len);
 }
 
-static void _purple_http_socket_watch_recv_ssl(gpointer _hs,
-	PurpleSslConnection *ssl_connection, PurpleInputCondition cond)
-{
-	PurpleHttpSocket *hs = _hs;
-
-	g_return_if_fail(hs != NULL);
-
-	hs->watch_cb(hs->cb_data, hs->fd, cond);
-}
-
 static void
 purple_http_socket_watch(PurpleHttpSocket *hs, PurpleInputCondition cond,
 	PurpleInputFunction func, gpointer user_data)
 {
 	g_return_if_fail(hs != NULL);
 
-	if (hs->inpa > 0)
-		purple_input_remove(hs->inpa);
-	hs->inpa = 0;
-
-	if (cond == PURPLE_INPUT_READ && hs->is_ssl) {
-		hs->watch_cb = func;
-		hs->cb_data = user_data;
-		purple_ssl_input_add(hs->ssl_connection,
-			_purple_http_socket_watch_recv_ssl, hs);
-	}
-	else
-		hs->inpa = purple_input_add(hs->fd, cond, func, user_data);
+	purple_http_socket_dontwatch(hs);
+	hs->inpa = purple_input_add(hs->fd, cond, func, user_data);
 }
 
 static void
@@ -615,8 +591,6 @@ purple_http_socket_dontwatch(PurpleHttpSocket *hs)
 	if (hs->inpa > 0)
 		purple_input_remove(hs->inpa);
 	hs->inpa = 0;
-	if (hs->ssl_connection)
-		purple_ssl_input_remove(hs->ssl_connection);
 }
 
 static void
