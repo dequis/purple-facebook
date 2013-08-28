@@ -70,7 +70,6 @@ struct _PurpleHttpSocket
 	PurpleProxyConnectData *raw_connection;
 	int fd;
 	guint inpa;
-	PurpleInputFunction watch_cb;
 	PurpleHttpSocketConnectCb connect_cb;
 	gpointer cb_data;
 };
@@ -574,16 +573,6 @@ purple_http_socket_write(PurpleHttpSocket *hs, const gchar *buf, size_t len)
 }
 
 static void
-purple_http_socket_watch(PurpleHttpSocket *hs, PurpleInputCondition cond,
-	PurpleInputFunction func, gpointer user_data)
-{
-	g_return_if_fail(hs != NULL);
-
-	purple_http_socket_dontwatch(hs);
-	hs->inpa = purple_input_add(hs->fd, cond, func, user_data);
-}
-
-static void
 purple_http_socket_dontwatch(PurpleHttpSocket *hs)
 {
 	g_return_if_fail(hs != NULL);
@@ -591,6 +580,16 @@ purple_http_socket_dontwatch(PurpleHttpSocket *hs)
 	if (hs->inpa > 0)
 		purple_input_remove(hs->inpa);
 	hs->inpa = 0;
+}
+
+static void
+purple_http_socket_watch(PurpleHttpSocket *hs, PurpleInputCondition cond,
+	PurpleInputFunction func, gpointer user_data)
+{
+	g_return_if_fail(hs != NULL);
+
+	purple_http_socket_dontwatch(hs);
+	hs->inpa = purple_input_add(hs->fd, cond, func, user_data);
 }
 
 static void
