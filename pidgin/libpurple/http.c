@@ -32,13 +32,17 @@
 #include "debug.h"
 #include "ntlm.h"
 
+#include <zlib.h>
+
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
 #define PURPLE_HTTP_MAX_READ_BUFFER_LEN 10240
+#define PURPLE_HTTP_GZ_BUFF_LEN 1024
 
 #define PURPLE_HTTP_REQUEST_DEFAULT_MAX_REDIRECTS 20
 #define PURPLE_HTTP_REQUEST_DEFAULT_TIMEOUT 30
 #define PURPLE_HTTP_REQUEST_DEFAULT_MAX_LENGTH 1048576
+#define PURPLE_HTTP_REQUEST_HARD_MAX_LENGTH G_MAXINT32-1
 
 #define PURPLE_HTTP_PROGRESS_WATCHER_DEFAULT_INTERVAL 250000
 
@@ -49,6 +53,8 @@ typedef struct _PurpleHttpHeaders PurpleHttpHeaders;
 typedef struct _PurpleHttpKeepaliveHost PurpleHttpKeepaliveHost;
 
 typedef struct _PurpleHttpKeepaliveRequest PurpleHttpKeepaliveRequest;
+
+typedef struct _PurpleHttpGzStream PurpleHttpGzStream;
 
 typedef void (*PurpleHttpSocketConnectCb)(PurpleHttpSocket *hs,
 	const gchar *error, gpointer user_data);
@@ -89,7 +95,7 @@ struct _PurpleHttpRequest
 	int timeout;
 	int max_redirects;
 	gboolean http11;
-	int max_length;
+	guint max_length;
 };
 
 struct _PurpleHttpConnection
@@ -109,16 +115,18 @@ struct _PurpleHttpConnection
 	PurpleHttpConnectionSet *connection_set;
 	PurpleHttpSocket *socket;
 	GString *request_header;
-	int request_header_written, request_contents_written;
+	guint request_header_written, request_contents_written;
 	gboolean main_header_got, headers_got;
 	GString *response_buffer;
+	PurpleHttpGzStream *gz_stream;
 
 	GString *contents_reader_buffer;
 	gboolean contents_reader_requested;
 
 	int redirects_count;
 
-	int length_expected, length_got;
+	int length_expected;
+	guint length_got, length_got_decompressed;
 
 	gboolean is_chunked, in_chunk, chunks_done;
 	int chunk_length, chunk_got;
@@ -214,6 +222,15 @@ struct _PurpleHttpConnectionSet
 	gboolean is_destroying;
 
 	GHashTable *connections;
+};
+
+struct _PurpleHttpGzStream
+{
+	gboolean failed;
+	z_stream zs;
+	gsize max_output;
+	gsize decompressed;
+	GString *pending;
 };
 
 static time_t purple_http_rfc1123_to_time(const gchar *str);
@@ -331,6 +348,120 @@ static time_t purple_http_rfc1123_to_time(const gchar *str)
 	return t;
 }
 
+/*** GZip streams *************************************************************/
+
+static PurpleHttpGzStream *
+purple_http_gz_new(gsize max_output, gboolean is_deflate)
+{
+	PurpleHttpGzStream *gzs = g_new0(PurpleHttpGzStream, 1);
+	int windowBits;
+
+	if (is_deflate)
+		windowBits = -MAX_WBITS;
+	else /* is gzip */
+		windowBits = MAX_WBITS + 32;
+
+	if (inflateInit2(&gzs->zs, windowBits) != Z_OK) {
+		purple_debug_error("http", "Cannot initialize zlib stream\n");
+		g_free(gzs);
+		return NULL;
+	}
+
+	gzs->max_output = max_output;
+
+	return gzs;
+}
+
+static GString *
+purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
+{
+	const gchar *compressed_buff;
+	gsize compressed_len;
+	GString *ret;
+	z_stream *zs;
+
+	g_return_val_if_fail(gzs != NULL, NULL);
+	g_return_val_if_fail(buf != NULL, NULL);
+
+	if (gzs->failed)
+		return NULL;
+
+	zs = &gzs->zs;
+
+	if (gzs->pending) {
+		g_string_append_len(gzs->pending, buf, len);
+		compressed_buff = gzs->pending->str;
+		compressed_len = gzs->pending->len;
+	} else {
+		compressed_buff = buf;
+		compressed_len = len;
+	}
+
+	zs->next_in = (z_const Bytef*)compressed_buff;
+	zs->avail_in = compressed_len;
+
+	ret = g_string_new(NULL);
+	while (zs->avail_in > 0) {
+		int gzres;
+		gchar decompressed_buff[PURPLE_HTTP_GZ_BUFF_LEN];
+		gsize decompressed_len;
+
+		zs->next_out = (Bytef*)decompressed_buff;
+		zs->avail_out = sizeof(decompressed_buff);
+		decompressed_len = zs->avail_out = sizeof(decompressed_buff);
+		gzres = inflate(zs, Z_FULL_FLUSH);
+		decompressed_len -= zs->avail_out;
+
+		if (gzres == Z_OK || gzres == Z_STREAM_END) {
+			if (decompressed_len == 0)
+				break;
+			if (gzs->decompressed + decompressed_len >=
+				gzs->max_output)
+			{
+				purple_debug_warning("http", "Maximum amount of"
+					" decompressed data is reached\n");
+				decompressed_len = gzs->max_output -
+					gzs->decompressed;
+				gzres = Z_STREAM_END;
+			}
+			gzs->decompressed += decompressed_len;
+			g_string_append_len(ret, decompressed_buff,
+				decompressed_len);
+			if (gzres == Z_STREAM_END)
+				break;
+		} else {
+			purple_debug_error("http",
+				"Decompression failed (%d): %s\n", gzres,
+				zs->msg);
+			gzs->failed = TRUE;
+			return NULL;
+		}
+	}
+
+	if (gzs->pending) {
+		g_string_free(gzs->pending, TRUE);
+		gzs->pending = NULL;
+	}
+
+	if (zs->avail_in > 0) {
+		gzs->pending = g_string_new_len((gchar*)zs->next_in,
+			zs->avail_in);
+	}
+
+	return ret;
+}
+
+static void
+purple_http_gz_free(PurpleHttpGzStream *gzs)
+{
+	if (gzs == NULL)
+		return;
+	inflateEnd(&gzs->zs);
+	if (gzs->pending)
+		g_string_free(gzs->pending, TRUE);
+	g_free(gzs);
+}
+
 /*** HTTP Sockets *************************************************************/
 
 static void _purple_http_socket_connected_raw(gpointer _hs, gint fd,
@@ -400,10 +531,6 @@ purple_http_socket_connect_new(PurpleConnection *gc, const gchar *host, int port
 			host, port,
 			_purple_http_socket_connected_ssl,
 			_purple_http_socket_connected_ssl_error, hs);
-/* TODO
-		purple_ssl_set_compatibility_level(hs->ssl_connection,
-			PURPLE_SSL_COMPATIBILITY_SECURE);
-*/
 	} else {
 		hs->raw_connection = purple_proxy_connect(gc, account,
 			host, port,
@@ -446,34 +573,14 @@ purple_http_socket_write(PurpleHttpSocket *hs, const gchar *buf, size_t len)
 		return write(hs->fd, buf, len);
 }
 
-static void _purple_http_socket_watch_recv_ssl(gpointer _hs,
-	PurpleSslConnection *ssl_connection, PurpleInputCondition cond)
-{
-	PurpleHttpSocket *hs = _hs;
-
-	g_return_if_fail(hs != NULL);
-
-	hs->watch_cb(hs->cb_data, hs->fd, cond);
-}
-
 static void
 purple_http_socket_watch(PurpleHttpSocket *hs, PurpleInputCondition cond,
 	PurpleInputFunction func, gpointer user_data)
 {
 	g_return_if_fail(hs != NULL);
 
-	if (hs->inpa > 0)
-		purple_input_remove(hs->inpa);
-	hs->inpa = 0;
-
-	if (cond == PURPLE_INPUT_READ && hs->is_ssl) {
-		hs->watch_cb = func;
-		hs->cb_data = user_data;
-		purple_ssl_input_add(hs->ssl_connection,
-			_purple_http_socket_watch_recv_ssl, hs);
-	}
-	else
-		hs->inpa = purple_input_add(hs->fd, cond, func, user_data);
+	purple_http_socket_dontwatch(hs);
+	hs->inpa = purple_input_add(hs->fd, cond, func, user_data);
 }
 
 static void
@@ -484,8 +591,6 @@ purple_http_socket_dontwatch(PurpleHttpSocket *hs)
 	if (hs->inpa > 0)
 		purple_input_remove(hs->inpa);
 	hs->inpa = 0;
-	if (hs->ssl_connection)
-		purple_ssl_input_remove(hs->ssl_connection);
 }
 
 static void
@@ -778,6 +883,8 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	}
 	if (!purple_http_headers_get(hdrs, "accept"))
 		g_string_append(h, "Accept: */*\r\n");
+	if (!purple_http_headers_get(hdrs, "accept-encoding"))
+		g_string_append(h, "Accept-Encoding: gzip, deflate\r\n");
 
 	if (!purple_http_headers_get(hdrs, "content-length") && (
 		req->contents_length > 0 ||
@@ -930,31 +1037,51 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 static gboolean _purple_http_recv_body_data(PurpleHttpConnection *hc,
 	const gchar *buf, int len)
 {
-	int current_offset = hc->length_got;
+	GString *decompressed = NULL;
 
 	if (hc->length_expected >= 0 &&
-		len + hc->length_got > hc->length_expected)
+		len + hc->length_got > (guint)hc->length_expected)
 	{
 		len = hc->length_expected - hc->length_got;
 	}
-	if (hc->request->max_length >= 0) {
-		if (hc->length_got + len > hc->request->max_length) {
-			purple_debug_warning("http",
-				"Maximum length exceeded, truncating\n");
-			len = hc->request->max_length - hc->length_got;
-			hc->length_expected = hc->request->max_length;
-		}
-	}
+
 	hc->length_got += len;
 
-	if (len == 0)
+	if (hc->gz_stream != NULL) {
+		decompressed = purple_http_gz_put(hc->gz_stream, buf, len);
+		if (decompressed == NULL) {
+			_purple_http_error(hc,
+				_("Error while decompressing data"));
+			return FALSE;
+		}
+		buf = decompressed->str;
+		len = decompressed->len;
+	}
+
+	g_assert(hc->request->max_length <=
+		PURPLE_HTTP_REQUEST_HARD_MAX_LENGTH);
+	if (hc->length_got_decompressed + len > hc->request->max_length) {
+		purple_debug_warning("http",
+			"Maximum length exceeded, truncating\n");
+		len = hc->request->max_length - hc->length_got_decompressed;
+		hc->length_expected = hc->length_got;
+	}
+	hc->length_got_decompressed += len;
+
+	if (len == 0) {
+		if (decompressed != NULL)
+			g_string_free(decompressed, TRUE);
 		return TRUE;
+	}
 
 	if (hc->request->response_writer != NULL) {
 		gboolean succ;
 		succ = hc->request->response_writer(hc, hc->response, buf,
-			current_offset, len, hc->request->response_writer_data);
+			hc->length_got_decompressed, len,
+			hc->request->response_writer_data);
 		if (!succ) {
+			if (decompressed != NULL)
+				g_string_free(decompressed, TRUE);
 			purple_debug_error("http",
 				"Cannot write using callback\n");
 			_purple_http_error(hc,
@@ -966,6 +1093,9 @@ static gboolean _purple_http_recv_body_data(PurpleHttpConnection *hc,
 			hc->response->contents = g_string_new("");
 		g_string_append_len(hc->response->contents, buf, len);
 	}
+
+	if (decompressed != NULL)
+		g_string_free(decompressed, TRUE);
 
 	purple_http_conn_notify_progress_watcher(hc);
 	return TRUE;
@@ -1091,7 +1221,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			hc->length_expected = hc->length_got;
 		}
 		if (hc->length_expected >= 0 &&
-			hc->length_got < hc->length_expected) {
+			hc->length_got < (guint)hc->length_expected) {
 			purple_debug_warning("http", "No more data while reading"
 				" contents\n");
 			_purple_http_error(hc, _("Error parsing HTTP"));
@@ -1114,6 +1244,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 					"quirk)\n");
 				hc->headers_got = TRUE;
 				hc->length_expected = hc->length_got = 0;
+				hc->length_got_decompressed = 0;
 			} else {
 				purple_debug_warning("http", "No more data "
 					"while parsing headers\n");
@@ -1128,12 +1259,25 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			return FALSE;
 		len = 0;
 		if (hc->headers_got) {
+			gboolean is_gzip, is_deflate;
 			if (!purple_http_headers_get_int(hc->response->headers,
 				"Content-Length", &hc->length_expected))
 				hc->length_expected = -1;
 			hc->is_chunked = (purple_http_headers_match(
 				hc->response->headers,
 				"Transfer-Encoding", "chunked"));
+			is_gzip = purple_http_headers_match(
+				hc->response->headers, "Content-Encoding",
+				"gzip");
+			is_deflate = purple_http_headers_match(
+				hc->response->headers, "Content-Encoding",
+				"deflate");
+			if (is_gzip || is_deflate)
+			{
+				hc->gz_stream = purple_http_gz_new(
+					hc->request->max_length + 1,
+					is_deflate);
+			}
 		}
 		if (hc->headers_got && hc->response_buffer &&
 			hc->response_buffer->len > 0) {
@@ -1154,7 +1298,9 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 	if (hc->is_chunked && hc->chunks_done && hc->length_expected < 0)
 		hc->length_expected = hc->length_got;
 
-	if (hc->length_expected >= 0 && hc->length_got >= hc->length_expected) {
+	if (hc->length_expected >= 0 &&
+		hc->length_got >= (guint)hc->length_expected)
+	{
 		const gchar *redirect;
 
 		if (hc->is_chunked && !hc->chunks_done) {
@@ -1351,8 +1497,12 @@ static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
 		purple_http_conn_notify_progress_watcher(hc);
 		if (hc->contents_reader_buffer)
 			g_string_erase(hc->contents_reader_buffer, 0, written);
-		if (hc->request_contents_written < hc->request->contents_length)
+		if (hc->request->contents_length > 0 &&
+			hc->request_contents_written <
+			(guint)hc->request->contents_length)
+		{
 			return;
+		}
 	}
 
 	/* request is completely written, let's read the response */
@@ -1460,6 +1610,7 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 		g_string_free(hc->response->contents, TRUE);
 	hc->response->contents = NULL;
 	hc->length_got = 0;
+	hc->length_got_decompressed = 0;
 	hc->length_expected = -1;
 	hc->is_chunked = FALSE;
 	hc->in_chunk = FALSE;
@@ -1611,6 +1762,7 @@ static void purple_http_connection_free(PurpleHttpConnection *hc)
 
 	if (hc->contents_reader_buffer)
 		g_string_free(hc->contents_reader_buffer, TRUE);
+	purple_http_gz_free(hc->gz_stream);
 
 	if (hc->request_header)
 		g_string_free(hc->request_header, TRUE);
@@ -2028,17 +2180,18 @@ purple_http_keepalive_host_free(gpointer _host)
 {
 	PurpleHttpKeepaliveHost *host = _host;
 
-	if (host->process_queue_timeout > 0) {
-		purple_timeout_remove(host->process_queue_timeout);
-		host->process_queue_timeout = 0;
-	}
-
 	g_free(host->host);
 
 	g_slist_free_full(host->queue,
 		(GDestroyNotify)purple_http_keepalive_pool_request_cancel);
 	g_slist_free_full(host->sockets,
 		(GDestroyNotify)purple_http_socket_close_free);
+
+	if (host->process_queue_timeout > 0) {
+		purple_timeout_remove(host->process_queue_timeout);
+		host->process_queue_timeout = 0;
+	}
+
 
 	g_free(host);
 }
@@ -2156,7 +2309,7 @@ _purple_http_keepalive_host_process_queue_cb(gpointer _host)
 	PurpleHttpKeepaliveHost *host = _host;
 	PurpleHttpSocket *hs = NULL;
 	GSList *it;
-	int sockets_count;
+	guint sockets_count;
 
 	g_return_val_if_fail(host != NULL, FALSE);
 
@@ -2199,10 +2352,12 @@ _purple_http_keepalive_host_process_queue_cb(gpointer _host)
 		hs->is_busy = TRUE;
 		hs->use_count++;
 
+		purple_http_keepalive_host_process_queue(host);
+
 		req->cb(hs, NULL, req->user_data);
 		g_free(req);
 
-		return TRUE; /* run again */
+		return FALSE;
 	}
 
 	hs = purple_http_socket_connect_new(req->gc, req->host->host,
@@ -2620,8 +2775,8 @@ void purple_http_request_set_max_len(PurpleHttpRequest *request, int max_len)
 {
 	g_return_if_fail(request != NULL);
 
-	if (max_len < -1)
-		max_len = -1;
+	if (max_len < 0 || max_len > PURPLE_HTTP_REQUEST_HARD_MAX_LENGTH)
+		max_len = PURPLE_HTTP_REQUEST_HARD_MAX_LENGTH;
 
 	request->max_length = max_len;
 }
