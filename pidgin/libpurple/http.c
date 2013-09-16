@@ -34,6 +34,9 @@
 #include "purple-socket.h"
 
 #include <zlib.h>
+#ifndef z_const
+#define z_const
+#endif
 
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
