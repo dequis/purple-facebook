@@ -25,7 +25,7 @@
  * Also, any public API should not depend on this file.
  */
 
-#ifdef HAVE_CLANG
+#ifdef __clang__
 
 #undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
@@ -36,7 +36,8 @@
 #define G_GNUC_END_IGNORE_DEPRECATIONS \
 	_Pragma ("clang diagnostic pop")
 
-#endif /* HAVE_CLANG */
+#endif /* __clang__ */
+
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
