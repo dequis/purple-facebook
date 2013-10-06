@@ -25,6 +25,20 @@
  * Also, any public API should not depend on this file.
  */
 
+#ifdef __clang__
+
+#undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
+	_Pragma ("clang diagnostic push") \
+	_Pragma ("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+
+#undef G_GNUC_END_IGNORE_DEPRECATIONS
+#define G_GNUC_END_IGNORE_DEPRECATIONS \
+	_Pragma ("clang diagnostic pop")
+
+#endif /* __clang__ */
+
+
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
