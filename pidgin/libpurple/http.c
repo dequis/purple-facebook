@@ -1117,9 +1117,10 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			purple_http_conn_retry(hc);
 			return FALSE;
 		} else {
-			if (g_ascii_strcasecmp(purple_http_headers_get(
-				hc->response->headers, "Server"),
-				"YHttpServer") == 0)
+			const gchar *server = purple_http_headers_get(
+				hc->response->headers, "Server");
+			if (server &&
+				g_ascii_strcasecmp(server, "YHttpServer") == 0)
 			{
 				purple_debug_warning("http", "No more data "
 					"while parsing headers (YHttpServer "
