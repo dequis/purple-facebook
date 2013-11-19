@@ -73,6 +73,15 @@ static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
 	g_slist_free(list);
 }
 
+#if !GLIB_CHECK_VERSION(2, 26, 0)
+
+static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
+{
+	g_object_notify(object, g_param_spec_get_name(pspec));
+}
+
+#endif /* < 2.26.0 */
+
 #endif /* < 2.28.0 */
 
 #endif /* < 2.32.0 */
