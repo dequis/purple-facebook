@@ -80,6 +80,14 @@ static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
 	g_object_notify(object, g_param_spec_get_name(pspec));
 }
 
+static inline void g_object_class_install_properties(GObjectClass *oclass,
+	guint n_pspecs, GParamSpec **pspecs)
+{
+	gint i;
+	for (i = 1; i < n_pspecs; ++i)
+		g_object_class_install_property(oclass, i, pspecs[i]);
+}
+
 #endif /* < 2.26.0 */
 
 #endif /* < 2.28.0 */
