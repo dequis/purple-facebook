@@ -598,6 +598,8 @@ static void purple_http_headers_remove(PurpleHttpHeaders *hdrs,
 
 static const GList * purple_http_headers_get_all(PurpleHttpHeaders *hdrs)
 {
+	g_return_val_if_fail(hdrs != NULL, NULL);
+
 	return hdrs->list;
 }
 
@@ -1433,7 +1435,7 @@ _purple_http_connected(PurpleSocket *ps, const gchar *error, gpointer _hc)
 		return;
 	}
 
-	purple_socket_watch(hs->ps, PURPLE_INPUT_WRITE, _purple_http_send, hc);
+	purple_socket_watch(ps, PURPLE_INPUT_WRITE, _purple_http_send, hc);
 }
 
 static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
@@ -1448,16 +1450,16 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 
 	if (purple_debug_is_verbose()) {
 		if (purple_debug_is_unsafe()) {
-			gchar *url = purple_http_url_print(hc->url);
-			purple_debug_misc("http", "Connecting to %s...\n", url);
-			g_free(url);
+			gchar *urlp = purple_http_url_print(hc->url);
+			purple_debug_misc("http", "Connecting to %s...\n", urlp);
+			g_free(urlp);
 		} else
 			purple_debug_misc("http", "Connecting to %s...\n",
 				hc->url->host);
 	}
 
 	url = hc->url;
-	if (url->protocol[0] == '\0' ||
+	if (g_strcmp0(url->protocol, "") == 0 ||
 		g_ascii_strcasecmp(url->protocol, "http") == 0) {
 		/* do nothing */
 	} else if (g_ascii_strcasecmp(url->protocol, "https") == 0) {
@@ -1614,6 +1616,8 @@ static PurpleHttpConnection * purple_http_connection_new(
 	PurpleHttpRequest *request, PurpleConnection *gc)
 {
 	PurpleHttpConnection *hc = g_new0(PurpleHttpConnection, 1);
+
+	g_assert(request != NULL);
 
 	hc->request = request;
 	purple_http_request_ref(request);
@@ -2190,7 +2194,7 @@ _purple_http_keepalive_socket_connected(PurpleSocket *ps,
 	if (hs != NULL)
 		hs->use_count++;
 
-	req->cb(hs->ps, error, req->user_data);
+	req->cb(ps, error, req->user_data);
 	g_free(req);
 }
 
@@ -2255,6 +2259,11 @@ _purple_http_keepalive_host_process_queue_cb(gpointer _host)
 	hs = purple_http_socket_connect_new(req->gc, req->host->host,
 		req->host->port, req->host->is_ssl,
 		_purple_http_keepalive_socket_connected, req);
+	if (hs == NULL) {
+		purple_debug_error("http", "failed creating new socket");
+		return FALSE;
+	}
+
 	req->hs = hs;
 	hs->is_busy = TRUE;
 	hs->host = host;
@@ -2289,8 +2298,10 @@ purple_http_keepalive_pool_request_cancel(PurpleHttpKeepaliveRequest *req)
 		req->host->queue = g_slist_remove(req->host->queue, req);
 
 	if (req->hs != NULL) {
-		req->host->sockets = g_slist_remove(req->host->sockets,
-			req->hs);
+		if (G_LIKELY(req->host)) {
+			req->host->sockets = g_slist_remove(req->host->sockets,
+				req->hs);
+		}
 		purple_http_socket_close_free(req->hs);
 		/* req should already be free'd here */
 	} else {
