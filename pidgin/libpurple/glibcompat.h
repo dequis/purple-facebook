@@ -41,6 +41,9 @@
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
+#include <glib.h>
+#include <glib-object.h>
+
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 #define G_GNUC_END_IGNORE_DEPRECATIONS
 
@@ -75,6 +78,8 @@ static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
 
 #if !GLIB_CHECK_VERSION(2, 26, 0)
 
+typedef struct stat GStatBuf;
+
 static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
 {
 	g_object_notify(object, g_param_spec_get_name(pspec));
@@ -83,7 +88,7 @@ static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
 static inline void g_object_class_install_properties(GObjectClass *oclass,
 	guint n_pspecs, GParamSpec **pspecs)
 {
-	gint i;
+	guint i;
 	for (i = 1; i < n_pspecs; ++i)
 		g_object_class_install_property(oclass, i, pspecs[i]);
 }
