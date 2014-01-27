@@ -41,6 +41,11 @@
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
+#include <glib.h>
+#include <glib-object.h>
+
+#include <string.h>
+
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 #define G_GNUC_END_IGNORE_DEPRECATIONS
 
@@ -48,6 +53,21 @@ static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
 	gpointer data, GError **error)
 {
 	return g_thread_create(func, data, TRUE, error);
+}
+
+#if !GLIB_CHECK_VERSION(2, 30, 0)
+
+static inline gchar *g_utf8_substring(const gchar *str, glong start_pos,
+	glong end_pos)
+{
+	gchar *start = g_utf8_offset_to_pointer(str, start_pos);
+	gchar *end = g_utf8_offset_to_pointer(start, end_pos - start_pos);
+	gchar *out = g_malloc(end - start + 1);
+
+	memcpy(out, start, end - start);
+	out[end - start] = 0;
+
+	return out;
 }
 
 #if !GLIB_CHECK_VERSION(2, 28, 0)
@@ -75,6 +95,8 @@ static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
 
 #if !GLIB_CHECK_VERSION(2, 26, 0)
 
+typedef struct stat GStatBuf;
+
 static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
 {
 	g_object_notify(object, g_param_spec_get_name(pspec));
@@ -83,7 +105,7 @@ static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
 static inline void g_object_class_install_properties(GObjectClass *oclass,
 	guint n_pspecs, GParamSpec **pspecs)
 {
-	gint i;
+	guint i;
 	for (i = 1; i < n_pspecs; ++i)
 		g_object_class_install_property(oclass, i, pspecs[i]);
 }
@@ -91,6 +113,8 @@ static inline void g_object_class_install_properties(GObjectClass *oclass,
 #endif /* < 2.26.0 */
 
 #endif /* < 2.28.0 */
+
+#endif /* < 2.30.0 */
 
 #endif /* < 2.32.0 */
 
