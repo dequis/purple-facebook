@@ -39,11 +39,11 @@
 #endif /* __clang__ */
 
 
+#include <glib.h>
+
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
-#include <glib.h>
 #include <glib-object.h>
-
 #include <string.h>
 
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
