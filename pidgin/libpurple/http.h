@@ -383,7 +383,7 @@ void purple_http_cookie_jar_ref(PurpleHttpCookieJar *cookie_jar);
  * If the reference count reaches zero, the cookie jar will be freed.
  *
  * @cookie_jar: The cookie jar.
- * Returns: @a cookie_jar or @c NULL if the reference count reached zero.
+ * Returns: @a cookie_jar or %NULL if the reference count reached zero.
  */
 PurpleHttpCookieJar * purple_http_cookie_jar_unref(
 	PurpleHttpCookieJar *cookie_jar);
@@ -446,7 +446,7 @@ void purple_http_request_ref(PurpleHttpRequest *request);
  * If the reference count reaches zero, the http request struct will be freed.
  *
  * @request: The request.
- * Returns: @a request or @c NULL if the reference count reached zero.
+ * Returns: @a request or %NULL if the reference count reached zero.
  */
 PurpleHttpRequest * purple_http_request_unref(PurpleHttpRequest *request);
 
@@ -697,7 +697,7 @@ purple_http_keepalive_pool_ref(PurpleHttpKeepalivePool *pool);
  * connections will be closed.
  *
  * @pool: The HTTP Keep-Alive pool.
- * Returns: @a pool or @c NULL if the reference count reached zero.
+ * Returns: @a pool or %NULL if the reference count reached zero.
  */
 PurpleHttpKeepalivePool *
 purple_http_keepalive_pool_unref(PurpleHttpKeepalivePool *pool);
