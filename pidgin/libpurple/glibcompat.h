@@ -25,6 +25,9 @@
  * Also, any public API should not depend on this file.
  */
 
+#include <glib.h>
+
+
 #ifdef __clang__
 
 #undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
@@ -38,8 +41,6 @@
 
 #endif /* __clang__ */
 
-
-#include <glib.h>
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
