@@ -666,7 +666,7 @@ static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs)
 	const GList *hdr;
 
 	GString *s = g_string_new("");
-	
+
 	hdr = purple_http_headers_get_all(hdrs);
 	while (hdr) {
 		PurpleKeyValuePair *kvp = hdr->data;
@@ -675,7 +675,7 @@ static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs)
 		g_string_append_printf(s, "%s: %s%s", kvp->key,
 			(gchar*)kvp->value, hdr ? "\n" : "");
 	}
-	
+
 	return g_string_free(s, FALSE);
 }
 
@@ -1011,7 +1011,7 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 			if (hc->chunk_got + got_now > hc->chunk_length)
 				got_now = hc->chunk_length - hc->chunk_got;
 			hc->chunk_got += got_now;
-			
+
 			if (!_purple_http_recv_body_data(hc,
 				hc->response_buffer->str, got_now))
 				return FALSE;
