@@ -322,7 +322,7 @@ static time_t purple_http_rfc1123_to_time(const gchar *str)
 	}
 	month++;
 
-	iso_date = g_strdup_printf("%s-%02d-%sT%s+00:00", 
+	iso_date = g_strdup_printf("%s-%02d-%sT%s+00:00",
 		d_year, month, d_date, d_time);
 
 	g_free(d_date);
@@ -908,7 +908,7 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 			*delim++ = '\0';
 			while (*delim == ' ')
 				delim++;
-			
+
 			purple_http_headers_add(hc->response->headers, hdrline, delim);
 		}
 
@@ -2815,10 +2815,10 @@ const gchar * purple_http_response_get_data(PurpleHttpResponse *response, size_t
 
 	if (response->contents != NULL) {
 		ret = response->contents->str;
-		if(len)
+		if (len)
 			*len = response->contents->len;
 	} else {
-		if(len)
+		if (len)
 			*len = 0;
 	}
 
