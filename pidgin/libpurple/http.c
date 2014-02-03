@@ -322,7 +322,7 @@ static time_t purple_http_rfc1123_to_time(const gchar *str)
 	}
 	month++;
 
-	iso_date = g_strdup_printf("%s-%02d-%sT%s+00:00", 
+	iso_date = g_strdup_printf("%s-%02d-%sT%s+00:00",
 		d_year, month, d_date, d_time);
 
 	g_free(d_date);
@@ -666,7 +666,7 @@ static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs)
 	const GList *hdr;
 
 	GString *s = g_string_new("");
-	
+
 	hdr = purple_http_headers_get_all(hdrs);
 	while (hdr) {
 		PurpleKeyValuePair *kvp = hdr->data;
@@ -675,7 +675,7 @@ static gchar * purple_http_headers_dump(PurpleHttpHeaders *hdrs)
 		g_string_append_printf(s, "%s: %s%s", kvp->key,
 			(gchar*)kvp->value, hdr ? "\n" : "");
 	}
-	
+
 	return g_string_free(s, FALSE);
 }
 
@@ -908,7 +908,7 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 			*delim++ = '\0';
 			while (*delim == ' ')
 				delim++;
-			
+
 			purple_http_headers_add(hc->response->headers, hdrline, delim);
 		}
 
@@ -1011,7 +1011,7 @@ static gboolean _purple_http_recv_body_chunked(PurpleHttpConnection *hc,
 			if (hc->chunk_got + got_now > hc->chunk_length)
 				got_now = hc->chunk_length - hc->chunk_got;
 			hc->chunk_got += got_now;
-			
+
 			if (!_purple_http_recv_body_data(hc,
 				hc->response_buffer->str, got_now))
 				return FALSE;
@@ -2815,10 +2815,10 @@ const gchar * purple_http_response_get_data(PurpleHttpResponse *response, size_t
 
 	if (response->contents != NULL) {
 		ret = response->contents->str;
-		if(len)
+		if (len)
 			*len = response->contents->len;
 	} else {
-		if(len)
+		if (len)
 			*len = 0;
 	}
 
