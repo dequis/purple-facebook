@@ -18,7 +18,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
-/**
+/*
  * SECTION:glibcompat
  * @section_id: libpurple-glibcompat
  * @short_description: <filename>glibcompat.h</filename>
