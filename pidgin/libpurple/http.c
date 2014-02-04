@@ -290,8 +290,10 @@ static GHashTable *purple_http_hc_by_ptr;
 
 static time_t purple_http_rfc1123_to_time(const gchar *str)
 {
-	static const gchar *months[13] = {"jan", "feb", "mar", "apr", "may", "jun",
-		"jul", "aug", "sep", "oct", "nov", "dec", NULL};
+	static const gchar *months[13] = {
+		"jan", "feb", "mar", "apr", "may", "jun",
+		"jul", "aug", "sep", "oct", "nov", "dec", NULL
+	};
 	GMatchInfo *match_info;
 	gchar *d_date, *d_month, *d_year, *d_time;
 	int month;
@@ -314,8 +316,7 @@ static time_t purple_http_rfc1123_to_time(const gchar *str)
 	g_match_info_free(match_info);
 
 	month = 0;
-	while (months[month] != NULL)
-	{
+	while (months[month] != NULL) {
 		if (0 == g_ascii_strcasecmp(d_month, months[month]))
 			break;
 		month++;
@@ -584,8 +585,7 @@ static void purple_http_headers_remove(PurpleHttpHeaders *hdrs,
 
 	/* Could be optimized to O(1). */
 	it = g_list_first(hdrs->list);
-	while (it)
-	{
+	while (it) {
 		PurpleKeyValuePair *kvp = it->data;
 		curr = it;
 		it = g_list_next(it);
@@ -853,7 +853,8 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 	}
 
 	while ((eol = strstr(hc->response_buffer->str, "\r\n"))
-		!= NULL) {
+		!= NULL)
+	{
 		gchar *hdrline = hc->response_buffer->str;
 		int hdrline_len = eol - hdrline;
 
@@ -883,7 +884,8 @@ static gboolean _purple_http_recv_headers(PurpleHttpConnection *hc,
 			hc->main_header_got = TRUE;
 			delim = strchr(hdrline, ' ');
 			if (delim == NULL || 1 != sscanf(delim + 1, "%d",
-				&hc->response->code)) {
+				&hc->response->code))
+			{
 				purple_debug_warning("http",
 					"Invalid response code\n");
 				_purple_http_error(hc, _("Error parsing HTTP"));
@@ -1106,7 +1108,8 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			hc->length_expected = hc->length_got;
 		}
 		if (hc->length_expected >= 0 &&
-			hc->length_got < (guint)hc->length_expected) {
+			hc->length_got < (guint)hc->length_expected)
+		{
 			purple_debug_warning("http", "No more data while reading"
 				" contents\n");
 			_purple_http_error(hc, _("Error parsing HTTP"));
@@ -1158,15 +1161,15 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			is_deflate = purple_http_headers_match(
 				hc->response->headers, "Content-Encoding",
 				"deflate");
-			if (is_gzip || is_deflate)
-			{
+			if (is_gzip || is_deflate) {
 				hc->gz_stream = purple_http_gz_new(
 					hc->request->max_length + 1,
 					is_deflate);
 			}
 		}
 		if (hc->headers_got && hc->response_buffer &&
-			hc->response_buffer->len > 0) {
+			hc->response_buffer->len > 0)
+		{
 			int buffer_len = hc->response_buffer->len;
 			gchar *buffer = g_string_free(hc->response_buffer, FALSE);
 			hc->response_buffer = NULL;
@@ -1218,7 +1221,8 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 
 		if (purple_debug_is_unsafe() && purple_debug_is_verbose() &&
 			!purple_http_cookie_jar_is_empty(
-				hc->request->cookie_jar)) {
+				hc->request->cookie_jar))
+		{
 			gchar *cookies = purple_http_cookie_jar_dump(
 				hc->request->cookie_jar);
 			purple_debug_misc("http", "Cookies: %s\n", cookies);
@@ -1233,7 +1237,8 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 		redirect = purple_http_headers_get(hc->response->headers,
 			"location");
 		if (redirect && (hc->request->max_redirects == -1 ||
-			hc->request->max_redirects > hc->redirects_count)) {
+			hc->request->max_redirects > hc->redirects_count))
+		{
 			PurpleHttpURL *url = purple_http_url_parse(redirect);
 
 			hc->redirects_count++;
@@ -1291,7 +1296,8 @@ static void _purple_http_send_got_data(PurpleHttpConnection *hc,
 	estimated_length = hc->request_contents_written + stored;
 
 	if (hc->request->contents_length != -1 &&
-		hc->request->contents_length != estimated_length) {
+		hc->request->contents_length != estimated_length)
+	{
 		purple_debug_warning("http",
 			"Invalid amount of data has been written\n");
 	}
@@ -1461,7 +1467,8 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 
 	url = hc->url;
 	if (g_strcmp0(url->protocol, "") == 0 ||
-		g_ascii_strcasecmp(url->protocol, "http") == 0) {
+		g_ascii_strcasecmp(url->protocol, "http") == 0)
+	{
 		/* do nothing */
 	} else if (g_ascii_strcasecmp(url->protocol, "https") == 0) {
 		is_ssl = TRUE;
@@ -1827,7 +1834,8 @@ static void purple_http_conn_notify_progress_watcher(
 
 	now = g_get_monotonic_time();
 	if (hc->watcher_last_call + hc->watcher_interval_threshold
-		> now && processed != total) {
+		> now && processed != total)
+	{
 		if (hc->watcher_delayed_handle)
 			return;
 		hc->watcher_delayed_handle = purple_timeout_add_seconds(
@@ -1934,7 +1942,8 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 		semicolon = strchr(cookie, ';');
 
 		if (eqsign == NULL || eqsign == cookie ||
-			(semicolon != NULL && semicolon < eqsign)) {
+			(semicolon != NULL && semicolon < eqsign))
+		{
 			if (purple_debug_is_unsafe())
 				purple_debug_warning("http",
 					"Invalid cookie: [%s]\n", cookie);
@@ -1990,7 +1999,8 @@ static gchar * purple_http_cookie_jar_gen(PurpleHttpCookieJar *cookie_jar)
 
 	g_hash_table_iter_init(&it, cookie_jar->tab);
 	while (g_hash_table_iter_next(&it, (gpointer*)&key,
-		(gpointer*)&cookie)) {
+		(gpointer*)&cookie))
+	{
 		if (cookie->expires != -1 && cookie->expires <= now)
 			continue;
 		g_string_append_printf(str, "%s=%s; ", key, cookie->value);
@@ -2903,9 +2913,11 @@ purple_http_url_parse(const char *raw_url)
 		gchar *port_str;
 
 		if (!g_regex_match(purple_http_re_url_host, host_full, 0,
-			&match_info)) {
+			&match_info))
+		{
 			if (purple_debug_is_verbose() &&
-				purple_debug_is_unsafe()) {
+				purple_debug_is_unsafe())
+			{
 				purple_debug_warning("http",
 					"Invalid host provided for URL: %s\n",
 					raw_url);
@@ -3003,7 +3015,8 @@ purple_http_url_relative(PurpleHttpURL *base_url, PurpleHttpURL *relative_url)
 
 	if (relative_url->path) {
 		if (relative_url->path[0] == '/' ||
-			base_url->path == NULL) {
+			base_url->path == NULL)
+		{
 			g_free(base_url->path);
 			base_url->path = g_strdup(relative_url->path);
 		} else {
