@@ -613,10 +613,10 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
 
 /**
  * purple_http_request_set_contents_reader:
- * @request:       The request.
- * @reader:        The reader callback.
- * @contents_size: The size of all contents.
- * @user_data:     The user data to pass to the callback function.
+ * @request:         The request.
+ * @reader:          The reader callback.
+ * @contents_length: The size of all contents.
+ * @user_data:       The user data to pass to the callback function.
  *
  * Sets contents reader for HTTP request, used mainly for possible large
  * uploads.
@@ -627,7 +627,7 @@ void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
 /**
  * purple_http_request_set_response_writer:
  * @request:   The request.
- * @reader:    The writer callback, or NULL to remove existing.
+ * @writer:    The writer callback, or %NULL to remove existing.
  * @user_data: The user data to pass to the callback function.
  *
  * Set contents writer for HTTP response.

@@ -258,24 +258,24 @@ purple_http_connection_set_remove(PurpleHttpConnectionSet *set,
 static GRegex *purple_http_re_url, *purple_http_re_url_host,
 	*purple_http_re_rfc1123;
 
-/**
+/*
  * Values: pointers to running PurpleHttpConnection.
  */
 static GList *purple_http_hc_list;
 
-/**
+/*
  * Keys: pointers to PurpleConnection.
  * Values: GList of pointers to running PurpleHttpConnection.
  */
 static GHashTable *purple_http_hc_by_gc;
 
-/**
+/*
  * Keys: pointers to PurpleConnection.
  * Values: gboolean TRUE.
  */
 static GHashTable *purple_http_cancelling_gc;
 
-/**
+/*
  * Keys: pointers to PurpleHttpConnection.
  * Values: pointers to links in purple_http_hc_list.
  */
