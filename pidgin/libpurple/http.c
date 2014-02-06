@@ -736,8 +736,8 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	proxy = purple_proxy_get_setup(hc->gc ?
 		purple_connection_get_account(hc->gc) : NULL);
 
-	proxy_http = (purple_proxy_info_get_type(proxy) == PURPLE_PROXY_HTTP ||
-		purple_proxy_info_get_type(proxy) == PURPLE_PROXY_USE_ENVVAR);
+	proxy_http = (purple_proxy_info_get_proxy_type(proxy) == PURPLE_PROXY_HTTP ||
+		purple_proxy_info_get_proxy_type(proxy) == PURPLE_PROXY_USE_ENVVAR);
 	/* this is HTTP proxy, but used with tunelling with CONNECT */
 	if (proxy_http && url->port != 80)
 		proxy_http = FALSE;
