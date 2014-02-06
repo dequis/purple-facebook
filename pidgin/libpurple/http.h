@@ -747,7 +747,7 @@ int purple_http_request_get_max_len(PurpleHttpRequest *request);
  *
  * Sets (replaces, if exists) specified HTTP request header with provided value.
  *
- * @see purple_http_request_header_add
+ * See purple_http_request_header_add().
  */
 void purple_http_request_header_set(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
@@ -770,7 +770,7 @@ void purple_http_request_header_set_printf(PurpleHttpRequest *request,
  *
  * Adds (without replacing, if exists) an HTTP request header.
  *
- * @see purple_http_request_header_set
+ * See purple_http_request_header_set().
  */
 void purple_http_request_header_add(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
