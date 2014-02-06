@@ -150,7 +150,7 @@ typedef void (*PurpleHttpProgressWatcher)(PurpleHttpConnection *http_conn,
 G_BEGIN_DECLS
 
 /**************************************************************************/
-/** @name Performing HTTP requests                                        */
+/* Performing HTTP requests                                               */
 /**************************************************************************/
 /*@{*/
 
@@ -203,7 +203,7 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 	gpointer user_data);
 
 /**************************************************************************/
-/** @name HTTP connection API                                             */
+/* HTTP connection API                                                    */
 /**************************************************************************/
 /*@{*/
 
@@ -285,7 +285,7 @@ void purple_http_conn_set_progress_watcher(PurpleHttpConnection *http_conn,
 
 
 /**************************************************************************/
-/** @name URL processing API                                              */
+/* URL processing API                                                     */
 /**************************************************************************/
 /*@{*/
 
@@ -419,7 +419,7 @@ purple_http_url_get_fragment(const PurpleHttpURL *parsed_url);
 
 
 /**************************************************************************/
-/** @name Cookie jar API                                                  */
+/* Cookie jar API                                                         */
 /**************************************************************************/
 /*@{*/
 
@@ -490,7 +490,7 @@ gboolean purple_http_cookie_jar_is_empty(PurpleHttpCookieJar *cookie_jar);
 
 
 /**************************************************************************/
-/** @name HTTP Request API                                                */
+/* HTTP Request API                                                       */
 /**************************************************************************/
 /*@{*/
 
@@ -747,7 +747,7 @@ int purple_http_request_get_max_len(PurpleHttpRequest *request);
  *
  * Sets (replaces, if exists) specified HTTP request header with provided value.
  *
- * @see purple_http_request_header_add
+ * See purple_http_request_header_add().
  */
 void purple_http_request_header_set(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
@@ -770,7 +770,7 @@ void purple_http_request_header_set_printf(PurpleHttpRequest *request,
  *
  * Adds (without replacing, if exists) an HTTP request header.
  *
- * @see purple_http_request_header_set
+ * See purple_http_request_header_set().
  */
 void purple_http_request_header_add(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
@@ -779,7 +779,7 @@ void purple_http_request_header_add(PurpleHttpRequest *request,
 
 
 /**************************************************************************/
-/** @name HTTP Keep-Alive pool API                                        */
+/* HTTP Keep-Alive pool API                                               */
 /**************************************************************************/
 /*@{*/
 
@@ -842,7 +842,7 @@ purple_http_keepalive_pool_get_limit_per_host(PurpleHttpKeepalivePool *pool);
 
 
 /**************************************************************************/
-/** @name HTTP connection set API                                         */
+/* HTTP connection set API                                                */
 /**************************************************************************/
 /*@{*/
 
@@ -860,7 +860,7 @@ purple_http_connection_set_add(PurpleHttpConnectionSet *set,
 
 
 /**************************************************************************/
-/** @name HTTP response API                                               */
+/* HTTP response API                                                      */
 /**************************************************************************/
 /*@{*/
 
@@ -959,7 +959,7 @@ const gchar * purple_http_response_get_header(PurpleHttpResponse *response,
 
 
 /**************************************************************************/
-/** @name HTTP Subsystem                                                  */
+/* HTTP Subsystem                                                         */
 /**************************************************************************/
 /*@{*/
 
