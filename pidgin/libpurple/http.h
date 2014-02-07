@@ -152,7 +152,6 @@ G_BEGIN_DECLS
 /**************************************************************************/
 /* Performing HTTP requests                                               */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_get:
@@ -205,7 +204,6 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 /**************************************************************************/
 /* HTTP connection API                                                    */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_conn_cancel:
@@ -281,13 +279,10 @@ void purple_http_conn_set_progress_watcher(PurpleHttpConnection *http_conn,
 	PurpleHttpProgressWatcher watcher, gpointer user_data,
 	gint interval_threshold);
 
-/*@}*/
-
 
 /**************************************************************************/
 /* URL processing API                                                     */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_url_parse:
@@ -415,13 +410,10 @@ purple_http_url_get_path(const PurpleHttpURL *parsed_url);
 const gchar *
 purple_http_url_get_fragment(const PurpleHttpURL *parsed_url);
 
-/*@}*/
-
 
 /**************************************************************************/
 /* Cookie jar API                                                         */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_cookie_jar_new:
@@ -486,13 +478,10 @@ const gchar * purple_http_cookie_jar_get(PurpleHttpCookieJar *cookie_jar,
  */
 gboolean purple_http_cookie_jar_is_empty(PurpleHttpCookieJar *cookie_jar);
 
-/*@}*/
-
 
 /**************************************************************************/
 /* HTTP Request API                                                       */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_request_new:
@@ -775,13 +764,10 @@ void purple_http_request_header_set_printf(PurpleHttpRequest *request,
 void purple_http_request_header_add(PurpleHttpRequest *request,
 	const gchar *key, const gchar *value);
 
-/*@}*/
-
 
 /**************************************************************************/
 /* HTTP Keep-Alive pool API                                               */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_keepalive_pool_new:
@@ -838,13 +824,10 @@ purple_http_keepalive_pool_set_limit_per_host(PurpleHttpKeepalivePool *pool,
 guint
 purple_http_keepalive_pool_get_limit_per_host(PurpleHttpKeepalivePool *pool);
 
-/*@}*/
-
 
 /**************************************************************************/
 /* HTTP connection set API                                                */
 /**************************************************************************/
-/*@{*/
 
 PurpleHttpConnectionSet *
 purple_http_connection_set_new(void);
@@ -856,13 +839,10 @@ void
 purple_http_connection_set_add(PurpleHttpConnectionSet *set,
 	PurpleHttpConnection *http_conn);
 
-/*@}*/
-
 
 /**************************************************************************/
 /* HTTP response API                                                      */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_response_is_successful:
@@ -955,13 +935,10 @@ const GList * purple_http_response_get_headers_by_name(
 const gchar * purple_http_response_get_header(PurpleHttpResponse *response,
 	const gchar *name);
 
-/*@}*/
-
 
 /**************************************************************************/
 /* HTTP Subsystem                                                         */
 /**************************************************************************/
-/*@{*/
 
 /**
  * purple_http_init:
@@ -976,8 +953,6 @@ void purple_http_init(void);
  * Uninitializes the http subsystem.
  */
 void purple_http_uninit(void);
-
-/*@}*/
 
 G_END_DECLS
 
