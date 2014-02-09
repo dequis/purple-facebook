@@ -18,10 +18,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
-#ifndef _PIDGINGLIBCOMPAT_H_
-#define _PIDGINGLIBCOMPAT_H_
 
-/* This file is internal to Pidgin. Do not use!
+#ifndef _GLIBCOMPAT_H_
+#define _GLIBCOMPAT_H_
+/*
+ * SECTION:glibcompat
+ * @section_id: libpurple-glibcompat
+ * @short_description: <filename>glibcompat.h</filename>
+ * @title: GLib version-dependent definitions
+ *
+ * This file is internal to libpurple. Do not use!
  * Also, any public API should not depend on this file.
  */
 
@@ -123,4 +129,4 @@ static inline void g_object_class_install_properties(GObjectClass *oclass,
 
 #endif /* < 2.32.0 */
 
-#endif /* _PIDGINGLIBCOMPAT_H_ */
+#endif /* _GLIBCOMPAT_H_ */
