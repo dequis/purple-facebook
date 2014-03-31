@@ -48,6 +48,34 @@
 #endif /* __clang__ */
 
 
+#if !GLIB_CHECK_VERSION(2, 36, 0)
+
+#include <errno.h>
+#include <fcntl.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
+static inline gboolean g_close(gint fd, GError **error)
+{
+	int res;
+	int errsv;
+
+	res = close(fd);
+
+	if (G_LIKELY(res == 0))
+		return TRUE;
+	if (G_UNLIKELY(errno == EINTR))
+		return TRUE;
+
+	errsv = errno;
+	g_set_error_literal(error, G_FILE_ERROR,
+		g_file_error_from_errno(errsv), g_strerror(errsv));
+	errno = errsv;
+
+	return FALSE;
+}
+
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
 #include <glib-object.h>
@@ -128,5 +156,7 @@ static inline void g_object_class_install_properties(GObjectClass *oclass,
 #endif /* < 2.30.0 */
 
 #endif /* < 2.32.0 */
+
+#endif /* < 2.36.0 */
 
 #endif /* _GLIBCOMPAT_H_ */
