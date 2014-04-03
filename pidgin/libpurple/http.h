@@ -156,7 +156,7 @@ G_BEGIN_DECLS
 /**
  * purple_http_get:
  * @gc:        The connection for which the request is needed, or NULL.
- * @callback:  The callback function.
+ * @callback:  (scope call): The callback function.
  * @user_data: The user data to pass to the callback function.
  * @url:       The URL.
  *
@@ -171,7 +171,7 @@ PurpleHttpConnection * purple_http_get(PurpleConnection *gc,
 /**
  * purple_http_get_printf:
  * @gc:        The connection for which the request is needed, or NULL.
- * @callback:  The callback function.
+ * @callback:  (scope call): The callback function.
  * @user_data: The user data to pass to the callback function.
  * @format:    The format string.
  *
@@ -188,7 +188,7 @@ PurpleHttpConnection * purple_http_get_printf(PurpleConnection *gc,
  * purple_http_request:
  * @gc:        The connection for which the request is needed, or NULL.
  * @request:   The request.
- * @callback:  The callback function.
+ * @callback:  (scope call): The callback function.
  * @user_data: The user data to pass to the callback function.
  *
  * Fetches a HTTP request and passes the response to a callback function.
@@ -266,11 +266,11 @@ PurpleConnection * purple_http_conn_get_purple_connection(
 
 /**
  * purple_http_conn_set_progress_watcher:
- * @http_conn:          The HTTP connection.
- * @watcher:            The watcher.
- * @user_data:          The user data to pass to the callback function.
- * @interval_threshold: Minimum interval (in microseconds) of calls to
- *                           watcher, or -1 for default.
+ * @http_conn:             The HTTP connection.
+ * @watcher: (scope call): The watcher.
+ * @user_data:             The user data to pass to the callback function.
+ * @interval_threshold:    Minimum interval (in microseconds) of calls to
+ *                         watcher, or -1 for default.
  *
  * Sets the watcher, called after writing or reading data to/from HTTP stream.
  * May be used for updating transfer progress gauge.
@@ -602,10 +602,10 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
 
 /**
  * purple_http_request_set_contents_reader:
- * @request:         The request.
- * @reader:          The reader callback.
- * @contents_length: The size of all contents.
- * @user_data:       The user data to pass to the callback function.
+ * @request:              The request.
+ * @reader: (scope call): The reader callback.
+ * @contents_length:      The size of all contents.
+ * @user_data:            The user data to pass to the callback function.
  *
  * Sets contents reader for HTTP request, used mainly for possible large
  * uploads.
@@ -615,9 +615,9 @@ void purple_http_request_set_contents_reader(PurpleHttpRequest *request,
 
 /**
  * purple_http_request_set_response_writer:
- * @request:   The request.
- * @writer:    The writer callback, or %NULL to remove existing.
- * @user_data: The user data to pass to the callback function.
+ * @request:              The request.
+ * @writer: (scope call): The writer callback, or %NULL to remove existing.
+ * @user_data:            The user data to pass to the callback function.
  *
  * Set contents writer for HTTP response.
  */
