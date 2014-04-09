@@ -33,21 +33,6 @@
 
 #include <glib.h>
 
-
-#ifdef __clang__
-
-#undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
-	_Pragma ("clang diagnostic push") \
-	_Pragma ("clang diagnostic ignored \"-Wdeprecated-declarations\"")
-
-#undef G_GNUC_END_IGNORE_DEPRECATIONS
-#define G_GNUC_END_IGNORE_DEPRECATIONS \
-	_Pragma ("clang diagnostic pop")
-
-#endif /* __clang__ */
-
-
 #if !GLIB_CHECK_VERSION(2, 36, 0)
 
 #include <errno.h>
@@ -83,6 +68,9 @@ static inline gboolean g_close(gint fd, GError **error)
 
 #define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 #define G_GNUC_END_IGNORE_DEPRECATIONS
+
+#define G_SOURCE_REMOVE FALSE
+#define G_SOURCE_CONTINUE TRUE
 
 #define g_signal_handlers_disconnect_by_data(instance, data) \
 	g_signal_handlers_disconnect_matched((instance), G_SIGNAL_MATCH_DATA, \
@@ -158,5 +146,19 @@ static inline void g_object_class_install_properties(GObjectClass *oclass,
 #endif /* < 2.32.0 */
 
 #endif /* < 2.36.0 */
+
+
+#ifdef __clang__
+
+#undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
+	_Pragma ("clang diagnostic push") \
+	_Pragma ("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+
+#undef G_GNUC_END_IGNORE_DEPRECATIONS
+#define G_GNUC_END_IGNORE_DEPRECATIONS \
+	_Pragma ("clang diagnostic pop")
+
+#endif /* __clang__ */
 
 #endif /* _GLIBCOMPAT_H_ */
