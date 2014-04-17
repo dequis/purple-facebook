@@ -148,6 +148,18 @@ static inline void g_object_class_install_properties(GObjectClass *oclass,
 #endif /* < 2.36.0 */
 
 
+/* glib's definition of g_stat+GStatBuf seems to be broken on 32-bit windows,
+ * so instead of relying on it, we'll define our own macros.
+ */
+#if defined(_WIN32) && !defined(_MSC_VER) && !defined(_WIN64)
+#  include <glib/gstdio.h>
+typedef struct _stat64 GStatBuf64;
+#  define GStatBuf GStatBuf64
+#  undef g_stat
+#  define g_stat _stat64
+#endif
+
+
 #ifdef __clang__
 
 #undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
