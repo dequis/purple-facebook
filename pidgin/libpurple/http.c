@@ -1944,6 +1944,7 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 					"Invalid cookie: [%s]\n", cookie);
 			else
 				purple_debug_warning("http", "Invalid cookie.");
+			continue;
 		}
 
 		name = g_strndup(cookie, eqsign - cookie);
@@ -1955,7 +1956,7 @@ static void purple_http_cookie_jar_parse(PurpleHttpCookieJar *cookie_jar,
 
 		if (semicolon != NULL) {
 			GMatchInfo *match_info;
-			GRegex *re_expires = g_regex_new(
+			GRegex *re_expires = g_regex_new( /* XXX: make it static */
 				"expires=([a-z0-9, :]+)",
 				G_REGEX_OPTIMIZE | G_REGEX_CASELESS,
 				G_REGEX_MATCH_NOTEMPTY, NULL);
@@ -2884,7 +2885,7 @@ purple_http_url_parse(const char *raw_url)
 	url->fragment = g_match_info_fetch(match_info, 4);
 	g_match_info_free(match_info);
 
-	if (url->protocol[0] == '\0') {
+	if (g_strcmp0(url->protocol, "") == 0) {
 		g_free(url->protocol);
 		url->protocol = NULL;
 	} else if (url->protocol != NULL) {
@@ -2939,7 +2940,7 @@ purple_http_url_parse(const char *raw_url)
 			g_free(url->password);
 			url->password = NULL;
 		}
-		if (url->host[0] == '\0') {
+		if (g_strcmp0(url->host, "") == 0) {
 			g_free(url->host);
 			url->host = NULL;
 		} else if (url->host != NULL) {
