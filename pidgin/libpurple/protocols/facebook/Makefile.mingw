@@ -1,0 +1,79 @@
+#
+# Makefile.mingw
+#
+# Description: Makefile for win32 (mingw) version of libfacebook
+#
+
+PIDGIN_TREE_TOP := ../../..
+include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
+
+TARGET = libnovell
+TYPE = PLUGIN
+
+# Static or Plugin...
+ifeq ($(TYPE),STATIC)
+  DEFINES += -DSTATIC
+  DLL_INSTALL_DIR =	$(PURPLE_INSTALL_DIR)
+else
+ifeq ($(TYPE),PLUGIN)
+  DLL_INSTALL_DIR =	$(PURPLE_INSTALL_PLUGINS_DIR)
+endif
+endif
+
+##
+## INCLUDE PATHS
+##
+INCLUDE_PATHS +=	-I. \
+			-I$(GTK_TOP)/include \
+			-I$(GTK_TOP)/include/glib-2.0 \
+			-I$(GTK_TOP)/lib/glib-2.0/include \
+			-I$(PURPLE_TOP) \
+			-I$(PURPLE_TOP)/win32 \
+			-I$(PIDGIN_TREE_TOP)
+
+LIB_PATHS +=		-L$(GTK_TOP)/lib \
+			-L$(PURPLE_TOP)
+
+##
+##  SOURCES, OBJECTS
+##
+C_SRC =	\
+			facebook.c
+
+OBJECTS = $(C_SRC:%.c=%.o)
+
+##
+## LIBRARIES
+##
+LIBS =	\
+			-lglib-2.0 \
+			-lgobject-2.0 \
+			-lws2_32 \
+			-lintl \
+			-lpurple
+
+include $(PIDGIN_COMMON_RULES)
+
+##
+## TARGET DEFINITIONS
+##
+.PHONY: all install clean
+
+all: $(TARGET).dll
+
+install: all $(DLL_INSTALL_DIR)
+	cp $(TARGET).dll $(DLL_INSTALL_DIR)
+
+$(OBJECTS): $(PURPLE_CONFIG_H)
+
+$(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
+	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+
+##
+## CLEAN RULES
+##
+clean:
+	rm -f $(OBJECTS)
+	rm -f $(TARGET).dll
+
+include $(PIDGIN_COMMON_TARGETS)
