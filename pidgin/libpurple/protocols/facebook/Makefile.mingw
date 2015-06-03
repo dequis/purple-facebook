@@ -7,7 +7,7 @@
 PIDGIN_TREE_TOP := ../../..
 include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
 
-TARGET = libnovell
+TARGET = libfacebook
 TYPE = PLUGIN
 
 # Static or Plugin...
@@ -27,18 +27,29 @@ INCLUDE_PATHS +=	-I. \
 			-I$(GTK_TOP)/include \
 			-I$(GTK_TOP)/include/glib-2.0 \
 			-I$(GTK_TOP)/lib/glib-2.0/include \
+			-I$(JSON_GLIB_TOP)/include/json-glib-1.0 \
 			-I$(PURPLE_TOP) \
 			-I$(PURPLE_TOP)/win32 \
+			-I$(GPLUGIN_TOP) \
 			-I$(PIDGIN_TREE_TOP)
 
 LIB_PATHS +=		-L$(GTK_TOP)/lib \
+			-L$(JSON_GLIB_TOP)/lib \
+			-L$(GPLUGIN_TOP) \
 			-L$(PURPLE_TOP)
 
 ##
 ##  SOURCES, OBJECTS
 ##
 C_SRC =	\
-			facebook.c
+			api.c \
+			facebook.c \
+			http.c \
+			json.c \
+			marshal.c \
+			mqtt.c \
+			thrift.c \
+			util.c
 
 OBJECTS = $(C_SRC:%.c=%.o)
 
@@ -50,6 +61,9 @@ LIBS =	\
 			-lgobject-2.0 \
 			-lws2_32 \
 			-lintl \
+			-lgplugin \
+			-ljson-glib-1.0 \
+			-lz \
 			-lpurple
 
 include $(PIDGIN_COMMON_RULES)
@@ -68,6 +82,13 @@ $(OBJECTS): $(PURPLE_CONFIG_H)
 
 $(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+
+marshal.c: marshaller.list marshal.h
+	@echo "#include \"marshal.h\"" > $@
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --body marshaller.list >> $@
+
+marshal.h: marshaller.list
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --header marshaller.list > $@
 
 ##
 ## CLEAN RULES
