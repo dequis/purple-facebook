@@ -22,6 +22,8 @@
 #ifndef _FACEBOOK_H_
 #define _FACEBOOK_H_
 
+#include <glib.h>
+
 #include "protocol.h"
 
 #define FACEBOOK_TYPE_PROTOCOL             (facebook_protocol_get_type())
