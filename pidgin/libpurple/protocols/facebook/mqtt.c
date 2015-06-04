@@ -316,7 +316,9 @@ fb_mqtt_cb_read(gpointer data, gint fd, PurpleInputCondition cond)
 		g_byte_array_append(priv->rbuf, &byte, sizeof byte);
 
 		if (res != sizeof byte) {
-			goto error;
+			fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
+			              _("Failed to read fixed header"));
+			return;
 		}
 
 		mult = 1;
@@ -326,7 +328,9 @@ fb_mqtt_cb_read(gpointer data, gint fd, PurpleInputCondition cond)
 			g_byte_array_append(priv->rbuf, &byte, sizeof byte);
 
 			if (res != sizeof byte) {
-				goto error;
+				fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
+				              _("Failed to read packet size"));
+				return;
 			}
 
 			priv->remz += (byte & 127) * mult;
@@ -339,7 +343,9 @@ fb_mqtt_cb_read(gpointer data, gint fd, PurpleInputCondition cond)
 		rize = purple_ssl_read(priv->gsc, buf, size);
 
 		if (rize < 1) {
-			goto error;
+			fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
+			              _("Failed to read packet data"));
+			return;
 		}
 
 		g_byte_array_append(priv->rbuf, buf, rize);
@@ -351,17 +357,14 @@ fb_mqtt_cb_read(gpointer data, gint fd, PurpleInputCondition cond)
 		priv->remz = 0;
 
 		if (G_UNLIKELY(msg == NULL)) {
-			goto error;
+			fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
+			              _("Failed to parse message"));
+			return;
 		}
 
 		fb_mqtt_read(mqtt, msg);
 		g_object_unref(msg);
 	}
-
-	return;
-
-error:
-	fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL, _("Short read"));
 }
 
 void
@@ -562,7 +565,6 @@ fb_mqtt_connect(FbMqtt *mqtt, guint8 flags, const gchar *cid, ...)
 	FbMqttMessage *msg;
 	va_list ap;
 
-	g_return_if_fail(FB_IS_MQTT(mqtt));
 	g_return_if_fail(cid != NULL);
 	g_return_if_fail(!fb_mqtt_connected(mqtt, FALSE));
 
@@ -610,8 +612,6 @@ void
 fb_mqtt_disconnect(FbMqtt *mqtt)
 {
 	FbMqttMessage *msg;
-
-	g_return_if_fail(FB_IS_MQTT(mqtt));
 
 	if (G_UNLIKELY(!fb_mqtt_connected(mqtt, FALSE))) {
 		return;
