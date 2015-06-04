@@ -67,9 +67,6 @@ void
 fb_json_bldr_add_int(JsonBuilder *bldr, const gchar *name, gint64 value);
 
 void
-fb_json_bldr_add_null(JsonBuilder *bldr, const gchar *name);
-
-void
 fb_json_bldr_add_str(JsonBuilder *bldr, const gchar *name, const gchar *value);
 
 void

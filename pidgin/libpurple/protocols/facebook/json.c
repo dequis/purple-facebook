@@ -203,7 +203,8 @@ fb_json_node_get(JsonNode *root, const gchar *expr, GError **error)
 
 	if (err != NULL) {
 		g_propagate_error(error, err);
-		goto error;
+		json_node_free(node);
+		return NULL;
 	}
 
 	rslt = json_node_get_array(node);
@@ -212,22 +213,20 @@ fb_json_node_get(JsonNode *root, const gchar *expr, GError **error)
 	if (size < 1) {
 		g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_NOMATCH,
 		            _("No matches for %s"), expr);
-		goto error;
+		json_node_free(node);
+		return NULL;
 	}
 
 	if (size > 1) {
 		g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_AMBIGUOUS,
 		            _("Ambiguous matches for %s"), expr);
-		goto error;
+		json_node_free(node);
+		return NULL;
 	}
 
 	ret = json_array_dup_element(rslt, 0);
 	json_node_free(node);
 	return ret;
-
-error:
-	json_node_free(node);
-	return NULL;
 }
 
 JsonArray *
