@@ -28,7 +28,7 @@
 GQuark
 fb_json_error_quark(void)
 {
-	static GQuark q;
+	static GQuark q = 0;
 
 	if (G_UNLIKELY(q == 0)) {
 		q = g_quark_from_static_string("fb-json-error-quark");

@@ -159,7 +159,7 @@ fb_mqtt_message_init(FbMqttMessage *msg)
 GQuark
 fb_mqtt_error_quark(void)
 {
-	static GQuark q;
+	static GQuark q = 0;
 
 	if (G_UNLIKELY(q == 0)) {
 		q = g_quark_from_static_string("fb-mqtt-error-quark");
