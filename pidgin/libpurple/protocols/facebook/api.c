@@ -290,7 +290,7 @@ fb_api_init(FbApi *api)
 GQuark
 fb_api_error_quark(void)
 {
-	static GQuark q;
+	static GQuark q = 0;
 
 	if (G_UNLIKELY(q == 0)) {
 		q = g_quark_from_static_string("fb-api-error-quark");
