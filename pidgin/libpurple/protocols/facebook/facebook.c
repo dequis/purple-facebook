@@ -34,7 +34,7 @@
 
 static const gchar *fb_props_strs[] = {
 	"cid",
-	"cuid",
+	"did",
 	"stoken",
 	"token"
 };

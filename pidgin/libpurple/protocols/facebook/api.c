@@ -35,7 +35,7 @@ enum
 	PROP_0,
 
 	PROP_CID,
-	PROP_CUID,
+	PROP_DID,
 	PROP_MID,
 	PROP_STOKEN,
 	PROP_TOKEN,
@@ -52,7 +52,7 @@ struct _FbApiPrivate
 	FbId uid;
 	guint64 mid;
 	gchar *cid;
-	gchar *cuid;
+	gchar *did;
 	gchar *stoken;
 	gchar *token;
 
@@ -71,9 +71,9 @@ fb_api_set_property(GObject *obj, guint prop, const GValue *val,
 		g_free(priv->cid);
 		priv->cid = g_value_dup_string(val);
 		break;
-	case PROP_CUID:
-		g_free(priv->cuid);
-		priv->cuid = g_value_dup_string(val);
+	case PROP_DID:
+		g_free(priv->did);
+		priv->did = g_value_dup_string(val);
 		break;
 	case PROP_MID:
 		priv->mid = g_value_get_uint64(val);
@@ -105,8 +105,8 @@ fb_api_get_property(GObject *obj, guint prop, GValue *val, GParamSpec *pspec)
 	case PROP_CID:
 		g_value_set_string(val, priv->cid);
 		break;
-	case PROP_CUID:
-		g_value_set_string(val, priv->cuid);
+	case PROP_DID:
+		g_value_set_string(val, priv->did);
 		break;
 	case PROP_MID:
 		g_value_set_uint64(val, priv->mid);
@@ -142,7 +142,7 @@ fb_api_dispose(GObject *obj)
 	}
 
 	g_free(priv->cid);
-	g_free(priv->cuid);
+	g_free(priv->did);
 	g_free(priv->stoken);
 	g_free(priv->token);
 }
@@ -164,10 +164,10 @@ fb_api_class_init(FbApiClass *klass)
 		"Client identifier for MQTT",
 		NULL,
 		G_PARAM_READWRITE);
-	props[PROP_CUID] = g_param_spec_string(
-		"cuid",
-		"Client Unique ID",
-		"Client unique identifier for the MQTT queue",
+	props[PROP_DID] = g_param_spec_string(
+		"did",
+		"Device ID",
+		"Device identifier",
 		NULL,
 		G_PARAM_READWRITE);
 	props[PROP_MID] = g_param_spec_uint64(
@@ -383,6 +383,7 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 
 	fb_http_params_set_str(params, "api_key", FB_API_KEY);
 	fb_http_params_set_str(params, "client_country_code", "US");
+	fb_http_params_set_str(params, "device_id", priv->did);
 	fb_http_params_set_str(params, "fb_api_caller_class", info->klass);
 	fb_http_params_set_str(params, "fb_api_req_friendly_name", info->name);
 	fb_http_params_set_str(params, "format", "json");
@@ -473,7 +474,7 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	fb_json_bldr_add_int(bldr, "nwt", 1);
 	fb_json_bldr_add_int(bldr, "nwst", 0);
 	fb_json_bldr_add_str(bldr, "a", FB_API_AGENT);
-	fb_json_bldr_add_str(bldr, "d", priv->cuid);
+	fb_json_bldr_add_str(bldr, "d", priv->did);
 	fb_json_bldr_add_str(bldr, "pf", "jz");
 	fb_json_bldr_add_strf(bldr, "u", "%" FB_ID_FORMAT, priv->uid);
 
@@ -521,7 +522,7 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	if (priv->stoken == NULL) {
 		fb_json_bldr_add_int(bldr, "initial_titan_sequence_id", nid);
-		fb_json_bldr_add_str(bldr, "device_id", priv->cuid);
+		fb_json_bldr_add_str(bldr, "device_id", priv->did);
 		fb_json_bldr_obj_begin(bldr, "device_params");
 		fb_json_bldr_obj_end(bldr);
 
@@ -881,12 +882,12 @@ fb_api_rehash(FbApi *api)
 		priv->cid = fb_util_randstr(32);
 	}
 
-	if (priv->mid == 0) {
-		priv->mid = g_random_int();
+	if (priv->did == NULL) {
+		priv->did = purple_uuid_random();
 	}
 
-	if (priv->cuid == NULL) {
-		priv->cuid = purple_uuid_random();
+	if (priv->mid == 0) {
+		priv->mid = g_random_int();
 	}
 
 	if (strlen(priv->cid) > 20) {
