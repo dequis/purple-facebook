@@ -971,7 +971,6 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	const gchar *name;
 	const gchar *uid;
 	FbApi *api = data;
-	FbApiPrivate *priv = api->priv;
 	FbApiUser user;
 	GError *err = NULL;
 	GList *elms = NULL;
@@ -999,10 +998,6 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		                           &err);
 		FB_API_ERROR_CHK(api, err, goto finish);
 		user.uid = FB_ID_FROM_STR(uid);
-
-		if (user.uid == priv->uid) {
-			continue;
-		}
 
 		name = fb_json_node_get_str(node, "$.structured_name.text",
 		                            &err);

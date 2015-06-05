@@ -162,9 +162,12 @@ fb_cb_api_connect(FbApi *api, gpointer data)
 static void
 fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 {
+	const gchar *alias;
 	FbApiUser *user;
+	FbId muid;
 	gchar uid[FB_ID_STRMAX];
 	GSList *l;
+	GValue val = G_VALUE_INIT;
 	PurpleAccount *acct;
 	PurpleBuddy *bdy;
 	PurpleConnection *gc = data;
@@ -172,10 +175,21 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 
 	acct = purple_connection_get_account(gc);
 	grp = purple_blist_get_default_group();
+	alias = purple_account_get_private_alias(acct);
+
+	g_value_init(&val, FB_TYPE_ID);
+	g_object_get_property(G_OBJECT(api), "uid", &val);
+	muid = g_value_get_int64(&val);
+	g_value_unset(&val);
 
 	for (l = users; l != NULL; l = l->next) {
 		user = l->data;
 		FB_ID_TO_STR(user->uid, uid);
+
+		if (G_UNLIKELY((user->uid == muid) && (alias == NULL))) {
+			purple_account_set_private_alias(acct, user->name);
+			continue;
+		}
 
 		if (purple_blist_find_buddy(acct, uid) == NULL) {
 			bdy = purple_buddy_new(acct, uid, user->name);
