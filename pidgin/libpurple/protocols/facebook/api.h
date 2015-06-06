@@ -128,6 +128,7 @@ struct _FbApiUser
 {
 	FbId uid;
 	const gchar *name;
+	const gchar *icon;
 };
 
 struct _FbApiHttpInfo

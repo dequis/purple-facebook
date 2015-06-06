@@ -968,8 +968,7 @@ static void
 fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
                    gpointer data)
 {
-	const gchar *name;
-	const gchar *uid;
+	const gchar *str;
 	FbApi *api = data;
 	FbApiUser user;
 	GError *err = NULL;
@@ -994,15 +993,20 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	for (l = elms; l != NULL; l = l->next) {
 		node = l->data;
-		uid = fb_json_node_get_str(node, "$.represented_profile.id",
+		str = fb_json_node_get_str(node, "$.represented_profile.id",
 		                           &err);
 		FB_API_ERROR_CHK(api, err, goto finish);
-		user.uid = FB_ID_FROM_STR(uid);
+		user.uid = FB_ID_FROM_STR(str);
 
-		name = fb_json_node_get_str(node, "$.structured_name.text",
+		str = fb_json_node_get_str(node, "$.structured_name.text",
+		                           &err);
+		FB_API_ERROR_CHK(api, err, goto finish);
+		user.name = str;
+
+		str = fb_json_node_get_str(node, "$.huge_picture_url.uri",
 		                            &err);
 		FB_API_ERROR_CHK(api, err, goto finish);
-		user.name = name;
+		user.icon = str;
 
 		mptr = g_memdup(&user, sizeof user);
 		users = g_slist_prepend(users, mptr);
