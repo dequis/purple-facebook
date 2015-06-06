@@ -41,6 +41,9 @@ static const gchar *fb_props_strs[] = {
 
 static PurpleProtocol *my_protocol = NULL;
 
+static void
+fb_cb_api_error(FbApi *api, GError *error, gpointer data);
+
 static gboolean
 fb_props_load(PurpleConnection *gc)
 {
@@ -160,9 +163,44 @@ fb_cb_api_connect(FbApi *api, gpointer data)
 }
 
 static void
+fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                 gpointer data)
+{
+	const gchar *str;
+	const gchar *name = data;
+	FbApi *api;
+	GError *err;
+	gsize size;
+	guchar *idata;
+	PurpleAccount *acct;
+	PurpleConnection *gc;
+
+	gc = purple_http_conn_get_purple_connection(con);
+	acct = purple_connection_get_account(gc);
+	api = purple_connection_get_protocol_data(gc);
+
+	if (!fb_http_error_chk(res, &err)) {
+		fb_cb_api_error(api, err, gc);
+		g_error_free(err);
+		return;
+	}
+
+	str = purple_http_response_get_data(res, &size);
+	idata = g_memdup(str, size);
+
+	if (G_UNLIKELY(name == NULL)) {
+		purple_buddy_icons_set_account_icon(acct, idata, size);
+		return;
+	}
+
+	purple_buddy_icons_set_for_user(acct, name, idata, size, NULL);
+}
+
+static void
 fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 {
 	const gchar *alias;
+	const gchar *name;
 	FbApiUser *user;
 	FbId muid;
 	gchar uid[FB_ID_STRMAX];
@@ -186,15 +224,26 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 		user = l->data;
 		FB_ID_TO_STR(user->uid, uid);
 
-		if (G_UNLIKELY((user->uid == muid) && (alias == NULL))) {
-			purple_account_set_private_alias(acct, user->name);
-			continue;
+		if (G_UNLIKELY(user->uid == muid)) {
+			if (G_UNLIKELY(alias == NULL)) {
+				purple_account_set_private_alias(acct,
+				                                 user->name);
+			}
+
+			name = NULL;
+		} else {
+			bdy = purple_blist_find_buddy(acct, uid);
+
+			if (bdy == NULL) {
+				bdy = purple_buddy_new(acct, uid, user->name);
+				purple_blist_add_buddy(bdy, NULL, grp, NULL);
+			}
+
+			name = purple_buddy_get_name(bdy);
 		}
 
-		if (purple_blist_find_buddy(acct, uid) == NULL) {
-			bdy = purple_buddy_new(acct, uid, user->name);
-			purple_blist_add_buddy(bdy, NULL, grp, NULL);
-		}
+		purple_http_get(gc, fb_cb_icon_fetch, (gchar *) name,
+		                user->icon);
 	}
 
 	purple_connection_update_progress(gc, _("Connecting"), 3, 4);
