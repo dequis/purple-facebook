@@ -28,6 +28,13 @@
 #define FB_HTTP_ERROR fb_http_error_quark()
 
 typedef GHashTable FbHttpParams;
+typedef enum _FbHttpError FbHttpError;
+
+enum _FbHttpError
+{
+	FB_HTTP_ERROR_SUCCESS = 0,
+	FB_HTTP_ERROR_NOMATCH
+};
 
 GQuark
 fb_http_error_quark(void);
@@ -38,8 +45,46 @@ fb_http_error_chk(PurpleHttpResponse *res, GError **error);
 FbHttpParams *
 fb_http_params_new(void);
 
+FbHttpParams *
+fb_http_params_new_parse(const gchar *data, gboolean isurl);
+
+void
+fb_http_params_free(FbHttpParams *params);
+
 gchar *
 fb_http_params_close(FbHttpParams *params, gsize *size);
+
+gboolean
+fb_http_params_get_bool(FbHttpParams *params, const gchar *name,
+                        GError **error);
+
+gdouble
+fb_http_params_get_dbl(FbHttpParams *params, const gchar *name,
+                       GError **error);
+
+gint64
+fb_http_params_get_int(FbHttpParams *params, const gchar *name,
+                       GError **error);
+
+const gchar *
+fb_http_params_get_str(FbHttpParams *params, const gchar *name,
+                       GError **error);
+
+gboolean
+fb_http_params_chk_bool(FbHttpParams *params, const gchar *name,
+                        gboolean *value);
+
+gboolean
+fb_http_params_chk_dbl(FbHttpParams *params, const gchar *name,
+                       gdouble *value);
+
+gboolean
+fb_http_params_chk_int(FbHttpParams *params, const gchar *name,
+                       gint64 *value);
+
+gboolean
+fb_http_params_chk_str(FbHttpParams *params, const gchar *name,
+                       const gchar **value);
 
 void
 fb_http_params_set_bool(FbHttpParams *params, const gchar *name,
