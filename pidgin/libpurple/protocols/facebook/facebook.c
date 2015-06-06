@@ -166,15 +166,18 @@ static void
 fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
                  gpointer data)
 {
+	const gchar *csum;
 	const gchar *name;
 	const gchar *str;
 	FbApi *api;
+	FbHttpParams *params;
 	GError *err;
 	gsize size;
 	guchar *idata;
 	PurpleAccount *acct;
 	PurpleBuddy *bdy = data;
 	PurpleConnection *gc;
+	PurpleHttpRequest *req;
 
 	acct = purple_buddy_get_account(bdy);
 	gc = purple_account_get_connection(acct);
@@ -186,17 +189,24 @@ fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	}
 
+	req = purple_http_conn_get_request(con);
+	str = purple_http_request_get_url(req);
+	params = fb_http_params_new_parse(str, TRUE);
+	csum = fb_http_params_get_str(params, "oh", &err);
+
 	name = purple_buddy_get_name(bdy);
 	str = purple_http_response_get_data(res, &size);
-
 	idata = g_memdup(str, size);
-	purple_buddy_icons_set_for_user(acct, name, idata, size, NULL);
+
+	purple_buddy_icons_set_for_user(acct, name, idata, size, csum);
+	fb_http_params_free(params);
 }
 
 static void
 fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 {
 	const gchar *alias;
+	const gchar *csum;
 	FbApiUser *user;
 	FbId muid;
 	gchar uid[FB_ID_STRMAX];
@@ -234,9 +244,15 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 		if (bdy == NULL) {
 			bdy = purple_buddy_new(acct, uid, user->name);
 			purple_blist_add_buddy(bdy, NULL, grp, NULL);
+			purple_http_get(gc, fb_cb_icon_fetch, bdy, user->icon);
+			continue;
 		}
 
-		purple_http_get(gc, fb_cb_icon_fetch, bdy, user->icon);
+		csum = purple_buddy_icons_get_checksum_for_user(bdy);
+
+		if (!purple_strequal(csum, user->csum)) {
+			purple_http_get(gc, fb_cb_icon_fetch, bdy, user->icon);
+		}
 	}
 
 	purple_connection_update_progress(gc, _("Connecting"), 3, 4);

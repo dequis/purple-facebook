@@ -129,6 +129,7 @@ struct _FbApiUser
 	FbId uid;
 	const gchar *name;
 	const gchar *icon;
+	gchar *csum;
 };
 
 struct _FbApiHttpInfo

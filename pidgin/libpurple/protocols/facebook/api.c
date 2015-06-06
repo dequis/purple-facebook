@@ -965,12 +965,20 @@ fb_api_auth(FbApi *api, const gchar *user, const gchar *pass)
 }
 
 static void
+fb_api_cb_contacts_free(FbApiUser *user)
+{
+	g_free(user->csum);
+	g_free(user);
+}
+
+static void
 fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
                    gpointer data)
 {
 	const gchar *str;
 	FbApi *api = data;
 	FbApiUser user;
+	FbHttpParams *params;
 	GError *err = NULL;
 	GList *elms = NULL;
 	GList *l;
@@ -987,12 +995,23 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	}
 
+	params = fb_http_params_new_parse("http://www.google.com/index.php?text=hello%20world#world", TRUE);
+	fb_http_params_free(params);
+
+	params = fb_http_params_new_parse("http://www.google.com/?text=hi", TRUE);
+	fb_http_params_free(params);
+
+	params = fb_http_params_new_parse("text=hello%20world", FALSE);
+	fb_http_params_free(params);
+
 	arr = fb_json_node_get_arr(root, expr, &err);
 	FB_API_ERROR_CHK(api, err, goto finish);
 	elms = json_array_get_elements(arr);
 
 	for (l = elms; l != NULL; l = l->next) {
 		node = l->data;
+		memset(&user, 0, sizeof user);
+
 		str = fb_json_node_get_str(node, "$.represented_profile.id",
 		                           &err);
 		FB_API_ERROR_CHK(api, err, goto finish);
@@ -1008,6 +1027,12 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		FB_API_ERROR_CHK(api, err, goto finish);
 		user.icon = str;
 
+		params = fb_http_params_new_parse(user.icon, TRUE);
+		str = fb_http_params_get_str(params, "oh", &err);
+		user.csum = g_strdup(str);
+		fb_http_params_free(params);
+		FB_API_ERROR_CHK(api, err, goto finish);
+
 		mptr = g_memdup(&user, sizeof user);
 		users = g_slist_prepend(users, mptr);
 	}
@@ -1016,7 +1041,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 finish:
 	g_list_free(elms);
-	g_slist_free_full(users, g_free);
+	g_slist_free_full(users, (GDestroyNotify) fb_api_cb_contacts_free);
 	json_node_free(root);
 }
 
