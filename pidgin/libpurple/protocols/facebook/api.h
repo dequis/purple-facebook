@@ -189,7 +189,7 @@ void
 fb_api_thread_invite(FbApi *api, FbId tid, FbId uid);
 
 void
-fb_api_thread_list(FbApi *api, guint limit);
+fb_api_thread_list(FbApi *api);
 
 void
 fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic);

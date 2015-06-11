@@ -1180,7 +1180,7 @@ fb_api_thread_create(FbApi *api, GSList *uids)
 	};
 
 	g_return_if_fail(FB_IS_API(api));
-	g_warn_if_fail((uids != NULL) && (uids->next != NULL));
+	g_warn_if_fail(g_slist_length(uids) > 1);
 	priv = api->priv;
 
 	bldr = fb_json_bldr_new(JSON_NODE_ARRAY);
@@ -1200,7 +1200,7 @@ fb_api_thread_create(FbApi *api, GSList *uids)
 	json = fb_json_bldr_close(bldr, JSON_NODE_ARRAY, NULL);
 	prms = fb_http_params_new();
 	fb_http_params_set_str(prms, "to", json);
-	fb_api_http_req(api, &info, prms, FB_API_URL_FQL);
+	fb_api_http_req(api, &info, prms, FB_API_URL_THRDS);
 	g_free(json);
 }
 
@@ -1404,6 +1404,11 @@ fb_api_cb_thread_list(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		g_list_free(elms2);
 		elms2 = NULL;
 
+		if (g_slist_length(thrd.users) < 2) {
+			g_slist_free_full(thrd.users, g_free);
+			continue;
+		}
+
 		mptr = g_memdup(&thrd, sizeof thrd);
 		thrds = g_slist_prepend(thrds, mptr);
 	}
@@ -1419,7 +1424,7 @@ finish:
 }
 
 void
-fb_api_thread_list(FbApi *api, guint limit)
+fb_api_thread_list(FbApi *api)
 {
 	FbHttpParams *prms;
 	gchar *json;
@@ -1437,9 +1442,7 @@ fb_api_thread_list(FbApi *api, guint limit)
 		"SELECT thread_fbid, participants, name "
 			"FROM unified_thread "
 			"WHERE folder='inbox' "
-			"ORDER BY timestamp DESC "
-			"LIMIT %u",
-		limit);
+			"ORDER BY timestamp DESC");
 	json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
 
 	prms = fb_http_params_new();

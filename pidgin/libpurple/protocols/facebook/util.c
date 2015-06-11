@@ -19,6 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
+#include "internal.h"
+
 #include <string.h>
 #include <zlib.h>
 
@@ -53,6 +55,136 @@ fb_util_randstr(gsize size)
 	ret[size] = 0;
 	g_rand_free(rand);
 	return ret;
+}
+
+static void
+fb_util_request_buddy_ok(gpointer *mata, PurpleRequestFields *fields)
+{
+	FbUtilRequestBuddyFunc func = mata[0];
+	GList *l;
+	GList *select;
+	gpointer data = mata[2];
+	GSList *ret = NULL;
+	PurpleBuddy *bdy;
+	PurpleRequestField *field;
+
+	if (func == NULL) {
+		g_free(mata);
+		return;
+	}
+
+	field = purple_request_fields_get_field(fields, "buddy");
+	select = purple_request_field_list_get_selected(field);
+
+	for (l = select; l != NULL; l = l->next) {
+		bdy = purple_request_field_list_get_data(field, l->data);
+		ret = g_slist_prepend(ret, bdy);
+	}
+
+	ret = g_slist_reverse(ret);
+	func(ret, data);
+
+	g_slist_free(ret);
+	g_free(mata);
+}
+
+static void
+fb_util_request_buddy_cancel(gpointer *mata, PurpleRequestFields *fields)
+{
+	FbUtilRequestBuddyFunc func = mata[1];
+	gpointer data = mata[2];
+
+	if (func != NULL) {
+		func(NULL, data);
+	}
+
+	g_free(mata);
+}
+
+gpointer
+fb_util_request_buddy(PurpleConnection *gc, const gchar *title,
+                      const gchar *primary, const gchar *secondary,
+                      GSList *select, gboolean multi, GCallback ok_cb,
+		      GCallback cancel_cb, gpointer data)
+{
+	const gchar *alias;
+	const gchar *name;
+	gchar *str;
+	GList *items = NULL;
+	gpointer *mata;
+	GSList *buddies;
+	GSList *l;
+	PurpleAccount *acct;
+	PurpleRequestCommonParameters *cpar;
+	PurpleRequestField *field;
+	PurpleRequestFieldGroup *group;
+	PurpleRequestFields *fields;
+
+	mata = g_new0(gpointer, 3);
+	mata[0] = ok_cb;
+	mata[1] = cancel_cb;
+	mata[2] = data;
+
+	acct = purple_connection_get_account(gc);
+	buddies = purple_blist_find_buddies(acct, NULL);
+	buddies = g_slist_sort(buddies, (GCompareFunc) g_ascii_strcasecmp);
+
+	fields = purple_request_fields_new();
+	group = purple_request_field_group_new(NULL);
+	purple_request_fields_add_group(fields, group);
+
+	field = purple_request_field_list_new("buddy", NULL);
+	purple_request_field_list_set_multi_select(field, multi);
+	purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
+
+	for (l = buddies; l != NULL; l = l->next) {
+		name = purple_buddy_get_name(l->data);
+		alias = purple_buddy_get_alias(l->data);
+		str = g_strdup_printf("%s (%s)", alias, name);
+		purple_request_field_list_add_icon(field, str, NULL, l->data);
+		g_free(str);
+	}
+
+	for (l = select; l != NULL; l = l->next) {
+		name = purple_buddy_get_name(l->data);
+		alias = purple_buddy_get_alias(l->data);
+		str = g_strdup_printf("%s (%s)", alias, name);
+		items = g_list_append(items, str);
+	}
+
+	purple_request_field_list_set_selected(field, items);
+	g_slist_free(buddies);
+	g_list_free_full(items, g_free);
+
+	cpar = purple_request_cpar_from_connection(gc);
+	return purple_request_fields(gc, title, primary, secondary, fields,
+	                             _("Ok"),
+	                             G_CALLBACK(fb_util_request_buddy_ok),
+				     _("Cancel"),
+	                             G_CALLBACK(fb_util_request_buddy_cancel),
+				     cpar, mata);
+}
+
+gboolean
+fb_util_str_is(const gchar *str, GAsciiType type)
+{
+	gsize i;
+	gsize size;
+	guchar c;
+
+	g_return_val_if_fail(str != NULL, FALSE);
+	size = strlen(str);
+
+	for (i = 0; i < size; i++) {
+		c = (guchar) str[i];
+
+		if ((g_ascii_table[c] & type) == 0) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
 }
 
 static voidpf
