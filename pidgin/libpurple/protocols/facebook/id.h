@@ -25,6 +25,8 @@
 #include <glib.h>
 #include <glib/gprintf.h>
 
+#include "util.h"
+
 #define FB_ID_CONSTANT(v)  G_GINT64_CONSTANT(v)
 #define FB_ID_FORMAT       G_GINT64_FORMAT
 #define FB_ID_MODIFIER     G_GINT64_MODIFIER
@@ -35,6 +37,9 @@
 
 #define FB_ID_FROM_STR(s) \
 	g_ascii_strtoll(s, NULL, 10)
+
+#define FB_ID_IS_STR(s) \
+	fb_util_str_is(s, G_ASCII_DIGIT)
 
 #define FB_ID_TO_STR(i, s) \
 	g_sprintf(s, "%" FB_ID_FORMAT, (FbId) i)

@@ -9,6 +9,8 @@ FACEBOOKSOURCES = \
 	marshal.h \
 	api.c \
 	api.h \
+	data.c \
+	data.h \
 	facebook.h \
 	facebook.c \
 	http.c \

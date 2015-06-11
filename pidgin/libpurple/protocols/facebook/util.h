@@ -24,8 +24,21 @@
 
 #include <glib.h>
 
+#include "connection.h"
+
+typedef void (*FbUtilRequestBuddyFunc) (GSList *buddies, gpointer data);
+
 gchar *
 fb_util_randstr(gsize size);
+
+gpointer
+fb_util_request_buddy(PurpleConnection *gc, const gchar *title,
+                      const gchar *primary, const gchar *secondary,
+                      GSList *select, gboolean multi, GCallback ok_cb,
+                      GCallback cancel_cb, gpointer data);
+
+gboolean
+fb_util_str_is(const gchar *str, GAsciiType type);
 
 gboolean
 fb_util_zcompressed(const GByteArray *bytes);

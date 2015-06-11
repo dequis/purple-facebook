@@ -43,6 +43,7 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##
 C_SRC =	\
 			api.c \
+			data.c \
 			facebook.c \
 			http.c \
 			json.c \

@@ -30,135 +30,36 @@
 #include "version.h"
 
 #include "api.h"
+#include "data.h"
 #include "facebook.h"
-
-static const gchar *fb_props_strs[] = {
-	"cid",
-	"did",
-	"stoken",
-	"token"
-};
 
 static PurpleProtocol *my_protocol = NULL;
 
 static void
 fb_cb_api_error(FbApi *api, GError *error, gpointer data);
 
-static gboolean
-fb_props_load(PurpleConnection *gc)
-{
-	const gchar *str;
-	FbApi *api;
-	FbId id;
-	gboolean ret = TRUE;
-	guint i;
-	guint64 uint;
-	GValue val = G_VALUE_INIT;
-	PurpleAccount *acct;
-
-	acct = purple_connection_get_account(gc);
-	api = purple_connection_get_protocol_data(gc);
-	g_return_val_if_fail(FB_IS_API(api), FALSE);
-
-	for (i = 0; i < G_N_ELEMENTS(fb_props_strs); i++) {
-		str = purple_account_get_string(acct, fb_props_strs[i], NULL);
-
-		if (str == NULL) {
-			ret = FALSE;
-		}
-
-		g_value_init(&val, G_TYPE_STRING);
-		g_value_set_string(&val, str);
-		g_object_set_property(G_OBJECT(api), fb_props_strs[i], &val);
-		g_value_unset(&val);
-	}
-
-	str = purple_account_get_string(acct, "mid", NULL);
-
-	if (str != NULL) {
-		uint = g_ascii_strtoull(str, NULL, 10);
-		g_value_init(&val, G_TYPE_UINT64);
-		g_value_set_uint64(&val, uint);
-		g_object_set_property(G_OBJECT(api), "mid", &val);
-		g_value_unset(&val);
-	} else {
-		ret = FALSE;
-	}
-
-	str = purple_account_get_string(acct, "uid", NULL);
-
-	if (str != NULL) {
-		id = FB_ID_FROM_STR(str);
-		g_value_init(&val, FB_TYPE_ID);
-		g_value_set_int64(&val, id);
-		g_object_set_property(G_OBJECT(api), "uid", &val);
-		g_value_unset(&val);
-	} else {
-		ret = FALSE;
-	}
-
-	fb_api_rehash(api);
-	return ret;
-}
-
-static void
-fb_props_save(PurpleConnection *gc)
-{
-	const gchar *str;
-	FbApi *api;
-	gchar *dup;
-	guint i;
-	guint64 uint;
-	GValue val = G_VALUE_INIT;
-	PurpleAccount *acct;
-
-	acct = purple_connection_get_account(gc);
-	api = purple_connection_get_protocol_data(gc);
-	g_return_if_fail(FB_IS_API(api));
-
-	for (i = 0; i < G_N_ELEMENTS(fb_props_strs); i++) {
-		g_value_init(&val, G_TYPE_STRING);
-		g_object_get_property(G_OBJECT(api), fb_props_strs[i], &val);
-		str = g_value_get_string(&val);
-		purple_account_set_string(acct, fb_props_strs[i], str);
-		g_value_unset(&val);
-	}
-
-	g_value_init(&val, G_TYPE_UINT64);
-	g_object_get_property(G_OBJECT(api), "mid", &val);
-	uint = g_value_get_uint64(&val);
-	g_value_unset(&val);
-
-	dup = g_strdup_printf("%" G_GINT64_FORMAT, uint);
-	purple_account_set_string(acct, "mid", dup);
-	g_free(dup);
-
-	g_value_init(&val, G_TYPE_INT64);
-	g_object_get_property(G_OBJECT(api), "uid", &val);
-	uint = g_value_get_int64(&val);
-	g_value_unset(&val);
-
-	dup = g_strdup_printf("%" FB_ID_FORMAT, uint);
-	purple_account_set_string(acct, "uid", dup);
-	g_free(dup);
-}
-
 static void
 fb_cb_api_auth(FbApi *api, gpointer data)
 {
-	PurpleConnection *gc = data;
+	FbData *fata = data;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
 
 	purple_connection_update_progress(gc, _("Fetching contacts"), 2, 4);
-	fb_props_save(gc);
+	fb_data_save(fata);
 	fb_api_contacts(api);
 }
 
 static void
 fb_cb_api_connect(FbApi *api, gpointer data)
 {
-	PurpleConnection *gc = data;
+	FbData *fata = data;
+	PurpleConnection *gc;
 
-	fb_props_save(gc);
+	gc = fb_data_get_connection(fata);
+
+	fb_data_save(fata);
 	purple_connection_set_state(gc, PURPLE_CONNECTION_CONNECTED);
 }
 
@@ -208,15 +109,17 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 	const gchar *alias;
 	const gchar *csum;
 	FbApiUser *user;
+	FbData *fata = data;
 	FbId muid;
 	gchar uid[FB_ID_STRMAX];
 	GSList *l;
 	GValue val = G_VALUE_INIT;
 	PurpleAccount *acct;
 	PurpleBuddy *bdy;
-	PurpleConnection *gc = data;
+	PurpleConnection *gc;
 	PurpleGroup *grp;
 
+	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
 	grp = purple_blist_get_default_group();
 	alias = purple_account_get_private_alias(acct);
@@ -262,8 +165,10 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 static void
 fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 {
-	PurpleConnection *gc = data;
+	FbData *fata = data;
+	PurpleConnection *gc;
 
+	gc = fb_data_get_connection(fata);
 	purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 	                        error->message);
 }
@@ -272,14 +177,39 @@ static void
 fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 {
 	FbApiMessage *msg;
+	FbData *fata = data;
+	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
+	gint id;
 	GSList *l;
-	PurpleConnection *gc = data;
+	PurpleAccount *acct;
+	PurpleChatConversation *chat;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
 
 	for (l = msgs; l != NULL; l = l->next) {
 		msg = l->data;
+		chat = NULL;
 		FB_ID_TO_STR(msg->uid, uid);
-		purple_serv_got_im(gc, uid, msg->text, PURPLE_MESSAGE_RECV, time(NULL));
+
+		if (msg->tid == 0) {
+			purple_serv_got_im(gc, uid, msg->text,
+		                           PURPLE_MESSAGE_RECV,
+			                   time(NULL));
+			continue;
+		}
+
+		FB_ID_TO_STR(msg->tid, tid);
+		chat = purple_conversations_find_chat_with_account(tid, acct);
+
+		if (chat != NULL) {
+			id = purple_chat_conversation_get_id(chat);
+			purple_serv_got_chat_in(gc, id, uid,
+			                        PURPLE_MESSAGE_RECV,
+		                                msg->text, time(NULL));
+		}
 	}
 }
 
@@ -288,14 +218,16 @@ fb_cb_api_presence(FbApi *api, GSList *press, gpointer data)
 {
 	const gchar *statid;
 	FbApiPresence *pres;
+	FbData *fata = data;
 	gchar uid[FB_ID_STRMAX];
 	GSList *l;
 	PurpleAccount *acct;
 	PurpleBuddy *bdy;
-	PurpleConnection *gc = data;
+	PurpleConnection *gc;
 	PurplePresence *ppres;
 	PurpleStatusPrimitive pstat;
 
+	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
 
 	for (l = press; l != NULL; l = l->next) {
@@ -323,27 +255,96 @@ fb_cb_api_presence(FbApi *api, GSList *press, gpointer data)
 static void
 fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
 {
-	purple_debug_info(NULL, "fb_cb_api_thread_create()");
+	FbData *fata = data;
+	gchar sid[FB_ID_STRMAX];
+	GHashTable *table;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	FB_ID_TO_STR(tid, sid);
+
+	table = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+	g_hash_table_insert(table, "name", g_strdup(sid));
+	purple_serv_join_chat(gc, table);
+	g_hash_table_destroy(table);
 }
 
 static void
 fb_cb_api_thread_info(FbApi *api, FbApiThread *thrd, gpointer data)
 {
-	purple_debug_info(NULL, "fb_cb_api_thread_info()");
+	FbApiUser *user;
+	FbData *fata = data;
+	gchar tid[FB_ID_STRMAX];
+	gchar uid[FB_ID_STRMAX];
+	gint id;
+	GSList *l;
+	PurpleChatConversation *chat;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	id = fb_data_get_chatid(fata);
+	FB_ID_TO_STR(thrd->tid, tid);
+
+	chat = purple_serv_got_joined_chat(gc, id, tid);
+	purple_chat_conversation_set_topic(chat, NULL, thrd->topic);
+
+	for (l = thrd->users; l != NULL; l = l->next) {
+		user = l->data;
+		FB_ID_TO_STR(user->uid, uid);
+		purple_chat_conversation_add_user(chat, uid, NULL, 0, FALSE);
+	}
 }
 
 static void
 fb_cb_api_thread_list(FbApi *api, GSList *thrds, gpointer data)
 {
-	purple_debug_info(NULL, "fb_cb_api_thread_list()");
+	FbApiUser *user;
+	FbData *fata = data;
+	gchar tid[FB_ID_STRMAX];
+	GSList *l;
+	GSList *m;
+	GString *gstr;
+	FbApiThread *thrd;
+	PurpleRoomlist *list;
+	PurpleRoomlistRoom *room;
+
+	list = fb_data_get_roomlist(fata);
+	gstr = g_string_new(NULL);
+
+	for (l = thrds; l != NULL; l = l->next) {
+		thrd = l->data;
+		FB_ID_TO_STR(thrd->tid, tid);
+		g_string_truncate(gstr, 0);
+
+		for (m = thrd->users; m != NULL; m = m->next) {
+			user = m->data;
+
+			if (gstr->len > 0) {
+				g_string_append(gstr, ", ");
+			}
+
+			g_string_append(gstr, user->name);
+		}
+
+		room = purple_roomlist_room_new(PURPLE_ROOMLIST_ROOMTYPE_ROOM,
+		                                tid, NULL);
+		purple_roomlist_room_add_field(list, room, thrd->topic);
+		purple_roomlist_room_add_field(list, room, gstr->str);
+		purple_roomlist_room_add(list, room);
+	}
+
+	purple_roomlist_set_in_progress(list, FALSE);
+	g_string_free(gstr, TRUE);
 }
 
 static void
 fb_cb_api_typing(FbApi *api, FbApiTyping *typg, gpointer data)
 {
+	FbData *fata = data;
 	gchar uid[FB_ID_STRMAX];
-	PurpleConnection *gc = data;
+	PurpleConnection *gc;
 
+	gc = fb_data_get_connection(fata);
 	FB_ID_TO_STR(typg->uid, uid);
 
 	if (typg->state) {
@@ -354,11 +355,70 @@ fb_cb_api_typing(FbApi *api, FbApiTyping *typg, gpointer data)
 }
 
 static void
+fb_blist_chat_create(GSList *buddies, gpointer data)
+{
+	const gchar *name;
+	FbApi *api;
+	FbData *fata = data;
+	FbId uid;
+	gpointer mptr;
+	GSList *l;
+	GSList *uids = NULL;
+	PurpleConnection *gc;
+	PurpleRequestCommonParameters *cpar;
+
+	gc = fb_data_get_connection(fata);
+	api = fb_data_get_api(fata);
+
+	if (g_slist_length(buddies) < 2) {
+		cpar = purple_request_cpar_from_connection(gc);
+		purple_notify_error(gc,
+		                    _("Initiate Chat"),
+		                    _("Failed to Initiate Chat"),
+		                    _("At least two initial chat participants"
+		                      " are required."),
+				    cpar);
+		return;
+	}
+
+	for (l = buddies; l != NULL; l = l->next) {
+		name = purple_buddy_get_name(l->data);
+		uid = FB_ID_FROM_STR(name);
+		mptr = g_memdup(&uid, sizeof uid);
+		uids = g_slist_prepend(uids, mptr);
+	}
+
+	fb_api_thread_create(api, uids);
+	g_slist_free_full(uids, g_free);
+}
+
+static void
+fb_blist_chat_init(PurpleBlistNode *node, gpointer data)
+{
+	FbData *fata = data;
+	GSList *select = NULL;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	select = g_slist_prepend(select, PURPLE_BUDDY(node));
+
+	fb_util_request_buddy(gc,
+	                      _("Initiate Chat"),
+	                      _("Initial Chat Participants"),
+	                      _("Select at least two initial participants."),
+	                      select, TRUE,
+			      G_CALLBACK(fb_blist_chat_create), NULL,
+			      fata);
+	g_slist_free(select);
+}
+
+static void
 fb_login(PurpleAccount *acct)
 {
 	const gchar *pass;
 	const gchar *user;
 	FbApi *api;
+	FbData *fata;
 	PurpleConnection *gc;
 
 	gc = purple_account_get_connection(acct);
@@ -371,51 +431,52 @@ fb_login(PurpleAccount *acct)
 		return;
 	}
 
-	api = fb_api_new(gc);
-	purple_connection_set_protocol_data(gc, api);
+	fata = fb_data_new(gc);
+	api = fb_data_get_api(fata);
+	purple_connection_set_protocol_data(gc, fata);
 
 	g_signal_connect(api,
 	                 "auth",
 	                 G_CALLBACK(fb_cb_api_auth),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "connect",
 	                 G_CALLBACK(fb_cb_api_connect),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "contacts",
 	                 G_CALLBACK(fb_cb_api_contacts),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "error",
 	                 G_CALLBACK(fb_cb_api_error),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "message",
 	                 G_CALLBACK(fb_cb_api_message),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "presence",
 	                 G_CALLBACK(fb_cb_api_presence),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "thread-create",
 	                 G_CALLBACK(fb_cb_api_thread_create),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "thread-info",
 	                 G_CALLBACK(fb_cb_api_thread_info),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "thread-list",
 	                 G_CALLBACK(fb_cb_api_thread_list),
-	                 gc);
+	                 fata);
 	g_signal_connect(api,
 	                 "typing",
 	                 G_CALLBACK(fb_cb_api_typing),
-	                 gc);
+	                 fata);
 
-	if (!fb_props_load(gc)) {
+	if (!fb_data_load(fata)) {
 		user = purple_account_get_username(acct);
 		pass = purple_connection_get_password(gc);
 		purple_connection_update_progress(gc, _("Authenticating"),
@@ -432,12 +493,13 @@ static void
 fb_close(PurpleConnection *gc)
 {
 	FbApi *api;
+	FbData *fata;
 
-	api = purple_connection_get_protocol_data(gc);
-	g_return_if_fail(FB_IS_API(api));
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
 
 	fb_api_disconnect(api);
-	g_object_unref(api);
+	g_object_unref(fata);
 	purple_connection_set_protocol_data(gc, NULL);
 }
 
@@ -464,15 +526,39 @@ fb_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 	return "facebook";
 }
 
+static GList *
+fb_client_blist_node_menu(PurpleBlistNode *node)
+{
+	FbData *fata;
+	GList *acts = NULL;
+	PurpleAccount *acct;
+	PurpleConnection *gc;
+	PurpleMenuAction *act;
+
+	acct = purple_buddy_get_account(PURPLE_BUDDY(node));
+	gc = purple_account_get_connection(acct);
+	fata = purple_connection_get_protocol_data(gc);
+
+	act = purple_menu_action_new(_("Initiate _Chat"),
+	                             PURPLE_CALLBACK(fb_blist_chat_init),
+	                             fata, NULL);
+	acts = g_list_prepend(acts, act);
+
+	return g_list_reverse(acts);
+}
+
 static gint
-fb_send(PurpleConnection *gc, PurpleMessage *msg)
+fb_im_send(PurpleConnection *gc, PurpleMessage *msg)
 {
 	const gchar *name;
 	const gchar *text;
 	FbApi *api;
+	FbData *fata;
 	FbId uid;
 
-	api = purple_connection_get_protocol_data(gc);
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+
 	name = purple_message_get_recipient(msg);
 	uid = FB_ID_FROM_STR(name);
 
@@ -482,23 +568,184 @@ fb_send(PurpleConnection *gc, PurpleMessage *msg)
 }
 
 static guint
-fb_send_typing(PurpleConnection *gc, const gchar *name,
-               PurpleIMTypingState state)
+fb_im_send_typing(PurpleConnection *gc, const gchar *name,
+                  PurpleIMTypingState state)
 {
 	FbApi *api;
+	FbData *fata;
 	FbId uid;
 
-	api = purple_connection_get_protocol_data(gc);
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
 	uid = FB_ID_FROM_STR(name);
+
 	fb_api_typing(api, uid, state != PURPLE_IM_NOT_TYPING);
 	return 0;
 }
 
 static void
+fb_chat_join(PurpleConnection *gc, GHashTable *data)
+{
+	const gchar *name;
+	FbApi *api;
+	FbData *fata;
+	FbId tid;
+
+	name = g_hash_table_lookup(data, "name");
+	g_return_if_fail(name != NULL);
+
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+	tid = FB_ID_FROM_STR(name);
+
+	fb_api_thread_info(api, tid);
+}
+
+static void
+fb_chat_invite(PurpleConnection *gc, gint id, const gchar *msg,
+               const gchar *who)
+{
+	const gchar *name;
+	FbApi *api;
+	FbData *fata;
+	FbId tid;
+	FbId uid;
+	PurpleChatConversation *chat;
+	PurpleRequestCommonParameters *cpar;
+
+	if (!FB_ID_IS_STR(who)) {
+		cpar = purple_request_cpar_from_connection(gc);
+		purple_notify_error(gc,
+		                    _("Invite Buddy Into Chat Room"),
+		                    _("Failed to Invite User"),
+		                    _("Invalid Facebook identifier."),
+				    cpar);
+		return;
+	}
+
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+	chat = purple_conversations_find_chat(gc, id);
+
+	name = purple_conversation_get_name(PURPLE_CONVERSATION(chat));
+	tid = FB_ID_FROM_STR(name);
+	uid = FB_ID_FROM_STR(who);
+
+	purple_chat_conversation_add_user(chat, who, NULL, 0, TRUE);
+	fb_api_thread_invite(api, tid, uid);
+}
+
+static gint
+fb_chat_send(PurpleConnection *gc, gint id, PurpleMessage *msg)
+{
+	const gchar *name;
+	const gchar *text;
+	FbApi *api;
+	FbData *fata;
+	FbId tid;
+	PurpleAccount *acct;
+	PurpleChatConversation *chat;
+
+	acct = purple_connection_get_account(gc);
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+	chat = purple_conversations_find_chat(gc, id);
+
+	name = purple_conversation_get_name(PURPLE_CONVERSATION(chat));
+	tid = FB_ID_FROM_STR(name);
+
+	text = purple_message_get_contents(msg);
+	fb_api_message(api, tid, TRUE, text);
+
+	name = purple_account_get_username(acct);
+	purple_serv_got_chat_in(gc, id, name,
+				purple_message_get_flags(msg),
+	                        purple_message_get_contents(msg),
+	                        time(NULL));
+	return 0;
+}
+
+static void
+fb_chat_set_topic(PurpleConnection *gc, gint id, const gchar *topic)
+{
+	const gchar *name;
+	FbApi *api;
+	FbData *fata;
+	FbId tid;
+	PurpleAccount *acct;
+	PurpleChatConversation *chat;
+
+	acct = purple_connection_get_account(gc);
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+	chat = purple_conversations_find_chat(gc, id);
+
+	name = purple_conversation_get_name(PURPLE_CONVERSATION(chat));
+	tid = FB_ID_FROM_STR(name);
+
+	name = purple_account_get_username(acct);
+	purple_chat_conversation_set_topic(chat, name, topic);
+	fb_api_thread_topic(api, tid, topic);
+}
+
+static PurpleRoomlist *
+fb_roomlist_get_list(PurpleConnection *gc)
+{
+	FbApi *api;
+	FbData *fata;
+	GList *flds = NULL;
+	PurpleAccount *acct;
+	PurpleRoomlist *list;
+	PurpleRoomlistField *fld;
+
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+	acct = purple_connection_get_account(gc);
+	list = purple_roomlist_new(acct);
+	fb_data_set_roomlist(fata, list);
+
+	fld = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_STRING,
+	                                _("Topic"), "topic", FALSE);
+	flds = g_list_prepend(flds, fld);
+
+	fld = purple_roomlist_field_new(PURPLE_ROOMLIST_FIELD_STRING,
+	                                _("Users"), "users", FALSE);
+	flds = g_list_prepend(flds, fld);
+
+	flds = g_list_reverse(flds);
+	purple_roomlist_set_fields(list, flds);
+
+	fb_api_thread_list(api);
+	return list;
+}
+
+static void
+fb_roomlist_cancel(PurpleRoomlist *list)
+{
+	FbData *fata;
+	PurpleAccount *acct;
+	PurpleConnection *gc;
+	PurpleRoomlist *cist;
+
+	acct = purple_roomlist_get_account(list);
+	gc = purple_account_get_connection(acct);
+	fata = purple_connection_get_protocol_data(gc);
+	cist = fb_data_get_roomlist(fata);
+
+	if (G_LIKELY(cist == list)) {
+		fb_data_set_roomlist(fata, NULL);
+	}
+
+	purple_roomlist_set_in_progress(list, FALSE);
+	g_object_unref(list);
+}
+
+static void
 facebook_protocol_init(PurpleProtocol *protocol)
 {
-	protocol->id   = "prpl-facebook";
-	protocol->name = "Facebook";
+	protocol->id      = "prpl-facebook";
+	protocol->name    = "Facebook";
+	protocol->options = OPT_PROTO_CHAT_TOPIC;
 }
 
 static void
@@ -513,7 +760,7 @@ facebook_protocol_class_init(PurpleProtocolClass *klass)
 static void
 facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
 {
-
+	iface->blist_node_menu = fb_client_blist_node_menu;
 }
 
 static void
@@ -525,14 +772,17 @@ facebook_protocol_server_iface_init(PurpleProtocolServerIface *iface)
 static void
 facebook_protocol_im_iface_init(PurpleProtocolIMIface *iface)
 {
-	iface->send        = fb_send;
-	iface->send_typing = fb_send_typing;
+	iface->send        = fb_im_send;
+	iface->send_typing = fb_im_send_typing;
 }
 
 static void
 facebook_protocol_chat_iface_init(PurpleProtocolChatIface *iface)
 {
-
+	iface->join      = fb_chat_join;
+	iface->invite    = fb_chat_invite;
+	iface->send      = fb_chat_send;
+	iface->set_topic = fb_chat_set_topic;
 }
 
 static void
@@ -544,7 +794,8 @@ facebook_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *iface)
 static void
 facebook_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *iface)
 {
-
+	iface->get_list = fb_roomlist_get_list;
+	iface->cancel   = fb_roomlist_cancel;
 }
 
 PURPLE_DEFINE_TYPE_EXTENDED(
