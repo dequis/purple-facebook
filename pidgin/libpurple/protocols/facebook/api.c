@@ -995,15 +995,6 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	}
 
-	params = fb_http_params_new_parse("http://www.google.com/index.php?text=hello%20world#world", TRUE);
-	fb_http_params_free(params);
-
-	params = fb_http_params_new_parse("http://www.google.com/?text=hi", TRUE);
-	fb_http_params_free(params);
-
-	params = fb_http_params_new_parse("text=hello%20world", FALSE);
-	fb_http_params_free(params);
-
 	arr = fb_json_node_get_arr(root, expr, &err);
 	FB_API_ERROR_CHK(api, err, goto finish);
 	elms = json_array_get_elements(arr);
