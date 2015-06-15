@@ -72,7 +72,7 @@ fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	const gchar *str;
 	FbApi *api;
 	FbHttpParams *params;
-	GError *err;
+	GError *err = NULL;
 	gsize size;
 	guchar *idata;
 	PurpleAccount *acct;
