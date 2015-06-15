@@ -337,6 +337,12 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 		return FALSE;
 	}
 
+	if (fb_json_node_chk_str(root, "$.failedSend.errorMessage", &msg)) {
+		fb_api_error(api, FB_API_ERROR_GENERAL, "%s", msg);
+		json_node_free(root);
+		return FALSE;
+	}
+
 	if (node != NULL) {
 		*node = root;
 	}
