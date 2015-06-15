@@ -1,0 +1,29 @@
+diff -r 510e0ad7dfea libpurple/protocols/facebook/Makefile.am
+--- a/libpurple/protocols/facebook/Makefile.am	Sun Jun 14 21:34:44 2015 -0400
++++ b/libpurple/protocols/facebook/Makefile.am	Mon Jun 15 02:08:17 2015 -0400
+@@ -23,7 +23,11 @@
+ 	thrift.c \
+ 	thrift.h \
+ 	util.c \
+-	util.h
++	util.h \
++	../../http.c \
++	../../http.h \
++	../../purple-socket.h \
++	../../purple-socket.c
+ 
+ CLEANFILES = \
+ 	marshal.c \
+@@ -57,10 +61,9 @@
+ endif
+ 
+ AM_CPPFLAGS = \
+-	-I$(top_srcdir)/libpurple \
+-	-I$(top_builddir)/libpurple \
+ 	$(GLIB_CFLAGS) \
+ 	$(JSON_CFLAGS) \
++	$(PURPLE_CFLAGS) \
+ 	$(ZLIB_CFLAGS) \
+-	$(GPLUGIN_CFLAGS) \
++	$(PLUGIN_CFLAGS) \
+ 	$(DEBUG_CFLAGS)

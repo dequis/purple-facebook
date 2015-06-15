@@ -1,0 +1,32 @@
+Purple Facebook implements the Facebook Messenger protocol into pidgin,
+finch, and libpurple. While the primary implementation is for purple3,
+this plugin is back-ported for purple2.
+
+## Installing Prebuilt Binaries
+
+Precompiled binaries can be downloaded from the releases section of
+GitHub. Then follow the generic instructions provided on the Pidgin
+website.
+
+https://developer.pidgin.im/wiki/ThirdPartyPlugins#InstallingPlugins
+
+## Building and Installing
+
+Make sure glib, json-glib, libpurple (pidgin), and zlib are installed
+with their headers and development information. If these packages came
+from the distribution's repository, they will likely need additional
+development packages, usually suffixed with -dev.
+
+    $ git clone https://github.com/jgeboski/purple-facebook.git
+    $ cd purple-facebook
+    $ ./autogen.sh
+    $ make
+
+With a "global" (or system) installation:
+
+    $ make install
+
+Or with a "local" installation:
+
+    $ mkdir -p ~/.purple/plugins
+    $ cp pidgin/libpurple/protocols/facebook/.libs/libfacebook.so ~/.purple/plugins
