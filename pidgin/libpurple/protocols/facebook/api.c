@@ -345,6 +345,8 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 
 	if (node != NULL) {
 		*node = root;
+	} else {
+		json_node_free(root);
 	}
 
 	return TRUE;
