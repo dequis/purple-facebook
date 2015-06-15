@@ -27,6 +27,34 @@
 #include "util.h"
 
 gchar *
+fb_util_locale_str(void)
+{
+	const gchar * const *langs;
+	const gchar *lang;
+	gchar *chr;
+	guint i;
+
+	static const gchar chrs[] = {'.', '@'};
+
+	langs = g_get_language_names();
+	lang = langs[0];
+
+	if (purple_strequal(lang, "C")) {
+		return g_strdup("en_US");
+	}
+
+	for (i = 0; i < G_N_ELEMENTS(chrs); i++) {
+		chr = strchr(lang, chrs[i]);
+
+		if (chr != NULL) {
+			return g_strndup(lang, chr - lang);
+		}
+	}
+
+	return g_strdup(lang);
+}
+
+gchar *
 fb_util_randstr(gsize size)
 {
 	gchar *ret;

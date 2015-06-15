@@ -29,6 +29,9 @@
 typedef void (*FbUtilRequestBuddyFunc) (GSList *buddies, gpointer data);
 
 gchar *
+fb_util_locale_str(void);
+
+gchar *
 fb_util_randstr(gsize size);
 
 gpointer
