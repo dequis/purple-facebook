@@ -382,13 +382,15 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 	PurpleHttpRequest *req;
 
 	fb_http_params_set_str(params, "api_key", FB_API_KEY);
-	fb_http_params_set_str(params, "client_country_code", "US");
 	fb_http_params_set_str(params, "device_id", priv->did);
 	fb_http_params_set_str(params, "fb_api_caller_class", info->klass);
 	fb_http_params_set_str(params, "fb_api_req_friendly_name", info->name);
 	fb_http_params_set_str(params, "format", "json");
-	fb_http_params_set_str(params, "locale", "en_US");
 	fb_http_params_set_str(params, "method", info->method);
+
+	val = fb_util_locale_str();
+	fb_http_params_set_str(params, "locale", val);
+	g_free(val);
 
 	req = purple_http_request_new(url);
 	purple_http_request_set_method(req, "POST");
