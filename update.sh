@@ -1,7 +1,7 @@
 #!/bin/sh
 
 URL="https://hg.pidgin.im/soc/2015/jgeboski/facebook"
-REV="facebook"
+REV="5fb3e4d02954"
 HG=$(type -p hg || exit 1)
 
 test -z "$srcdir" && srcdir=$(dirname "$0")
