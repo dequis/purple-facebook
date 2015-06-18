@@ -42,12 +42,12 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##  SOURCES, OBJECTS
 ##
 C_SRC =	\
+			marshal.c \
 			api.c \
 			data.c \
 			facebook.c \
 			http.c \
 			json.c \
-			marshal.c \
 			mqtt.c \
 			thrift.c \
 			util.c
