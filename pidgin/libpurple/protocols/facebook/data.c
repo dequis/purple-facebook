@@ -205,7 +205,7 @@ fb_data_get_chatid(FbData *fata)
 {
 	FbDataPrivate *priv;
 
-	g_return_val_if_fail(FB_IS_DATA(fata), NULL);
+	g_return_val_if_fail(FB_IS_DATA(fata), 0);
 	priv = fata->priv;
 
 	return priv->chatid++;
