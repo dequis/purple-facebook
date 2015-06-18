@@ -22,8 +22,9 @@
 #ifndef _FACEBOOK_HTTP_H_
 #define _FACEBOOK_HTTP_H_
 
-#include <glib.h>
 #include <libpurple/http.h>
+
+#include "glibcompat.h"
 
 #define FB_HTTP_ERROR fb_http_error_quark()
 

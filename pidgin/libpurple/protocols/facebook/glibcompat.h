@@ -19,36 +19,33 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_UTIL_H_
-#define _FACEBOOK_UTIL_H_
+#ifndef _FACEBOOK_GLIBCOMPAT_H_
+#define _FACEBOOK_GLIBCOMPAT_H_
 
-#include "connection.h"
-#include "glibcompat.h"
+#include <glib.h>
+#include <glib-object.h>
+#include <libpurple/glibcompat.h>
 
-typedef void (*FbUtilRequestBuddyFunc) (GSList *buddies, gpointer data);
+#if !GLIB_CHECK_VERSION(2, 32, 0)
 
-gchar *
-fb_util_locale_str(void);
+static inline GByteArray*
+g_byte_array_new_take(guint8 *data, gsize len)
+{
+	GByteArray *array;
 
-gchar *
-fb_util_randstr(gsize size);
+	array = g_byte_array_new();
+	g_byte_array_append(array, data, len);
+	g_free(data);
 
-gpointer
-fb_util_request_buddy(PurpleConnection *gc, const gchar *title,
-                      const gchar *primary, const gchar *secondary,
-                      GSList *select, gboolean multi, GCallback ok_cb,
-                      GCallback cancel_cb, gpointer data);
+	return array;
+}
 
-gboolean
-fb_util_str_is(const gchar *str, GAsciiType type);
+#if !GLIB_CHECK_VERSION(2, 30, 0)
 
-gboolean
-fb_util_zcompressed(const GByteArray *bytes);
+#define G_VALUE_INIT  {0, {{0}}}
 
-GByteArray *
-fb_util_zcompress(const GByteArray *bytes);
+#endif /* < 2.30.0 */
 
-GByteArray *
-fb_util_zuncompress(const GByteArray *bytes);
+#endif /* < 2.32.0 */
 
-#endif /* _FACEBOOK_UTIL_H_ */
+#endif /* _FACEBOOK_GLIBCOMPAT_H_ */

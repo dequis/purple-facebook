@@ -22,10 +22,8 @@
 #ifndef _FACEBOOK_DATA_H_
 #define _FACEBOOK_DATA_H_
 
-#include <glib.h>
-#include <glib-object.h>
-
 #include "connection.h"
+#include "glibcompat.h"
 
 #define FB_TYPE_DATA             (fb_data_get_type())
 #define FB_DATA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA, FbData))

@@ -13,6 +13,7 @@ FACEBOOKSOURCES = \
 	data.h \
 	facebook.h \
 	facebook.c \
+	glibcompat.h \
 	http.c \
 	http.h \
 	id.h \

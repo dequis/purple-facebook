@@ -24,8 +24,7 @@
 
 #include "internal.h"
 
-#include <glib.h>
-
+#include "glibcompat.h"
 #include "http.h"
 #include "id.h"
 #include "mqtt.h"
