@@ -52,7 +52,7 @@ Download and extract json-glib:
 Compile the plugin:
 
     $ cd $PIDGIN_DEV_ROOT/purple-facebook #-<version>
-    $ make -f Makefile.mingw all
+    $ make -f Makefile.mingw install
 
 ### Installing on Windows
 
@@ -65,4 +65,4 @@ The GTK runtime distributed with pidgin is to old and must be upgraded:
 
 Install the plugin:
 
-    $ cp pidgin/libpurple/protocols/facebook/libfacebook.dll C:/Users/<user>/AppData/Roaming/.purple/plugins
+    $ cp win32-install-dir/plugins/libfacebook.dll C:/Users/<user>/AppData/Roaming/.purple/plugins

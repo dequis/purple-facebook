@@ -1,20 +1,18 @@
 PLUGIN_VERSION = 0.1.0
 PURPLE_VERSION = 2.10.11
 
-WIN32_TREE_TOP := ../win32-dev/pidgin-$(PURPLE_VERSION)
-include $(WIN32_TREE_TOP)/libpurple/win32/global.mak
-
 TREE_TOP = ../../../..
 PLUGIN_TOP = pidgin/libpurple/protocols/facebook
+WIN32_TREE_TOP := ../win32-dev/pidgin-$(PURPLE_VERSION)
 
 PIDGIN_TREE_TOP = $(TREE_TOP)/$(WIN32_TREE_TOP)
 WIN32_DEV_TOP = $(PIDGIN_TREE_TOP)/..
 PURPLE_TOP = $(TREE_TOP)/$(WIN32_TREE_TOP)/libpurple
-PURPLE_INSTALL_DIR = $(TREE_TOP)/win32-install-dir
+PURPLE_INSTALL_PLUGINS_DIR = $(TREE_TOP)/win32-install-dir/plugins
 
 GTK_TOP = $(WIN32_DEV_TOP)/gtk_2_0-2.24
 GTK_BIN = $(GTK_TOP)/bin
-GLIB_GENMARSHAL ?= $(GTK_BIN)/glib-genmarshal
+GLIB_GENMARSHAL = $(GTK_BIN)/glib-genmarshal
 JSON_GLIB_TOP = $(WIN32_DEV_TOP)/json-glib-0.14
 
 export CFLAGS = \
@@ -41,15 +39,30 @@ export INCLUDE_PATHS = \
 export LIB_PATHS = \
 	-L$(PIDGIN_TREE_TOP)/win32-install-dir
 
-%:
-	$(MAKE) -C $(PLUGIN_TOP) -f Makefile.mingw $@ \
-		PURPLE_VERSION="$(PURPLE_VERSION)" \
-		PIDGIN_TREE_TOP="$(PIDGIN_TREE_TOP)" \
-		WIN32_DEV_TOP="$(WIN32_DEV_TOP)" \
-		PLUGIN_TOP="$(PLUGIN_TOP)" \
-		PURPLE_TOP="$(PURPLE_TOP)" \
-		PURPLE_INSTALL_DIR="$(PURPLE_INSTALL_DIR)" \
-		GTK_TOP="$(GTK_TOP)" \
-		GTK_BIN="$(GTK_BIN)" \
-		GLIB_GENMARSHAL="$(GLIB_GENMARSHAL)" \
-		JSON_GLIB_TOP="$(JSON_GLIB_TOP)"
+override define PLUGIN_MAKE =
+$(MAKE) -C $(PLUGIN_TOP) -f Makefile.mingw $(@) \
+	PURPLE_VERSION="$(PURPLE_VERSION)" \
+	PIDGIN_TREE_TOP="$(PIDGIN_TREE_TOP)" \
+	WIN32_DEV_TOP="$(WIN32_DEV_TOP)" \
+	PLUGIN_TOP="$(PLUGIN_TOP)" \
+	PURPLE_TOP="$(PURPLE_TOP)" \
+	PURPLE_INSTALL_PLUGINS_DIR="$(PURPLE_INSTALL_PLUGINS_DIR)" \
+	GTK_TOP="$(GTK_TOP)" \
+	GTK_BIN="$(GTK_BIN)" \
+	GLIB_GENMARSHAL="$(GLIB_GENMARSHAL)" \
+	JSON_GLIB_TOP="$(JSON_GLIB_TOP)"
+endef
+
+.PHONY: all install clean
+
+all:
+	$(call PLUGIN_MAKE,all)
+
+$(PURPLE_INSTALL_PLUGINS_DIR):
+	cd $(PLUGIN_TOP) && mkdir -p $(PURPLE_INSTALL_PLUGINS_DIR)
+
+install: $(PURPLE_INSTALL_PLUGINS_DIR)
+	$(call PLUGIN_MAKE,install)
+
+clean:
+	$(call PLUGIN_MAKE,clean)

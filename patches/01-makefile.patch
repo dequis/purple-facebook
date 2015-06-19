@@ -1,6 +1,6 @@
 diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.am
 --- a/libpurple/protocols/facebook/Makefile.am	Thu Jun 18 00:45:16 2015 -0400
-+++ b/libpurple/protocols/facebook/Makefile.am	Thu Jun 18 19:57:31 2015 -0400
++++ b/libpurple/protocols/facebook/Makefile.am	Fri Jun 19 07:20:43 2015 -0400
 @@ -24,7 +24,12 @@
  	thrift.c \
  	thrift.h \
@@ -30,7 +30,7 @@ diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.am
  	$(DEBUG_CFLAGS)
 diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.mingw
 --- a/libpurple/protocols/facebook/Makefile.mingw	Thu Jun 18 00:45:16 2015 -0400
-+++ b/libpurple/protocols/facebook/Makefile.mingw	Thu Jun 18 19:57:31 2015 -0400
++++ b/libpurple/protocols/facebook/Makefile.mingw	Fri Jun 19 07:20:43 2015 -0400
 @@ -50,7 +50,9 @@
  			json.c \
  			mqtt.c \
@@ -50,14 +50,12 @@ diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.mingw
  			-ljson-glib-1.0 \
  			-lz \
  			-lpurple
-@@ -76,12 +77,15 @@
+@@ -76,12 +77,12 @@
  
  all: $(TARGET).dll
  
-+$(PURPLE_INSTALL_PLUGINS_DIR):
-+	mkdir -p $(PURPLE_INSTALL_PLUGINS_DIR)
-+
- install: all $(DLL_INSTALL_DIR)
+-install: all $(DLL_INSTALL_DIR)
++install: all
  	cp $(TARGET).dll $(DLL_INSTALL_DIR)
  
  $(OBJECTS): $(PURPLE_CONFIG_H)
