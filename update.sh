@@ -1,7 +1,7 @@
 #!/bin/sh
 
 URL="https://hg.pidgin.im/soc/2015/jgeboski/facebook"
-REV="5fb3e4d02954"
+REV="5abaecb5a83d"
 HG=$(type -p hg || exit 1)
 
 test -z "$srcdir" && srcdir=$(dirname "$0")
@@ -22,9 +22,9 @@ touch \
 patchdir="$(pwd)/patches"
 cd "$srcdir/pidgin"
 
-"$HG" pull
-"$HG" update -C "$REV"
-"$HG" clean --all --config extensions.purge=
+"$HG" -v pull
+"$HG" -v update -C "$REV"
+"$HG" -v clean --all --config extensions.purge=
 
 for patch in $(ls -1 "$patchdir"); do
     patch -p1 -i "$patchdir/$patch"
@@ -37,4 +37,5 @@ rm -f \
     libpurple/internal.h \
     libpurple/ntlm.h \
     libpurple/proxy.h \
+    libpurple/request.h \
     libpurple/sslconn.h

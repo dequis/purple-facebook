@@ -4,6 +4,6 @@ SUBDIRS         = pidgin/libpurple/protocols/facebook
 EXTRA_DIST = \
 	autogen.sh \
 	include \
+	Makefile.mingw \
 	patches \
-	pidgin/libpurple/glibcompat.h \
 	update.sh

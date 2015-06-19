@@ -18,10 +18,30 @@
 #ifndef _PURPLE_INTERNAL_H_
 #define _PURPLE_INTERNAL_H_
 
+#include <ctype.h>
 #include <errno.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <glib.h>
 #include <glib/gi18n.h>
 #include <locale.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#ifndef _WIN32
+# include <arpa/inet.h>
+# include <netdb.h>
+# include <netinet/in.h>
+# include <sys/socket.h>
+# include <sys/time.h>
+# include <sys/un.h>
+# include <sys/utsname.h>
+# include <sys/wait.h>
+# include <unistd.h>
+#endif
 
 void
 _purple_socket_init(void);

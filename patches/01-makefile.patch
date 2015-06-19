@@ -1,12 +1,13 @@
-diff -r 510e0ad7dfea libpurple/protocols/facebook/Makefile.am
---- a/libpurple/protocols/facebook/Makefile.am	Sun Jun 14 21:34:44 2015 -0400
-+++ b/libpurple/protocols/facebook/Makefile.am	Mon Jun 15 02:08:17 2015 -0400
-@@ -23,7 +23,11 @@
+diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.am
+--- a/libpurple/protocols/facebook/Makefile.am	Thu Jun 18 00:45:16 2015 -0400
++++ b/libpurple/protocols/facebook/Makefile.am	Thu Jun 18 19:57:31 2015 -0400
+@@ -24,7 +24,12 @@
  	thrift.c \
  	thrift.h \
  	util.c \
 -	util.h
 +	util.h \
++	../../glibcompat.h \
 +	../../http.c \
 +	../../http.h \
 +	../../purple-socket.h \
@@ -14,7 +15,7 @@ diff -r 510e0ad7dfea libpurple/protocols/facebook/Makefile.am
  
  CLEANFILES = \
  	marshal.c \
-@@ -57,10 +61,9 @@
+@@ -58,10 +63,9 @@
  endif
  
  AM_CPPFLAGS = \
@@ -27,3 +28,42 @@ diff -r 510e0ad7dfea libpurple/protocols/facebook/Makefile.am
 -	$(GPLUGIN_CFLAGS) \
 +	$(PLUGIN_CFLAGS) \
  	$(DEBUG_CFLAGS)
+diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.mingw
+--- a/libpurple/protocols/facebook/Makefile.mingw	Thu Jun 18 00:45:16 2015 -0400
++++ b/libpurple/protocols/facebook/Makefile.mingw	Thu Jun 18 19:57:31 2015 -0400
+@@ -50,7 +50,9 @@
+ 			json.c \
+ 			mqtt.c \
+ 			thrift.c \
+-			util.c
++			util.c \
++			../../http.c \
++			../../purple-socket.c
+ 
+ OBJECTS = $(C_SRC:%.c=%.o)
+ 
+@@ -62,7 +64,6 @@
+ 			-lgobject-2.0 \
+ 			-lws2_32 \
+ 			-lintl \
+-			-lgplugin \
+ 			-ljson-glib-1.0 \
+ 			-lz \
+ 			-lpurple
+@@ -76,12 +77,15 @@
+ 
+ all: $(TARGET).dll
+ 
++$(PURPLE_INSTALL_PLUGINS_DIR):
++	mkdir -p $(PURPLE_INSTALL_PLUGINS_DIR)
++
+ install: all $(DLL_INSTALL_DIR)
+ 	cp $(TARGET).dll $(DLL_INSTALL_DIR)
+ 
+ $(OBJECTS): $(PURPLE_CONFIG_H)
+ 
+-$(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
++$(TARGET).dll: $(OBJECTS)
+ 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+ 
+ marshal.c: marshaller.list marshal.h

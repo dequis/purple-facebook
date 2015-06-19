@@ -1,0 +1,55 @@
+PLUGIN_VERSION = 0.1.0
+PURPLE_VERSION = 2.10.11
+
+WIN32_TREE_TOP := ../win32-dev/pidgin-$(PURPLE_VERSION)
+include $(WIN32_TREE_TOP)/libpurple/win32/global.mak
+
+TREE_TOP = ../../../..
+PLUGIN_TOP = pidgin/libpurple/protocols/facebook
+
+PIDGIN_TREE_TOP = $(TREE_TOP)/$(WIN32_TREE_TOP)
+WIN32_DEV_TOP = $(PIDGIN_TREE_TOP)/..
+PURPLE_TOP = $(TREE_TOP)/$(WIN32_TREE_TOP)/libpurple
+PURPLE_INSTALL_DIR = $(TREE_TOP)/win32-install-dir
+
+GTK_TOP = $(WIN32_DEV_TOP)/gtk_2_0-2.24
+GTK_BIN = $(GTK_TOP)/bin
+GLIB_GENMARSHAL ?= $(GTK_BIN)/glib-genmarshal
+JSON_GLIB_TOP = $(WIN32_DEV_TOP)/json-glib-0.14
+
+export CFLAGS = \
+	-include purple-compat.h \
+	-Wno-unused-variable \
+	-Wno-unused-but-set-variable
+
+export DEFINES = $(AUTOTOOLS_DEFINES) \
+	-DPACKAGE_NAME=\"purple-facebook\" \
+	-DPACKAGE_TARNAME=\"purple-facebook\" \
+	-DPACKAGE_VERSION=\"$(PLUGIN_VERSION)\" \
+	-DPACKAGE_STRING=\"purple-facebook\ $(PLUGIN_VERSION)\" \
+	-DPACKAGE_BUGREPORT=\"https://github.com/jgeboski/purple-facebook/issues\" \
+	-DPACKAGE_URL=\"https://github.com/jgeboski/purple-facebook\" \
+	-DPACKAGE=\"purple-facebook\" \
+	-DVERSION=\"$(PLUGIN_VERSION)\" \
+	-DPURPLE_PLUGINS
+
+export INCLUDE_PATHS = \
+	-I$(TREE_TOP)/include \
+	-I$(TREE_TOP)/pidgin \
+	-I$(TREE_TOP)/pidgin/libpurple
+
+export LIB_PATHS = \
+	-L$(PIDGIN_TREE_TOP)/win32-install-dir
+
+%:
+	$(MAKE) -C $(PLUGIN_TOP) -f Makefile.mingw $@ \
+		PURPLE_VERSION="$(PURPLE_VERSION)" \
+		PIDGIN_TREE_TOP="$(PIDGIN_TREE_TOP)" \
+		WIN32_DEV_TOP="$(WIN32_DEV_TOP)" \
+		PLUGIN_TOP="$(PLUGIN_TOP)" \
+		PURPLE_TOP="$(PURPLE_TOP)" \
+		PURPLE_INSTALL_DIR="$(PURPLE_INSTALL_DIR)" \
+		GTK_TOP="$(GTK_TOP)" \
+		GTK_BIN="$(GTK_BIN)" \
+		GLIB_GENMARSHAL="$(GLIB_GENMARSHAL)" \
+		JSON_GLIB_TOP="$(JSON_GLIB_TOP)"

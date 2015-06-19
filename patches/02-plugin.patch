@@ -1,6 +1,6 @@
-diff -r 510e0ad7dfea libpurple/protocols/facebook/facebook.c
---- a/libpurple/protocols/facebook/facebook.c	Sun Jun 14 21:34:44 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.c	Mon Jun 15 08:14:49 2015 -0400
+diff -r 5abaecb5a83d libpurple/protocols/facebook/facebook.c
+--- a/libpurple/protocols/facebook/facebook.c	Thu Jun 18 00:45:16 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.c	Thu Jun 18 02:15:21 2015 -0400
 @@ -548,7 +548,8 @@
  }
  
@@ -51,89 +51,34 @@ diff -r 510e0ad7dfea libpurple/protocols/facebook/facebook.c
  	                        time(NULL));
  	return 0;
  }
-@@ -740,111 +742,68 @@
+@@ -740,111 +742,71 @@
  	g_object_unref(list);
  }
  
 -static void
 -facebook_protocol_init(PurpleProtocol *protocol)
-+gboolean
++static gboolean
 +plugin_load(PurplePlugin *plugin)
  {
 -	protocol->id      = "prpl-facebook";
 -	protocol->name    = "Facebook";
 -	protocol->options = OPT_PROTO_CHAT_TOPIC;
-+	_purple_socket_init();
-+	purple_http_init();
-+	return TRUE;
- }
- 
+-}
+-
 -static void
 -facebook_protocol_class_init(PurpleProtocolClass *klass)
-+gboolean
-+plugin_unload(PurplePlugin *plugin)
- {
+-{
 -	klass->login        = fb_login;
 -	klass->close        = fb_close;
 -	klass->status_types = fb_status_types;
 -	klass->list_icon    = fb_list_icon;
-+	purple_http_uninit();
-+	_purple_socket_uninit();
-+	return TRUE;
- }
- 
+-}
+-
 -static void
 -facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
-+G_MODULE_EXPORT gboolean
-+purple_init_plugin(PurplePlugin *plugin)
- {
+-{
 -	iface->blist_node_menu = fb_client_blist_node_menu;
-+	static gboolean inited = FALSE;
-+	static PurplePluginInfo info;
-+	static PurplePluginProtocolInfo pinfo;
-+
-+	plugin->info = &info;
-+
-+	if (G_LIKELY(inited)) {
-+		return purple_plugin_register(plugin);
-+	}
-+
-+	memset(&info, 0, sizeof info);
-+	memset(&pinfo, 0, sizeof pinfo);
-+
-+	info.magic         = PURPLE_PLUGIN_MAGIC;
-+	info.major_version = PURPLE_MAJOR_VERSION;
-+	info.minor_version = PURPLE_MINOR_VERSION;
-+	info.type          = PURPLE_PLUGIN_PROTOCOL;
-+	info.priority      = PURPLE_PRIORITY_DEFAULT;
-+	info.id            = "prpl-facebook";
-+	info.name          = "Facebook";
-+	info.version       = PACKAGE_VERSION;
-+	info.summary       = N_("Facebook Protocol Plugin");
-+	info.description   = N_("Facebook Protocol Plugin");
-+	info.homepage      = PACKAGE_URL;
-+	info.load          = plugin_load;
-+	info.unload        = plugin_unload;
-+	info.extra_info    = &pinfo;
-+
-+	pinfo.options           = OPT_PROTO_CHAT_TOPIC;
-+	pinfo.list_icon         = fb_list_icon;
-+	pinfo.status_types      = fb_status_types;
-+	pinfo.blist_node_menu   = fb_client_blist_node_menu;
-+	pinfo.login             = fb_login;
-+	pinfo.close             = fb_close;
-+	pinfo.send_im           = fb_im_send;
-+	pinfo.send_typing       = fb_im_send_typing;
-+	pinfo.join_chat         = fb_chat_join;
-+	pinfo.chat_invite       = fb_chat_invite;
-+	pinfo.chat_send         = fb_chat_send;
-+	pinfo.set_chat_topic    = fb_chat_set_topic;
-+	pinfo.roomlist_get_list = fb_roomlist_get_list;
-+	pinfo.roomlist_cancel   = fb_roomlist_cancel;
-+
-+	inited = TRUE;
-+	return purple_plugin_register(plugin);
- }
+-}
 -
 -static void
 -facebook_protocol_server_iface_init(PurpleProtocolServerIface *iface)
@@ -203,34 +148,87 @@ diff -r 510e0ad7dfea libpurple/protocols/facebook/facebook.c
 -		               PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
 -		NULL
 -	);
--}
--
--static gboolean
++	_purple_socket_init();
++	purple_http_init();
++	return TRUE;
+ }
+ 
+ static gboolean
 -plugin_load(PurplePlugin *plugin, GError **error)
--{
++plugin_unload(PurplePlugin *plugin)
+ {
 -	facebook_protocol_register_type(plugin);
 -	my_protocol = purple_protocols_add(FACEBOOK_TYPE_PROTOCOL, error);
 -	return my_protocol != NULL;
--}
--
++	purple_http_uninit();
++	_purple_socket_uninit();
++	return TRUE;
+ }
+ 
 -static gboolean
 -plugin_unload(PurplePlugin *plugin, GError **error)
--{
++G_MODULE_EXPORT gboolean
++purple_init_plugin(PurplePlugin *plugin);
++
++G_MODULE_EXPORT gboolean
++purple_init_plugin(PurplePlugin *plugin)
+ {
 -	return purple_protocols_remove(my_protocol, error);
--}
++	static gboolean inited = FALSE;
++	static PurplePluginInfo info;
++	static PurplePluginProtocolInfo pinfo;
++
++	plugin->info = &info;
++
++	if (G_LIKELY(inited)) {
++		return purple_plugin_register(plugin);
++	}
++
++	memset(&info, 0, sizeof info);
++	memset(&pinfo, 0, sizeof pinfo);
++
++	info.magic         = PURPLE_PLUGIN_MAGIC;
++	info.major_version = PURPLE_MAJOR_VERSION;
++	info.minor_version = PURPLE_MINOR_VERSION;
++	info.type          = PURPLE_PLUGIN_PROTOCOL;
++	info.priority      = PURPLE_PRIORITY_DEFAULT;
++	info.id            = "prpl-facebook";
++	info.name          = "Facebook";
++	info.version       = PACKAGE_VERSION;
++	info.summary       = N_("Facebook Protocol Plugin");
++	info.description   = N_("Facebook Protocol Plugin");
++	info.homepage      = PACKAGE_URL;
++	info.load          = plugin_load;
++	info.unload        = plugin_unload;
++	info.extra_info    = &pinfo;
++
++	pinfo.options           = OPT_PROTO_CHAT_TOPIC;
++	pinfo.list_icon         = fb_list_icon;
++	pinfo.status_types      = fb_status_types;
++	pinfo.blist_node_menu   = fb_client_blist_node_menu;
++	pinfo.login             = fb_login;
++	pinfo.close             = fb_close;
++	pinfo.send_im           = fb_im_send;
++	pinfo.send_typing       = fb_im_send_typing;
++	pinfo.join_chat         = fb_chat_join;
++	pinfo.chat_invite       = fb_chat_invite;
++	pinfo.chat_send         = fb_chat_send;
++	pinfo.set_chat_topic    = fb_chat_set_topic;
++	pinfo.roomlist_get_list = fb_roomlist_get_list;
++	pinfo.roomlist_cancel   = fb_roomlist_cancel;
++
++	inited = TRUE;
++	return purple_plugin_register(plugin);
+ }
 -
 -PURPLE_PLUGIN_INIT(facebook, plugin_query, plugin_load, plugin_unload);
-diff -r 510e0ad7dfea libpurple/protocols/facebook/facebook.h
---- a/libpurple/protocols/facebook/facebook.h	Sun Jun 14 21:34:44 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.h	Mon Jun 15 08:14:49 2015 -0400
-@@ -22,33 +22,4 @@
- #ifndef _FACEBOOK_H_
- #define _FACEBOOK_H_
+diff -r 5abaecb5a83d libpurple/protocols/facebook/facebook.h
+--- a/libpurple/protocols/facebook/facebook.h	Thu Jun 18 00:45:16 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.h	Thu Jun 18 02:15:21 2015 -0400
+@@ -25,29 +25,4 @@
+ #include "glibcompat.h"
+ #include "protocol.h"
  
--#include <glib.h>
--
--#include "protocol.h"
--
 -#define FACEBOOK_TYPE_PROTOCOL             (facebook_protocol_get_type())
 -#define FACEBOOK_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FACEBOOK_TYPE_PROTOCOL, FacebookProtocol))
 -#define FACEBOOK_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), FACEBOOK_TYPE_PROTOCOL, FacebookProtocolClass))
