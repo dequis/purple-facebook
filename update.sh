@@ -9,10 +9,18 @@ test -z "$srcdir" && srcdir=.
 
 cd "$srcdir"
 
-if ! test -d pidgin/.hg; then
-    rm -rf pidgin
-    "$HG" clone "$URL" pidgin
+if ! test -d .pidgin/.hg; then
+    rm -rf .pidgin
+    "$HG" clone "$URL" .pidgin
 fi
+
+"$HG" -R .pidgin -v pull
+"$HG" -R .pidgin -v update -C "$REV"
+
+for FILE in $(cat MANIFEST); do
+    mkdir -p $(dirname "pidgin/$FILE")
+    cp ".pidgin/$FILE" "pidgin/$FILE"
+done
 
 touch \
     include/plugins.h \
@@ -22,20 +30,6 @@ touch \
 patchdir="$(pwd)/patches"
 cd "$srcdir/pidgin"
 
-"$HG" -v pull
-"$HG" -v update -C "$REV"
-"$HG" -v clean --all --config extensions.purge=
-
 for patch in $(ls -1 "$patchdir"); do
     patch -p1 -i "$patchdir/$patch"
 done
-
-rm -f \
-    libpurple/connection.h \
-    libpurple/conversation.h \
-    libpurple/debug.h \
-    libpurple/internal.h \
-    libpurple/ntlm.h \
-    libpurple/proxy.h \
-    libpurple/request.h \
-    libpurple/sslconn.h
