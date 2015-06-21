@@ -17,15 +17,12 @@ fi
 "$HG" -R .pidgin -v pull
 "$HG" -R .pidgin -v update -C "$REV"
 
-for FILE in $(cat MANIFEST); do
+for FILE in $(cat MANIFEST_PIDGIN); do
     mkdir -p $(dirname "pidgin/$FILE")
     cp ".pidgin/$FILE" "pidgin/$FILE"
 done
 
-touch \
-    include/plugins.h \
-    include/protocol.h \
-    include/protocols.h
+touch $(cat MANIFEST_VOIDS)
 
 patchdir="$(pwd)/patches"
 cd "$srcdir/pidgin"
