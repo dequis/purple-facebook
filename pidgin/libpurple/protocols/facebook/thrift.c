@@ -88,6 +88,26 @@ fb_thrift_new(GByteArray *bytes, guint offset, gboolean compact)
 	return thft;
 }
 
+guint
+fb_thrift_get_pos(FbThrift *thft)
+{
+	FbThriftPrivate *priv;
+
+	g_return_val_if_fail(FB_IS_THRIFT(thft), 0);
+	priv = thft->priv;
+	return priv->pos;
+}
+
+void
+fb_thrift_set_pos(FbThrift *thft, guint pos)
+{
+	FbThriftPrivate *priv;
+
+	g_return_if_fail(FB_IS_THRIFT(thft));
+	priv = thft->priv;
+	priv->pos = pos;
+}
+
 void
 fb_thrift_reset(FbThrift *thft)
 {

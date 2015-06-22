@@ -647,6 +647,7 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	const gchar *str;
 	FbApiMessage msg;
 	FbApiPrivate *priv = api->priv;
+	FbThrift *thft;
 	GError *err = NULL;
 	gint64 tid;
 	gint64 uid;
@@ -654,13 +655,20 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	GList *l;
 	gpointer mptr;
 	GSList *msgs = NULL;
+	guint i;
 	JsonArray *arr;
 	JsonNode *mode;
 	JsonNode *node;
 	JsonNode *root;
 
-	/* Start at 1 to skip the NULL byte */
-	if (!fb_api_json_chk(api, pload->data + 1, pload->len - 1, &root)) {
+	thft = fb_thrift_new((GByteArray*) pload, 0, TRUE);
+	fb_thrift_read_str(thft, NULL);
+	i = fb_thrift_get_pos(thft);
+	g_object_unref(thft);
+
+	g_return_if_fail(i < pload->len);
+
+	if (!fb_api_json_chk(api, pload->data + i, pload->len - i, &root)) {
 		return;
 	}
 
