@@ -16,6 +16,7 @@ fi
 
 "$HG" -R .pidgin -v pull
 "$HG" -R .pidgin -v update -C "$REV"
+rm -rf pidgin
 
 for FILE in $(cat MANIFEST_PIDGIN); do
     mkdir -p $(dirname "pidgin/$FILE")
