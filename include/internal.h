@@ -44,6 +44,9 @@
 #endif
 
 void
+_purple_socket_cancel_with_connection(PurpleConnection *gc);
+
+void
 _purple_socket_init(void);
 
 void
