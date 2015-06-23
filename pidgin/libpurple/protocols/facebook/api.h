@@ -101,7 +101,7 @@ struct _FbApiMessage
 {
 	FbId uid;
 	FbId tid;
-	const gchar *text;
+	gchar *text;
 };
 
 struct _FbApiPresence
@@ -113,7 +113,7 @@ struct _FbApiPresence
 struct _FbApiThread
 {
 	FbId tid;
-	const gchar *topic;
+	gchar *topic;
 	GSList *users;
 };
 
@@ -126,8 +126,8 @@ struct _FbApiTyping
 struct _FbApiUser
 {
 	FbId uid;
-	const gchar *name;
-	const gchar *icon;
+	gchar *name;
+	gchar *icon;
 	gchar *csum;
 };
 
@@ -195,5 +195,66 @@ fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic);
 
 void
 fb_api_typing(FbApi *api, FbId uid, gboolean state);
+
+FbApiMessage *
+fb_api_message_new(FbId uid, FbId tid, const gchar *text);
+
+FbApiMessage *
+fb_api_message_dup(FbApiMessage *msg, gboolean deep);
+
+void
+fb_api_message_reset(FbApiMessage *msg, gboolean deep);
+
+void
+fb_api_message_free(FbApiMessage *msg);
+
+FbApiPresence *
+fb_api_presence_new(FbId uid, gboolean active);
+
+FbApiPresence *
+fb_api_presence_dup(FbApiPresence *pres);
+
+void
+fb_api_presence_reset(FbApiPresence *pres);
+
+void
+fb_api_presence_free(FbApiPresence *pres);
+
+FbApiThread *
+fb_api_thread_new(FbId tid, const gchar *topic, GSList *users);
+
+FbApiThread *
+fb_api_thread_dup(FbApiThread *thrd, gboolean deep);
+
+void
+fb_api_thread_reset(FbApiThread *thrd, gboolean deep);
+
+void
+fb_api_thread_free(FbApiThread *thrd);
+
+FbApiTyping *
+fb_api_typing_new(FbId uid, gboolean state);
+
+FbApiTyping *
+fb_api_typing_dup(FbApiTyping *typg);
+
+void
+fb_api_typing_reset(FbApiTyping *typg);
+
+void
+fb_api_typing_free(FbApiTyping *typg);
+
+FbApiUser *
+fb_api_user_new(FbId uid, const gchar *name, const gchar *icon,
+                const gchar *csum);
+
+FbApiUser *
+fb_api_user_dup(FbApiUser *user, gboolean deep);
+
+void
+fb_api_user_reset(FbApiUser *user, gboolean deep);
+
+void
+fb_api_user_free(FbApiUser *user);
 
 #endif /* _FACEBOOK_API_H_ */

@@ -93,7 +93,7 @@ fb_json_node_get_dbl(JsonNode *root, const gchar *expr, GError **error);
 gint64
 fb_json_node_get_int(JsonNode *root, const gchar *expr, GError **error);
 
-const gchar *
+gchar *
 fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error);
 
 gboolean
@@ -112,6 +112,6 @@ gboolean
 fb_json_node_chk_int(JsonNode *root, const gchar *expr, gint64 *value);
 
 gboolean
-fb_json_node_chk_str(JsonNode *root, const gchar *expr, const gchar **value);
+fb_json_node_chk_str(JsonNode *root, const gchar *expr, gchar **value);
 
 #endif /* _FACEBOOK_JSON_H_ */
