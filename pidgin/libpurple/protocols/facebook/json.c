@@ -241,7 +241,7 @@ fb_json_node_get_arr(JsonNode *root, const gchar *expr, GError **error)
 		return NULL;
 	}
 
-	ret = json_node_get_array(rslt);
+	ret = json_node_dup_array(rslt);
 	json_node_free(rslt);
 	return ret;
 }
@@ -297,10 +297,10 @@ fb_json_node_get_int(JsonNode *root, const gchar *expr, GError **error)
 	return ret;
 }
 
-const gchar *
+gchar *
 fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error)
 {
-	const gchar *ret;
+	gchar *ret;
 	JsonNode *rslt;
 
 	rslt = fb_json_node_get(root, expr, error);
@@ -309,7 +309,7 @@ fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error)
 		return NULL;
 	}
 
-	ret = json_node_get_string(rslt);
+	ret = json_node_dup_string(rslt);
 	json_node_free(rslt);
 	return ret;
 }
@@ -342,7 +342,7 @@ fb_json_node_chk_arr(JsonNode *root, const gchar *expr, JsonArray **value)
 	}
 
 	if (value != NULL) {
-		*value = json_node_get_array(rslt);
+		*value = json_node_dup_array(rslt);
 	}
 
 	json_node_free(rslt);
@@ -401,7 +401,7 @@ fb_json_node_chk_int(JsonNode *root, const gchar *expr, gint64 *value)
 }
 
 gboolean
-fb_json_node_chk_str(JsonNode *root, const gchar *expr, const gchar **value)
+fb_json_node_chk_str(JsonNode *root, const gchar *expr, gchar **value)
 {
 	JsonNode *rslt;
 
@@ -410,7 +410,7 @@ fb_json_node_chk_str(JsonNode *root, const gchar *expr, const gchar **value)
 	}
 
 	if (value != NULL) {
-		*value = json_node_get_string(rslt);
+		*value = json_node_dup_string(rslt);
 	}
 
 	json_node_free(rslt);
