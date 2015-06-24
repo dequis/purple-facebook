@@ -1,0 +1,12 @@
+diff -r b9aca76e0549 libpurple/http.c
+--- a/libpurple/http.c	Wed Jun 24 08:52:47 2015 -0400
++++ b/libpurple/http.c	Wed Jun 24 08:59:52 2015 -0400
+@@ -2453,6 +2453,8 @@
+ 	purple_http_cookie_jar_unref(request->cookie_jar);
+ 	purple_http_keepalive_pool_unref(request->keepalive_pool);
+ 	g_free(request->url);
++	g_free(request->method);
++	g_free(request->contents);
+ 	g_free(request);
+ }
+ 
