@@ -48,6 +48,7 @@
 #define purple_chat_conversation_add_user       purple_conv_chat_add_user
 #define purple_chat_conversation_get_id         purple_conv_chat_get_id
 #define purple_chat_conversation_set_topic      purple_conv_chat_set_topic
+#define purple_protocol_got_user_status         purple_prpl_got_user_status
 #define purple_proxy_info_get_proxy_type        purple_proxy_info_get_type
 #define purple_request_cpar_from_connection(c)  NULL
 #define purple_roomlist_get_account(l)          ((l)->account)
