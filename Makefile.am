@@ -6,4 +6,7 @@ EXTRA_DIST = \
 	include \
 	Makefile.mingw \
 	patches \
+	pidgin/AUTHORS \
+	pidgin/COPYING \
+	pidgin/COPYRIGHT \
 	update.sh
