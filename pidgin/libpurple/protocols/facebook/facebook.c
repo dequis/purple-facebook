@@ -501,11 +501,11 @@ fb_status_types(PurpleAccount *acct)
 	GList *types = NULL;
 
 	type = purple_status_type_new(PURPLE_STATUS_AVAILABLE,
-	                              NULL, NULL, FALSE);
+	                              NULL, NULL, TRUE);
 	types = g_list_prepend(types, type);
 
 	type = purple_status_type_new(PURPLE_STATUS_OFFLINE,
-	                              NULL, NULL, FALSE);
+	                              NULL, NULL, TRUE);
 	types = g_list_prepend(types, type);
 
 	return types;
