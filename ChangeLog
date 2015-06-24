@@ -1,0 +1,7 @@
+purple-facebook-b9aca76e0549 (2015-06-24):
+  - Enabled the setting of statuses
+  - Fixed HTTP memory leaks
+  - Internal code refactoring
+
+purple-facebook-5e83f57d97f3 (2015-06-23):
+  - Initial release
