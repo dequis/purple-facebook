@@ -1,13 +1,14 @@
 #!/bin/sh
 
 URL="https://hg.pidgin.im/soc/2015/jgeboski/facebook"
-REV="5e83f57d97f3"
 HG=$(type -p hg || exit 1)
 
 test -z "$srcdir" && srcdir=$(dirname "$0")
 test -z "$srcdir" && srcdir=.
 
 cd "$srcdir"
+
+REV=$(head -n18 configure.ac | tail -n1 | tr -d '[ ],')
 
 if ! test -d .pidgin/.hg; then
     rm -rf .pidgin
