@@ -222,9 +222,7 @@ fb_cb_api_presence(FbApi *api, GSList *press, gpointer data)
 	gchar uid[FB_ID_STRMAX];
 	GSList *l;
 	PurpleAccount *acct;
-	PurpleBuddy *bdy;
 	PurpleConnection *gc;
-	PurplePresence *ppres;
 	PurpleStatusPrimitive pstat;
 
 	gc = fb_data_get_connection(fata);
@@ -233,22 +231,15 @@ fb_cb_api_presence(FbApi *api, GSList *press, gpointer data)
 	for (l = press; l != NULL; l = l->next) {
 		pres = l->data;
 
-		FB_ID_TO_STR(pres->uid, uid);
-		bdy = purple_blist_find_buddy(acct, uid);
-		ppres = purple_buddy_get_presence(bdy);
-
-		if (G_UNLIKELY(bdy == NULL)) {
-			continue;
-		}
-
 		if (pres->active) {
 			pstat = PURPLE_STATUS_AVAILABLE;
 		} else {
 			pstat = PURPLE_STATUS_OFFLINE;
 		}
 
+		FB_ID_TO_STR(pres->uid, uid);
 		statid = purple_primitive_get_id_from_type(pstat);
-		purple_presence_switch_status(ppres, statid);
+		purple_protocol_got_user_status(acct, uid, statid, NULL);
 	}
 }
 
