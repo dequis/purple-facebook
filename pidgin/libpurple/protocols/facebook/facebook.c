@@ -71,6 +71,7 @@ fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	const gchar *name;
 	const gchar *str;
 	FbApi *api;
+	FbData *fata;
 	FbHttpParams *params;
 	GError *err = NULL;
 	gsize size;
@@ -82,10 +83,11 @@ fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	acct = purple_buddy_get_account(bdy);
 	gc = purple_account_get_connection(acct);
-	api = purple_connection_get_protocol_data(gc);
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
 
 	if (!fb_http_error_chk(res, &err)) {
-		fb_cb_api_error(api, err, gc);
+		fb_cb_api_error(api, err, fata);
 		g_error_free(err);
 		return;
 	}
