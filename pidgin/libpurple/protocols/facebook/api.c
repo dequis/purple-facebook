@@ -1193,9 +1193,9 @@ fb_api_thread_create(FbApi *api, GSList *uids)
 	g_free(json);
 }
 
-static void
-fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
-                      gpointer data)
+static GSList *
+fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                  gpointer data)
 {
 	FbApi *api = data;
 	FbApiPrivate *priv = api->priv;
@@ -1204,62 +1204,112 @@ fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	gchar *str;
 	GError *err = NULL;
 	GList *elms = NULL;
+	GList *elms2 = NULL;
 	GList *l;
+	GList *m;
 	gpointer mptr;
+	GSList *ret = NULL;
+	GSList *thrds = NULL;
 	JsonArray *arr = NULL;
-	JsonNode *mode;
+	JsonArray *arr2 = NULL;
 	JsonNode *node;
+	JsonNode *node2;
 	JsonNode *root;
 
-	static const gchar *expr = "$.data[0].fql_result_set[0]";
+	static const gchar *expr = "$.data[0].fql_result_set";
 
 	if (!fb_api_http_chk(api, res, &root)) {
-		return;
+		return NULL;
 	}
 
-	fb_api_thread_reset(&thrd, FALSE);
-	node = fb_json_node_get(root, expr, &err);
-	FB_API_ERROR_CHK(api, err, goto finish);
-
-	str = fb_json_node_get_str(node, "$.thread_fbid", &err);
-	FB_API_ERROR_CHK(api, err, goto finish);
-	thrd.tid = FB_ID_FROM_STR(str);
-	g_free(str);
-
-	thrd.topic = fb_json_node_get_str(node, "$.name", NULL);
-	arr = fb_json_node_get_arr(node, "$.participants", &err);
+	arr = fb_json_node_get_arr(root, expr, &err);
 	FB_API_ERROR_CHK(api, err, goto finish);
 	elms = json_array_get_elements(arr);
 
 	for (l = elms; l != NULL; l = l->next) {
-		mode = l->data;
-		fb_api_user_reset(&user, FALSE);
+		node = l->data;
+		fb_api_thread_reset(&thrd, FALSE);
 
-		str = fb_json_node_get_str(mode, "$.user_id", &err);
+		str = fb_json_node_get_str(node, "$.thread_fbid", &err);
 		FB_API_ERROR_CHK(api, err, goto finish);
-		user.uid = FB_ID_FROM_STR(str);
+		thrd.tid = FB_ID_FROM_STR(str);
 		g_free(str);
 
-		if (user.uid == priv->uid) {
+		thrd.topic = fb_json_node_get_str(node, "$.name", NULL);
+		arr2 = fb_json_node_get_arr(node, "$.participants", &err);
+		FB_API_ERROR_CHK(api, err, goto finish);
+		elms2 = json_array_get_elements(arr2);
+
+		for (m = elms2; m != NULL; m = m->next) {
+			node2 = m->data;
+			fb_api_user_reset(&user, FALSE);
+
+			str = fb_json_node_get_str(node2, "$.user_id", &err);
+			FB_API_ERROR_CHK(api, err, goto finish);
+			user.uid = FB_ID_FROM_STR(str);
+			g_free(str);
+
+			if (user.uid == priv->uid) {
+				continue;
+			}
+
+			user.name = fb_json_node_get_str(node2, "$.name", NULL);
+			mptr = fb_api_user_dup(&user, FALSE);
+			thrd.users = g_slist_prepend(thrd.users, mptr);
+		}
+
+		if (G_LIKELY(arr2 != NULL)) {
+			json_array_unref(arr2);
+			arr2 = NULL;
+		}
+
+		g_list_free(elms2);
+		elms2 = NULL;
+
+		if (g_slist_length(thrd.users) < 2) {
+			fb_api_thread_reset(&thrd, TRUE);
 			continue;
 		}
 
-		user.name = fb_json_node_get_str(mode, "$.name", NULL);
-		mptr = fb_api_user_dup(&user, FALSE);
-		thrd.users = g_slist_prepend(thrd.users, mptr);
+		mptr = fb_api_thread_dup(&thrd, FALSE);
+		thrds = g_slist_prepend(thrds, mptr);
 	}
 
-	g_signal_emit_by_name(api, "thread-info", &thrd);
+	ret = g_slist_reverse(thrds);
 
 finish:
 	if (G_LIKELY(arr != NULL)) {
 		json_array_unref(arr);
 	}
 
+	if (G_LIKELY(arr2 != NULL)) {
+		json_array_unref(arr2);
+	}
+
+	g_list_free(elms2);
 	g_list_free(elms);
-	fb_api_thread_reset(&thrd, TRUE);
-	json_node_free(node);
 	json_node_free(root);
+
+	return ret;
+}
+
+static void
+fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                      gpointer data)
+{
+	FbApi *api = data;
+	GSList *thrds;
+
+	thrds = fb_api_cb_threads(con, res, data);
+
+	if (thrds == NULL) {
+		fb_api_error(api, FB_API_ERROR_GENERAL,
+		             _("Failed to obtain thread information"));
+		return;
+	}
+
+	g_signal_emit_by_name(api, "thread-info", thrds->data);
+	g_slist_free_full(thrds, (GDestroyNotify) fb_api_thread_free);
 }
 
 void
@@ -1324,98 +1374,11 @@ fb_api_cb_thread_list(PurpleHttpConnection *con, PurpleHttpResponse *res,
                       gpointer data)
 {
 	FbApi *api = data;
-	FbApiPrivate *priv = api->priv;
-	FbApiThread thrd;
-	FbApiUser user;
-	gchar *str;
-	GError *err = NULL;
-	GList *elms = NULL;
-	GList *elms2 = NULL;
-	GList *l;
-	GList *m;
-	gpointer mptr;
-	GSList *thrds = NULL;
-	JsonArray *arr = NULL;
-	JsonArray *arr2 = NULL;
-	JsonNode *node;
-	JsonNode *node2;
-	JsonNode *root;
+	GSList *thrds;
 
-	static const gchar *expr = "$.data[0].fql_result_set";
-
-	if (!fb_api_http_chk(api, res, &root)) {
-		return;
-	}
-
-	arr = fb_json_node_get_arr(root, expr, &err);
-	FB_API_ERROR_CHK(api, err, goto finish);
-	elms = json_array_get_elements(arr);
-
-	for (l = elms; l != NULL; l = l->next) {
-		node = l->data;
-		fb_api_thread_reset(&thrd, FALSE);
-
-		str = fb_json_node_get_str(node, "$.thread_fbid", &err);
-		FB_API_ERROR_CHK(api, err, goto finish);
-		thrd.tid = FB_ID_FROM_STR(str);
-		g_free(str);
-
-		thrd.topic = fb_json_node_get_str(node, "$.name", NULL);
-		arr2 = fb_json_node_get_arr(node, "$.participants", &err);
-		FB_API_ERROR_CHK(api, err, goto finish);
-		elms2 = json_array_get_elements(arr2);
-
-		for (m = elms2; m != NULL; m = m->next) {
-			node2 = m->data;
-			fb_api_user_reset(&user, FALSE);
-
-			str = fb_json_node_get_str(node2, "$.user_id", &err);
-			FB_API_ERROR_CHK(api, err, goto finish);
-			user.uid = FB_ID_FROM_STR(str);
-			g_free(str);
-
-			if (user.uid == priv->uid) {
-				continue;
-			}
-
-			user.name = fb_json_node_get_str(node2, "$.name", NULL);
-			mptr = fb_api_user_dup(&user, FALSE);
-			thrd.users = g_slist_prepend(thrd.users, mptr);
-		}
-
-		if (G_LIKELY(arr2 != NULL)) {
-			json_array_unref(arr2);
-			arr2 = NULL;
-		}
-
-		g_list_free(elms2);
-		elms2 = NULL;
-
-		if (g_slist_length(thrd.users) < 2) {
-			fb_api_thread_reset(&thrd, TRUE);
-			continue;
-		}
-
-		mptr = fb_api_thread_dup(&thrd, FALSE);
-		thrds = g_slist_prepend(thrds, mptr);
-	}
-
-	thrds = g_slist_reverse(thrds);
+	thrds = fb_api_cb_threads(con, res, data);
 	g_signal_emit_by_name(api, "thread-list", thrds);
-
-finish:
-	if (G_LIKELY(arr != NULL)) {
-		json_array_unref(arr);
-	}
-
-	if (G_LIKELY(arr2 != NULL)) {
-		json_array_unref(arr2);
-	}
-
-	g_list_free(elms2);
-	g_list_free(elms);
 	g_slist_free_full(thrds, (GDestroyNotify) fb_api_thread_free);
-	json_node_free(root);
 }
 
 void
