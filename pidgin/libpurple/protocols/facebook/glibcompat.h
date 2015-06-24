@@ -40,7 +40,7 @@ g_slist_copy_deep(GSList *list, GCopyFunc func, gpointer data)
 	}
 
 	for (l = list; l != NULL; l = l->next) {
-		g_slist_prepend(ret, func(l->data, data));
+		ret = g_slist_prepend(ret, func(l->data, data));
 	}
 
 	return g_slist_reverse(ret);
