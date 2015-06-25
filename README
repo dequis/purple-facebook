@@ -34,14 +34,14 @@ See: https://developer.pidgin.im/wiki/BuildingWinPidgin
 ### Building on Windows
 
 Download and extract glib:
-* Download: http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.28/glib-dev_2.28.8-1_win32.zip
-* Download: http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/gettext-runtime-dev_0.18.1.1-2_win32.zip
-* Download: http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/zlib-dev_1.2.5-2_win32.zip
-* Extract all zips to `$PIDGIN_DEV_ROOT/win32-dev/glib-2.28.8`
+- Download: [glib-dev_2.28.8-1_win32.zip](http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.28/glib-dev_2.28.8-1_win32.zip)
+- Download: [gettext-runtime-dev_0.18.1.1-2_win32.zip](http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/gettext-runtime-dev_0.18.1.1-2_win32.zip)
+- Download: [zlib-dev_1.2.5-2_win32.zip](http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/zlib-dev_1.2.5-2_win32.zip)
+- Extract all zips to `$PIDGIN_DEV_ROOT/win32-dev/glib-2.28.8`
 
 Download and extract json-glib:
-* Download: https://github.com/jgeboski/purple-facebook/releases/download/downloads/json-glib-0.14.tar.gz
-* Extract to `$PIDGIN_DEV_ROOT/win32-dev/json-glib-0.14`
+- Download: [json-glib-0.14.tar.gz](https://github.com/jgeboski/purple-facebook/releases/download/downloads/json-glib-0.14.tar.gz)
+- Extract to `$PIDGIN_DEV_ROOT/win32-dev/json-glib-0.14`
 
 Compile the plugin:
 
@@ -51,7 +51,9 @@ Compile the plugin:
 
 ### Installing on Windows
 
-1. Download: https://github.com/jgeboski/purple-facebook/releases/download/downloads/libjson-glib-1.0.dll
-2. Copy the downloaded `libjson-glib-1.0.dll` to `C:\Program Files\Pidgin` (alternatively: `Program Files (x86)`)
-3. Download the latest `libfacebook.dll` from https://github.com/jgeboski/purple-facebook/releases
-4. Copy the downloaded `libfacebook.dll` to `C:\Program Files\Pidgin\plugins` (alternatively: `Program Files (x86)`)
+1. Download: [libjson-glib-1.0.dll](https://github.com/jgeboski/purple-facebook/releases/download/downloads/libjson-glib-1.0.dll)
+2. Copy the downloaded `libjson-glib-1.0.dll` to `C:\Program Files\Pidgin`
+3. Download the latest `libfacebook.dll` from the [releases](https://github.com/jgeboski/purple-facebook/releases)
+4. Copy the downloaded `libfacebook.dll` to `C:\Program Files\Pidgin\plugins`
+
+Note: `Program Files` will be `Program Files (x86)` on 64-bit Windows.
