@@ -1,3 +1,7 @@
+purple-facebook-9e295f087bf6 (2015-06-25):
+  - Distribute license information
+  - Fixed segmentation fault when retrieving icons
+
 purple-facebook-b9aca76e0549 (2015-06-24):
   - Enabled the setting of statuses
   - Fixed HTTP memory leaks
