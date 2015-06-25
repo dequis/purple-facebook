@@ -10,7 +10,7 @@ WIN32_DEV_TOP = $(PIDGIN_TREE_TOP)/..
 PURPLE_TOP = $(TREE_TOP)/$(WIN32_TREE_TOP)/libpurple
 PURPLE_INSTALL_PLUGINS_DIR = $(TREE_TOP)/win32-install-dir/plugins
 
-GTK_TOP = $(WIN32_DEV_TOP)/gtk_2_0-2.24
+GTK_TOP = $(WIN32_DEV_TOP)/glib-2.28.8
 GTK_BIN = $(GTK_TOP)/bin
 GLIB_GENMARSHAL = $(GTK_BIN)/glib-genmarshal
 JSON_GLIB_TOP = $(WIN32_DEV_TOP)/json-glib-0.14

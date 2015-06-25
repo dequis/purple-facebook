@@ -2,14 +2,6 @@ Purple Facebook implements the Facebook Messenger protocol into pidgin,
 finch, and libpurple. While the primary implementation is for purple3,
 this plugin is back-ported for purple2.
 
-## Installing Prebuilt Binaries
-
-Precompiled binaries can be downloaded from the releases section of
-GitHub. Then follow the generic instructions provided on the Pidgin
-website.
-
-https://developer.pidgin.im/wiki/ThirdPartyPlugins#InstallingPlugins
-
 ## Building and Installing
 
 Make sure glib, json-glib, libpurple (pidgin), and zlib are installed
@@ -41,28 +33,25 @@ See: https://developer.pidgin.im/wiki/BuildingWinPidgin
 
 ### Building on Windows
 
-Download and extract gtk:
-* Download: http://ftp.gnome.org/pub/gnome/binaries/win32/gtk+/2.24/gtk+-bundle_2.24.10-20120208_win32.zip
-* Extract to `$PIDGIN_DEV_ROOT/win32-dev/gtk_2_0-2.24`
+Download and extract glib:
+* Download: http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.28/glib-dev_2.28.8-1_win32.zip
+* Download: http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/gettext-runtime-dev_0.18.1.1-2_win32.zip
+* Download: http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/zlib-dev_1.2.5-2_win32.zip
+* Extract all zips to `$PIDGIN_DEV_ROOT/win32-dev/glib-2.28.8`
 
 Download and extract json-glib:
-* Download: https://pidgin.im/~twasilczyk/win32/devel-deps/mingw32-json-glib-devel-0.14.2-2.1.noarch.rpm
-* Extract `./usr/i686-w64-mingw32/sys-root/mingw/*` to `$PIDGIN_DEV_ROOT/win32-dev/json-glib-0.14`
+* Download: https://github.com/jgeboski/purple-facebook/releases/download/downloads/json-glib-0.14.tar.gz
+* Extract to `$PIDGIN_DEV_ROOT/win32-dev/json-glib-0.14`
 
 Compile the plugin:
 
     $ cd $PIDGIN_DEV_ROOT/purple-facebook #-<version>
     $ make -f Makefile.mingw install
+    $ cp win32-install-dir/plugins/libfacebook.dll C:/Program Files/Pidgin/plugins # alternatively: Program Files (x86)
 
 ### Installing on Windows
 
-The GTK runtime distributed with pidgin is to old and must be upgraded:
-
-* Download: https://pidgin.im/~twasilczyk/win32/gtk-runtime-2.24.18.0.zip
-* Remove: `C:/Program Files/Pidgin/Gtk`
-* Extract `./Gtk` to `C:/Program Files/Pidgin`
-* Copy `libintl-8.dll` to `intl.dll` in `C:/Program Files/Pidgin/Gtk/bin`
-
-Install the plugin:
-
-    $ cp win32-install-dir/plugins/libfacebook.dll C:/Users/<user>/AppData/Roaming/.purple/plugins
+1. Download: https://github.com/jgeboski/purple-facebook/releases/download/downloads/libjson-glib-1.0.dll
+2. Copy the downloaded `libjson-glib-1.0.dll` to `C:\Program Files\Pidgin` (alternatively: `Program Files (x86)`)
+3. Download the latest `libfacebook.dll` from https://github.com/jgeboski/purple-facebook/releases
+4. Copy the downloaded `libfacebook.dll` to `C:\Program Files\Pidgin\plugins` (alternatively: `Program Files (x86)`)
