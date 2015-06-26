@@ -64,30 +64,26 @@ fb_cb_api_connect(FbApi *api, gpointer data)
 }
 
 static void
-fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
-                 gpointer data)
+fb_cb_data_icon(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                gpointer data)
 {
 	const gchar *csum;
 	const gchar *name;
 	const gchar *str;
 	FbApi *api;
-	FbData *fata;
+	FbDataIcon *icon = data;
 	FbHttpParams *params;
 	GError *err = NULL;
 	gsize size;
 	guchar *idata;
 	PurpleAccount *acct;
-	PurpleBuddy *bdy = data;
-	PurpleConnection *gc;
 	PurpleHttpRequest *req;
 
-	acct = purple_buddy_get_account(bdy);
-	gc = purple_account_get_connection(acct);
-	fata = purple_connection_get_protocol_data(gc);
-	api = fb_data_get_api(fata);
+	acct = purple_buddy_get_account(icon->buddy);
+	api = fb_data_get_api(icon->fata);
 
 	if (!fb_http_error_chk(res, &err)) {
-		fb_cb_api_error(api, err, fata);
+		fb_cb_api_error(api, err, icon->fata);
 		g_error_free(err);
 		return;
 	}
@@ -97,7 +93,7 @@ fb_cb_icon_fetch(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	params = fb_http_params_new_parse(str, TRUE);
 	csum = fb_http_params_get_str(params, "oh", &err);
 
-	name = purple_buddy_get_name(bdy);
+	name = purple_buddy_get_name(icon->buddy);
 	str = purple_http_response_get_data(res, &size);
 	idata = g_memdup(str, size);
 
@@ -149,17 +145,20 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 		if (bdy == NULL) {
 			bdy = purple_buddy_new(acct, uid, user->name);
 			purple_blist_add_buddy(bdy, NULL, grp, NULL);
-			purple_http_get(gc, fb_cb_icon_fetch, bdy, user->icon);
+			fb_data_icon_add(fata, bdy, user->icon,
+			                 fb_cb_data_icon);
 			continue;
 		}
 
 		csum = purple_buddy_icons_get_checksum_for_user(bdy);
 
 		if (!purple_strequal(csum, user->csum)) {
-			purple_http_get(gc, fb_cb_icon_fetch, bdy, user->icon);
+			fb_data_icon_add(fata, bdy, user->icon,
+			                 fb_cb_data_icon);
 		}
 	}
 
+	fb_data_icon_queue(fata);
 	purple_connection_update_progress(gc, _("Connecting"), 3, 4);
 	fb_api_connect(api);
 }
