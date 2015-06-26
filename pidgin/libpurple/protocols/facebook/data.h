@@ -56,7 +56,6 @@ struct _FbDataIcon
 	FbData *fata;
 	PurpleBuddy *buddy;
 	gchar *url;
-	gchar *csum;
 	PurpleHttpCallback func;
 };
 
