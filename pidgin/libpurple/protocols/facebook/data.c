@@ -30,6 +30,8 @@ struct _FbDataPrivate
 	PurpleConnection *gc;
 	PurpleRoomlist *roomlist;
 	gint chatid;
+	GHashTable *icons;
+	GHashTable *icona;
 };
 
 static const gchar *fb_props_strs[] = {
@@ -38,6 +40,9 @@ static const gchar *fb_props_strs[] = {
 	"stoken",
 	"token"
 };
+
+static void
+fb_data_icon_free(FbDataIcon *icon);
 
 G_DEFINE_TYPE(FbData, fb_data, G_TYPE_OBJECT);
 
@@ -53,6 +58,9 @@ fb_data_dispose(GObject *obj)
 	if (priv->roomlist != NULL) {
 		g_object_unref(priv->roomlist);
 	}
+
+	g_hash_table_destroy(priv->icons);
+	g_hash_table_destroy(priv->icona);
 }
 
 static void
@@ -71,6 +79,13 @@ fb_data_init(FbData *fata)
 
 	priv = G_TYPE_INSTANCE_GET_PRIVATE(fata, FB_TYPE_DATA, FbDataPrivate);
 	fata->priv = priv;
+
+	priv->icons = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+	                                    (GDestroyNotify) fb_data_icon_free,
+					    NULL);
+	priv->icona = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+	                                    (GDestroyNotify) fb_data_icon_free,
+					    NULL);
 }
 
 FbData *
@@ -242,4 +257,104 @@ fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list)
 	priv = fata->priv;
 
 	priv->roomlist = list;
+}
+
+FbDataIcon *
+fb_data_icon_add(FbData *fata, PurpleBuddy *buddy, const gchar *url,
+                 PurpleHttpCallback func)
+{
+	FbDataIcon *icon;
+	FbDataPrivate *priv;
+
+	g_return_val_if_fail(FB_IS_DATA(fata), NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
+	g_return_val_if_fail(url != NULL, NULL);
+	priv = fata->priv;
+
+	icon = g_new(FbDataIcon, 1);
+	icon->fata = fata;
+	icon->buddy = buddy;
+	icon->url = g_strdup(url);
+	icon->func = func;
+
+	g_hash_table_replace(priv->icons, icon, icon);
+	return icon;
+}
+
+static void
+fb_data_icon_free(FbDataIcon *icon)
+{
+	g_return_if_fail(icon != NULL);
+
+	g_free(icon->url);
+	g_free(icon);
+}
+
+void
+fb_data_icon_destroy(FbDataIcon *icon)
+{
+	FbDataPrivate *priv;
+
+	g_return_if_fail(icon != NULL);
+	g_return_if_fail(FB_IS_DATA(icon->fata));
+	priv = icon->fata->priv;
+
+	if (!g_hash_table_remove(priv->icons, icon) &&
+	    !g_hash_table_remove(priv->icona, icon))
+	{
+		fb_data_icon_free(icon);
+	}
+}
+
+static void
+fb_data_icon_cb(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                gpointer data)
+{
+	FbDataIcon *icon = data;
+	FbData *fata = icon->fata;
+
+	if (icon->func != NULL) {
+		icon->func(con, res, icon);
+	}
+
+	fb_data_icon_destroy(icon);
+	fb_data_icon_queue(fata);
+}
+
+void
+fb_data_icon_queue(FbData *fata)
+{
+	FbDataIcon *icon;
+	FbDataPrivate *priv;
+	GHashTableIter iter;
+	guint size;
+	PurpleAccount *acct;
+	PurpleConnection *gc;
+
+	g_return_if_fail(FB_IS_DATA(fata));
+	priv = fata->priv;
+	size = g_hash_table_size(priv->icona);
+
+	if (size >= FB_DATA_ICON_MAX) {
+		return;
+	}
+
+	g_hash_table_iter_init(&iter, priv->icons);
+
+	while (g_hash_table_iter_next(&iter, (gpointer*) &icon, NULL)) {
+		acct = purple_buddy_get_account(icon->buddy);
+		gc = purple_account_get_connection(acct);
+
+		if (g_hash_table_lookup_extended(priv->icona, icon, NULL, NULL)) {
+			continue;
+		}
+
+		g_hash_table_iter_steal(&iter);
+		g_hash_table_replace(priv->icona, icon, icon);
+		purple_http_get(gc, fb_data_icon_cb, icon, icon->url);
+
+		if (++size >= FB_DATA_ICON_MAX) {
+			break;
+		}
+	}
 }

@@ -25,6 +25,8 @@
 #include "connection.h"
 #include "glibcompat.h"
 
+#define FB_DATA_ICON_MAX 4
+
 #define FB_TYPE_DATA             (fb_data_get_type())
 #define FB_DATA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA, FbData))
 #define FB_DATA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA, FbData))
@@ -36,6 +38,7 @@
 typedef struct _FbData FbData;
 typedef struct _FbDataClass FbDataClass;
 typedef struct _FbDataPrivate FbDataPrivate;
+typedef struct _FbDataIcon FbDataIcon;
 
 struct _FbData
 {
@@ -46,6 +49,15 @@ struct _FbData
 struct _FbDataClass
 {
 	GObjectClass parent_class;
+};
+
+struct _FbDataIcon
+{
+	FbData *fata;
+	PurpleBuddy *buddy;
+	gchar *url;
+	gchar *csum;
+	PurpleHttpCallback func;
 };
 
 
@@ -75,5 +87,15 @@ fb_data_get_roomlist(FbData *fata);
 
 void
 fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list);
+
+FbDataIcon *
+fb_data_icon_add(FbData *fata, PurpleBuddy *buddy, const gchar *url,
+                 PurpleHttpCallback func);
+
+void
+fb_data_icon_destroy(FbDataIcon *icon);
+
+void
+fb_data_icon_queue(FbData *fata);
 
 #endif /* _FACEBOOK_DATA_H_ */
