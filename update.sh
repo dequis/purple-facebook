@@ -13,7 +13,9 @@ test -z "$srcdir" && srcdir=.
 
 cd "$srcdir"
 
-REV=$(head -n18 configure.ac | tail -n1 | tr -d '[ ],')
+if test -z "$REVISION"; then
+    REVISION=$(head -n18 configure.ac | tail -n1 | tr -d '[ ],')
+fi
 
 if ! test -d .pidgin/.hg; then
     rm -rf .pidgin
@@ -21,7 +23,7 @@ if ! test -d .pidgin/.hg; then
 fi
 
 hg -R .pidgin -v pull
-hg -R .pidgin -v update -C "$REV"
+hg -R .pidgin -v update -C "$REVISION"
 rm -rf pidgin
 
 for FILE in $(cat MANIFEST_PIDGIN); do
