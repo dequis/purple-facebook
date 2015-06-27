@@ -1,7 +1,12 @@
 #!/bin/sh
 
 URL="https://hg.pidgin.im/soc/2015/jgeboski/facebook"
-HG=$(type -p hg || exit 1)
+HASHG=$(_TMP_=$(type hg 2>&1); echo $?)
+
+if test "$HASHG" != "0"; then
+    echo "hg (mercurial) not found in PATH" >&2
+    exit $HASHG
+fi
 
 test -z "$srcdir" && srcdir=$(dirname "$0")
 test -z "$srcdir" && srcdir=.
@@ -15,8 +20,8 @@ if ! test -d .pidgin/.hg; then
     "$HG" clone "$URL" .pidgin
 fi
 
-"$HG" -R .pidgin -v pull
-"$HG" -R .pidgin -v update -C "$REV"
+hg -R .pidgin -v pull
+hg -R .pidgin -v update -C "$REV"
 rm -rf pidgin
 
 for FILE in $(cat MANIFEST_PIDGIN); do
