@@ -25,7 +25,53 @@
 #include "connection.h"
 #include "glibcompat.h"
 
+#define FB_UTIL_DEBUG_INFO (        \
+		PURPLE_DEBUG_INFO |         \
+		FB_UTIL_DEBUG_FLAG_UNSAFE | \
+		FB_UTIL_DEBUG_FLAG_VERBOSE  \
+	)
+
+typedef enum _FbUtilDebugFlags FbUtilDebugFlags;
+
 typedef void (*FbUtilRequestBuddyFunc) (GSList *buddies, gpointer data);
+
+enum _FbUtilDebugFlags
+{
+	FB_UTIL_DEBUG_FLAG_UNSAFE  = 1 << 25,
+	FB_UTIL_DEBUG_FLAG_VERBOSE = 1 << 26
+};
+
+void
+fb_util_debug(PurpleDebugLevel level, const gchar *format, ...)
+              G_GNUC_PRINTF(2, 3);
+
+void
+fb_util_vdebug(PurpleDebugLevel level, const gchar *format, va_list ap);
+
+void
+fb_util_debug_misc(const gchar *format, ...)
+                   G_GNUC_PRINTF(1, 2);
+
+void
+fb_util_debug_info(const gchar *format, ...)
+                   G_GNUC_PRINTF(1, 2);
+
+void
+fb_util_debug_warning(const gchar *format, ...)
+                      G_GNUC_PRINTF(1, 2);
+
+void
+fb_util_debug_error(const gchar *format, ...)
+                    G_GNUC_PRINTF(1, 2);
+
+void
+fb_util_debug_fatal(const gchar *format, ...)
+                    G_GNUC_PRINTF(1, 2);
+
+void
+fb_util_debug_hexdump(PurpleDebugLevel level, const GByteArray *bytes,
+                      const gchar *format, ...)
+                      G_GNUC_PRINTF(3, 4);
 
 gchar *
 fb_util_locale_str(void);

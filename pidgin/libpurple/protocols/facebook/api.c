@@ -312,6 +312,9 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 	g_return_val_if_fail(FB_IS_API(api), FALSE);
 	priv = api->priv;
 
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "Parsing JSON: %.*s",
+	              (gint) size, (const gchar *) data);
+
 	root = fb_json_node_new(data, size, &err);
 	FB_API_ERROR_CHK(api, err, return FALSE);
 
@@ -777,6 +780,8 @@ fb_api_cb_publish_p(FbApi *api, const GByteArray *pload)
 
 		mptr = fb_api_presence_dup(&pres);
 		press = g_slist_prepend(press, mptr);
+		fb_util_debug_info("Presence: %" FB_ID_FORMAT " (%d)",
+		                   i64, i32 != 0);
 
 		/* Skip the last active timestamp field */
 		if (!fb_thrift_read_field(thft, &type, NULL)) {
@@ -836,6 +841,10 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic,
 	} else {
 		bytes = (GByteArray*) pload;
 	}
+
+	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, bytes,
+	                      "Reading message (topic: %s)",
+			      topic);
 
 	if (g_ascii_strcasecmp(topic, "/orca_typing_notifications") == 0) {
 		fb_api_cb_publish_tn(api, bytes);
@@ -1120,8 +1129,12 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *fmt, ...)
 
 	bytes = g_byte_array_new_take((guint8*) msg, strlen(msg));
 	cytes = fb_util_zcompress(bytes);
-	fb_mqtt_publish(priv->mqtt, topic, cytes);
 
+	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, bytes,
+	                      "Writing message (topic: %s)",
+			      topic);
+
+	fb_mqtt_publish(priv->mqtt, topic, cytes);
 	g_byte_array_free(cytes, TRUE);
 	g_byte_array_free(bytes, TRUE);
 }
