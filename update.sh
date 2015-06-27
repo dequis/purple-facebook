@@ -17,7 +17,7 @@ REV=$(head -n18 configure.ac | tail -n1 | tr -d '[ ],')
 
 if ! test -d .pidgin/.hg; then
     rm -rf .pidgin
-    "$HG" clone "$URL" .pidgin
+    hg clone "$URL" .pidgin
 fi
 
 hg -R .pidgin -v pull
