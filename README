@@ -58,3 +58,34 @@ Compile the plugin:
 4. Copy the downloaded `libfacebook.dll` to `C:\Program Files\Pidgin\plugins`
 
 Note: `Program Files` will be `Program Files (x86)` on 64-bit Windows.
+
+## Debugging
+
+Before debugging can begin, the plugin must be compiled with debugging
+support. Once debugging support has been enabled, one of the two
+supported environment variables can be defined to enable debugging
+output. This can be used in unison with debuggers such as GDB, which
+should enable easier tracing of bugs.
+
+When posting to the issue tracker, please ensure any sensitive
+information has been stripped.
+
+Enable debugging support (enabled by default with Windows):
+
+    $ ./autogen.sh --enable-debug
+
+Enable debugging output:
+
+    $ export PURPLE_UNSAFE_DEBUG=1 PURPLE_VERBOSE_DEBUG=1
+    $ pidgin --debug
+    OR
+    $ PURPLE_UNSAFE_DEBUG=1 PURPLE_VERBOSE_DEBUG=1 pidgin --debug
+
+Obtaining a GDB backtrace:
+
+    $ PURPLE_UNSAFE_DEBUG=1 PURPLE_VERBOSE_DEBUG=1 gdb \
+        -ex 'handle SIGPIPE nostop noprint pass' \
+        -ex "set breakpoint pending on" \
+        -ex "set pagination off" \
+        -ex run -ex bt \
+        --args pidgin --debug
