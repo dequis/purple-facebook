@@ -46,8 +46,9 @@ Download and extract json-glib:
 Compile the plugin:
 
     $ cd $PIDGIN_DEV_ROOT/purple-facebook #-<version>
+    $ ./update  # not required for dist tarballs
     $ make -f Makefile.mingw install
-    $ cp win32-install-dir/plugins/libfacebook.dll C:/Program Files/Pidgin/plugins # alternatively: Program Files (x86)
+    $ cp win32-install-dir/plugins/libfacebook.dll C:/Program Files/Pidgin/plugins  # alternatively: Program Files (x86)
 
 ### Installing on Windows
 
