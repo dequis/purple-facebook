@@ -39,7 +39,7 @@ export INCLUDE_PATHS = \
 export LIB_PATHS = \
 	-L$(PIDGIN_TREE_TOP)/win32-install-dir
 
-override define PLUGIN_MAKE =
+override PLUGIN_MAKE = \
 $(MAKE) -C $(PLUGIN_TOP) -f Makefile.mingw $(@) \
 	PURPLE_VERSION="$(PURPLE_VERSION)" \
 	PIDGIN_TREE_TOP="$(PIDGIN_TREE_TOP)" \
@@ -51,7 +51,6 @@ $(MAKE) -C $(PLUGIN_TOP) -f Makefile.mingw $(@) \
 	GTK_BIN="$(GTK_BIN)" \
 	GLIB_GENMARSHAL="$(GLIB_GENMARSHAL)" \
 	JSON_GLIB_TOP="$(JSON_GLIB_TOP)"
-endef
 
 .PHONY: all install clean
 
