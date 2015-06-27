@@ -30,6 +30,7 @@
 
 #include "marshal.h"
 #include "mqtt.h"
+#include "util.h"
 
 struct _FbMqttPrivate
 {
@@ -211,6 +212,10 @@ fb_mqtt_close(FbMqtt *mqtt)
 		priv->gsc = NULL;
 	}
 
+	if (priv->wbuf->len > 0) {
+		fb_util_debug_warning("Closing with unwritten data");
+	}
+
 	priv->connected = FALSE;
 	g_byte_array_set_size(priv->rbuf, 0);
 	g_byte_array_set_size(priv->wbuf, 0);
@@ -383,6 +388,10 @@ fb_mqtt_read(FbMqtt *mqtt, FbMqttMessage *msg)
 	priv = mqtt->priv;
 	mriv = msg->priv;
 
+	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, mriv->bytes,
+	                      "Reading %d (flags: 0x%0X)",
+			      mriv->type, mriv->flags);
+
 	switch (mriv->type) {
 	case FB_MQTT_MESSAGE_TYPE_CONNACK:
 		if (!fb_mqtt_message_read_byte(msg, NULL) ||
@@ -493,10 +502,14 @@ void
 fb_mqtt_write(FbMqtt *mqtt, FbMqttMessage *msg)
 {
 	const GByteArray *bytes;
+	FbMqttMessagePrivate *mriv;
 	FbMqttPrivate *priv;
 
 	g_return_if_fail(FB_IS_MQTT(mqtt));
+	g_return_if_fail(FB_IS_MQTT_MESSAGE(msg));
 	priv = mqtt->priv;
+	mriv = msg->priv;
+
 	bytes = fb_mqtt_message_bytes(msg);
 
 	if (G_UNLIKELY(bytes == NULL)) {
@@ -504,6 +517,10 @@ fb_mqtt_write(FbMqtt *mqtt, FbMqttMessage *msg)
 		              _("Failed to format data"));
 		return;
 	}
+
+	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, mriv->bytes,
+	                      "Writing %d (flags: 0x%0X)",
+		              mriv->type, mriv->flags);
 
 	g_byte_array_append(priv->wbuf, bytes->data, bytes->len);
 	fb_mqtt_cb_write(mqtt, priv->gsc->fd, PURPLE_INPUT_WRITE);

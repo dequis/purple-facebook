@@ -21,10 +21,154 @@
 
 #include "internal.h"
 
+#include <stdarg.h>
 #include <string.h>
 #include <zlib.h>
 
 #include "util.h"
+
+void
+fb_util_debug(PurpleDebugLevel level, const gchar *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	fb_util_vdebug(level, format, ap);
+	va_end(ap);
+}
+
+void
+fb_util_vdebug(PurpleDebugLevel level, const gchar *format, va_list ap)
+{
+	gboolean unsafe;
+	gboolean verbose;
+	gchar *str;
+
+	g_return_if_fail(format != NULL);
+
+	unsafe = (level & FB_UTIL_DEBUG_FLAG_UNSAFE) != 0;
+	verbose = (level & FB_UTIL_DEBUG_FLAG_VERBOSE) != 0;
+
+	if ((unsafe && !purple_debug_is_unsafe()) ||
+	    (verbose && !purple_debug_is_verbose()))
+	{
+		return;
+	}
+
+	str = g_strdup_vprintf(format, ap);
+	purple_debug(level, "facebook", "%s", str);
+	g_free(str);
+}
+
+void
+fb_util_debug_misc(const gchar *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	fb_util_vdebug(PURPLE_DEBUG_MISC, format, ap);
+	va_end(ap);
+}
+
+void
+fb_util_debug_info(const gchar *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	fb_util_vdebug(PURPLE_DEBUG_INFO, format, ap);
+	va_end(ap);
+}
+
+void
+fb_util_debug_warning(const gchar *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	fb_util_vdebug(PURPLE_DEBUG_WARNING, format, ap);
+	va_end(ap);
+}
+
+void
+fb_util_debug_error(const gchar *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	fb_util_vdebug(PURPLE_DEBUG_ERROR, format, ap);
+	va_end(ap);
+}
+
+void
+fb_util_debug_fatal(const gchar *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	fb_util_vdebug(PURPLE_DEBUG_FATAL, format, ap);
+	va_end(ap);
+}
+
+void
+fb_util_debug_hexdump(PurpleDebugLevel level, const GByteArray *bytes,
+                      const gchar *format, ...)
+{
+	gchar c;
+	guint i;
+	guint j;
+	GString *gstr;
+	va_list ap;
+
+	static const gchar *indent = "  ";
+
+	g_return_if_fail(bytes != NULL);
+
+	if (format != NULL) {
+		va_start(ap, format);
+		fb_util_vdebug(level, format, ap);
+		va_end(ap);
+	}
+
+	gstr = g_string_sized_new(80);
+
+	for (i = 0; i < bytes->len; i += 16) {
+		g_string_append_printf(gstr, "%s%08x  ", indent, i);
+
+		for (j = 0; j < 16; j++) {
+			if ((i + j) < bytes->len) {
+				g_string_append_printf(gstr, "%02x ",
+				                       bytes->data[i + j]);
+			} else {
+				g_string_append(gstr, "   ");
+			}
+
+			if (j == 7) {
+				g_string_append_c(gstr, ' ');
+			}
+		}
+
+		g_string_append(gstr, " |");
+
+		for (j = 0; (j < 16) && ((i + j) < bytes->len); j++) {
+			c = bytes->data[i + j];
+
+			if (!g_ascii_isprint(c) || g_ascii_isspace(c)) {
+				c = '.';
+			}
+
+			g_string_append_c(gstr, c);
+		}
+
+		g_string_append_c(gstr, '|');
+		fb_util_debug(level, "%s", gstr->str);
+		g_string_erase(gstr, 0, -1);
+	}
+
+	g_string_append_printf(gstr, "%s%08x", indent, i);
+	fb_util_debug(level, "%s", gstr->str);
+	g_string_free(gstr, TRUE);
+}
 
 gchar *
 fb_util_locale_str(void)
