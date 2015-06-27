@@ -15,7 +15,7 @@
 
 AC_INIT(
     [purple-facebook],
-    [9e295f087bf6],
+    [3ee1b27dacc4],
     [https://github.com/jgeboski/purple-facebook/issues],
     [purple-facebook],
     [https://github.com/jgeboski/purple-facebook],

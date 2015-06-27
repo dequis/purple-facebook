@@ -1,7 +1,7 @@
-diff -r 9e295f087bf6 libpurple/protocols/facebook/facebook.c
---- a/libpurple/protocols/facebook/facebook.c	Wed Jun 24 18:13:18 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.c	Thu Jun 25 08:27:37 2015 -0400
-@@ -541,7 +541,8 @@
+diff -r 3ee1b27dacc4 libpurple/protocols/facebook/facebook.c
+--- a/libpurple/protocols/facebook/facebook.c	Sat Jun 27 00:56:13 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.c	Sat Jun 27 01:17:25 2015 -0400
+@@ -540,7 +540,8 @@
  }
  
  static gint
@@ -11,7 +11,7 @@ diff -r 9e295f087bf6 libpurple/protocols/facebook/facebook.c
  {
  	const gchar *name;
  	const gchar *text;
-@@ -552,10 +553,10 @@
+@@ -551,10 +552,10 @@
  	fata = purple_connection_get_protocol_data(gc);
  	api = fb_data_get_api(fata);
  
@@ -24,7 +24,7 @@ diff -r 9e295f087bf6 libpurple/protocols/facebook/facebook.c
  	fb_api_message(api, uid, FALSE, text);
  	return 1;
  }
-@@ -629,7 +630,8 @@
+@@ -628,7 +629,8 @@
  }
  
  static gint
@@ -34,7 +34,7 @@ diff -r 9e295f087bf6 libpurple/protocols/facebook/facebook.c
  {
  	const gchar *name;
  	const gchar *text;
-@@ -647,13 +649,13 @@
+@@ -646,13 +648,13 @@
  	name = purple_conversation_get_name(PURPLE_CONVERSATION(chat));
  	tid = FB_ID_FROM_STR(name);
  
@@ -51,7 +51,7 @@ diff -r 9e295f087bf6 libpurple/protocols/facebook/facebook.c
  	                        time(NULL));
  	return 0;
  }
-@@ -733,111 +735,71 @@
+@@ -732,111 +734,71 @@
  	g_object_unref(list);
  }
  
@@ -222,9 +222,9 @@ diff -r 9e295f087bf6 libpurple/protocols/facebook/facebook.c
  }
 -
 -PURPLE_PLUGIN_INIT(facebook, plugin_query, plugin_load, plugin_unload);
-diff -r 9e295f087bf6 libpurple/protocols/facebook/facebook.h
---- a/libpurple/protocols/facebook/facebook.h	Wed Jun 24 18:13:18 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.h	Thu Jun 25 08:27:37 2015 -0400
+diff -r 3ee1b27dacc4 libpurple/protocols/facebook/facebook.h
+--- a/libpurple/protocols/facebook/facebook.h	Sat Jun 27 00:56:13 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.h	Sat Jun 27 01:17:25 2015 -0400
 @@ -25,29 +25,4 @@
  #include "glibcompat.h"
  #include "protocol.h"

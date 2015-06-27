@@ -1,3 +1,10 @@
+purple-facebook-3ee1b27dacc4 (2015-06-27):
+  - Added debugging support
+  - Added queued icon downloads (fixes lag on load)
+  - Allow revision overriding with update.sh
+  - Fixed Makfile.mingw for older make versions
+  - Fixed noncompliant hg (mercurial) check
+
 purple-facebook-9e295f087bf6 (2015-06-25):
   - Distribute license information
   - Fixed segmentation fault when retrieving icons

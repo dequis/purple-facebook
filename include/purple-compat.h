@@ -19,6 +19,7 @@
 #define _PURPLE_COMPAT_H_
 
 #include "connection.h"
+#include "debug.h"
 #include "notify.h"
 #include "prpl.h"
 #include "request.h"
@@ -36,6 +37,7 @@
 #define PURPLE_IM_TYPING             PURPLE_TYPING
 
 #define PURPLE_CONVERSATION      purple_conv_chat_get_conversation
+#define PURPLE_IS_BUDDY(b)       ((b) != NULL)
 #define PURPLE_IS_CONNECTION(c)  ((c) != NULL)
 
 #define purple_account_get_private_alias        purple_account_get_alias
