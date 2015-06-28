@@ -32,6 +32,7 @@
 #include "api.h"
 #include "data.h"
 #include "facebook.h"
+#include "util.h"
 
 static PurpleProtocol *my_protocol = NULL;
 
@@ -70,7 +71,6 @@ fb_cb_data_icon(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	const gchar *csum;
 	const gchar *name;
 	const gchar *str;
-	FbApi *api;
 	FbDataIcon *icon = data;
 	FbHttpParams *params;
 	GError *err = NULL;
@@ -80,10 +80,11 @@ fb_cb_data_icon(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	PurpleHttpRequest *req;
 
 	acct = purple_buddy_get_account(icon->buddy);
-	api = fb_data_get_api(icon->fata);
+	name = purple_buddy_get_name(icon->buddy);
 
 	if (!fb_http_error_chk(res, &err)) {
-		fb_cb_api_error(api, err, icon->fata);
+		fb_util_debug_warning("Failed to retrieve icon for %s: %s",
+		                      name, err->message);
 		g_error_free(err);
 		return;
 	}
@@ -92,11 +93,9 @@ fb_cb_data_icon(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	str = purple_http_request_get_url(req);
 	params = fb_http_params_new_parse(str, TRUE);
 	csum = fb_http_params_get_str(params, "oh", &err);
-
-	name = purple_buddy_get_name(icon->buddy);
 	str = purple_http_response_get_data(res, &size);
-	idata = g_memdup(str, size);
 
+	idata = g_memdup(str, size);
 	purple_buddy_icons_set_for_user(acct, name, idata, size, csum);
 	fb_http_params_free(params);
 }
