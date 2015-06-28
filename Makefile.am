@@ -5,6 +5,8 @@ EXTRA_DIST = \
 	autogen.sh \
 	include \
 	Makefile.mingw \
+	MANIFEST_PIDGIN \
+	MANIFEST_VOIDS \
 	patches \
 	pidgin/AUTHORS \
 	pidgin/COPYING \
