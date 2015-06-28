@@ -1,3 +1,7 @@
+purple-facebook-602a1c64670a (2015-06-27):
+  - Fixed disabled contacts causing JSON parse errors
+  - Fixed truncated HTTP responses
+
 purple-facebook-3ee1b27dacc4 (2015-06-27):
   - Added debugging support
   - Added queued icon downloads (fixes lag on load)
