@@ -1010,8 +1010,12 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		fb_api_user_reset(&user, FALSE);
 
 		str = fb_json_node_get_str(node, "$.represented_profile.id",
-		                           &err);
-		FB_API_ERROR_CHK(api, err, goto finish);
+		                           NULL);
+
+		if (G_UNLIKELY(str == NULL)) {
+			continue;
+		}
+
 		user.uid = FB_ID_FROM_STR(str);
 		g_free(str);
 
