@@ -398,6 +398,7 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 	g_free(val);
 
 	req = purple_http_request_new(url);
+	purple_http_request_set_max_len(req, -1);
 	purple_http_request_set_method(req, "POST");
 
 	/* Ensure an old signature is not computed */
