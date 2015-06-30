@@ -390,6 +390,10 @@ fb_blist_chat_init(PurpleBlistNode *node, gpointer data)
 	GSList *select = NULL;
 	PurpleConnection *gc;
 
+	if (G_OBJECT_TYPE(node) != PURPLE_TYPE_BUDDY) {
+		return;
+	}
+
 	gc = fb_data_get_connection(fata);
 	select = g_slist_prepend(select, PURPLE_BUDDY(node));
 
@@ -525,6 +529,10 @@ fb_client_blist_node_menu(PurpleBlistNode *node)
 	PurpleAccount *acct;
 	PurpleConnection *gc;
 	PurpleMenuAction *act;
+
+	if (G_OBJECT_TYPE(node) != PURPLE_TYPE_BUDDY) {
+		return NULL;
+	}
 
 	acct = purple_buddy_get_account(PURPLE_BUDDY(node));
 	gc = purple_account_get_connection(acct);
