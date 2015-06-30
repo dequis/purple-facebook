@@ -1,3 +1,7 @@
+purple-facebook-0bd9b2c3f5b7 (2015-06-30):
+  - Do not error on icon retrieval failtures
+  - Only show "Initiate Chat" with buddies
+
 purple-facebook-602a1c64670a (2015-06-27):
   - Fixed disabled contacts causing JSON parse errors
   - Fixed truncated HTTP responses
