@@ -390,7 +390,7 @@ fb_blist_chat_init(PurpleBlistNode *node, gpointer data)
 	GSList *select = NULL;
 	PurpleConnection *gc;
 
-	if (G_OBJECT_TYPE(node) != PURPLE_TYPE_BUDDY) {
+	if (!PURPLE_IS_BUDDY(node)) {
 		return;
 	}
 
@@ -530,7 +530,7 @@ fb_client_blist_node_menu(PurpleBlistNode *node)
 	PurpleConnection *gc;
 	PurpleMenuAction *act;
 
-	if (G_OBJECT_TYPE(node) != PURPLE_TYPE_BUDDY) {
+	if (!PURPLE_IS_BUDDY(node)) {
 		return NULL;
 	}
 
