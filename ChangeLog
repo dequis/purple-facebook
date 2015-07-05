@@ -1,3 +1,6 @@
+purple-facebook-6e3ee8e18697 (2015-07-05):
+  - Fixed chats not being able to be added
+
 purple-facebook-2a5decfdeb7b (2015-07-05):
   - Added kicking/leaving for group chats
   - Use proper type checks

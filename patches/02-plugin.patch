@@ -1,6 +1,6 @@
-diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
---- a/libpurple/protocols/facebook/facebook.c	Sun Jul 05 15:58:47 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.c	Sun Jul 05 16:31:07 2015 -0400
+diff -r 6e3ee8e18697 libpurple/protocols/facebook/facebook.c
+--- a/libpurple/protocols/facebook/facebook.c	Sun Jul 05 18:05:01 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.c	Sun Jul 05 18:31:14 2015 -0400
 @@ -392,7 +392,7 @@
  	GSList *select = NULL;
  	PurpleConnection *gc;
@@ -42,7 +42,7 @@ diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
  	fb_api_message(api, uid, FALSE, text);
  	return 1;
  }
-@@ -637,7 +638,8 @@
+@@ -674,7 +675,8 @@
  }
  
  static gint
@@ -52,7 +52,7 @@ diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
  {
  	const gchar *name;
  	const gchar *text;
-@@ -655,13 +657,13 @@
+@@ -692,13 +694,13 @@
  	name = purple_conversation_get_name(PURPLE_CONVERSATION(chat));
  	tid = FB_ID_FROM_STR(name);
  
@@ -69,7 +69,7 @@ diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
  	                        time(NULL));
  	return 0;
  }
-@@ -815,81 +817,6 @@
+@@ -852,84 +854,6 @@
  }
  
  static void
@@ -111,10 +111,13 @@ diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
 -static void
 -facebook_protocol_chat_iface_init(PurpleProtocolChatIface *iface)
 -{
--	iface->join      = fb_chat_join;
--	iface->invite    = fb_chat_invite;
--	iface->send      = fb_chat_send;
--	iface->set_topic = fb_chat_set_topic;
+-	iface->info          = fb_chat_info;
+-	iface->info_defaults = fb_chat_info_defaults;
+-	iface->join          = fb_chat_join;
+-	iface->get_name      = fb_chat_get_name;
+-	iface->invite        = fb_chat_invite;
+-	iface->send          = fb_chat_send;
+-	iface->set_topic     = fb_chat_set_topic;
 -}
 -
 -static void
@@ -151,7 +154,7 @@ diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
  fb_cmds_register(void)
  {
  	PurpleCmdId id;
-@@ -901,13 +828,13 @@
+@@ -941,13 +865,13 @@
  	g_return_if_fail(fb_cmds == NULL);
  
  	id = purple_cmd_register("kick", "s", PURPLE_CMD_P_PROTOCOL, cflags,
@@ -167,7 +170,7 @@ diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
  				 _("leave: Leave the chat"),
  				 NULL);
  	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
-@@ -926,43 +853,73 @@
+@@ -966,43 +890,76 @@
  	g_slist_free_full(fb_cmds, fb_cmds_unregister_free);
  }
  
@@ -253,27 +256,30 @@ diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.c
 +	info.unload        = plugin_unload;
 +	info.extra_info    = &pinfo;
 +
-+	pinfo.options           = OPT_PROTO_CHAT_TOPIC;
-+	pinfo.list_icon         = fb_list_icon;
-+	pinfo.status_types      = fb_status_types;
-+	pinfo.blist_node_menu   = fb_client_blist_node_menu;
-+	pinfo.login             = fb_login;
-+	pinfo.close             = fb_close;
-+	pinfo.send_im           = fb_im_send;
-+	pinfo.send_typing       = fb_im_send_typing;
-+	pinfo.join_chat         = fb_chat_join;
-+	pinfo.chat_invite       = fb_chat_invite;
-+	pinfo.chat_send         = fb_chat_send;
-+	pinfo.set_chat_topic    = fb_chat_set_topic;
-+	pinfo.roomlist_get_list = fb_roomlist_get_list;
-+	pinfo.roomlist_cancel   = fb_roomlist_cancel;
++	pinfo.options            = OPT_PROTO_CHAT_TOPIC;
++	pinfo.list_icon          = fb_list_icon;
++	pinfo.status_types       = fb_status_types;
++	pinfo.blist_node_menu    = fb_client_blist_node_menu;
++	pinfo.chat_info          = fb_chat_info;
++	pinfo.chat_info_defaults = fb_chat_info_defaults;
++	pinfo.login              = fb_login;
++	pinfo.close              = fb_close;
++	pinfo.send_im            = fb_im_send;
++	pinfo.send_typing        = fb_im_send_typing;
++	pinfo.join_chat          = fb_chat_join;
++	pinfo.get_chat_name      = fb_chat_get_name;
++	pinfo.chat_invite        = fb_chat_invite;
++	pinfo.chat_send          = fb_chat_send;
++	pinfo.set_chat_topic     = fb_chat_set_topic;
++	pinfo.roomlist_get_list  = fb_roomlist_get_list;
++	pinfo.roomlist_cancel    = fb_roomlist_cancel;
 +
 +	inited = TRUE;
 +	return purple_plugin_register(plugin);
 +}
-diff -r 2a5decfdeb7b libpurple/protocols/facebook/facebook.h
---- a/libpurple/protocols/facebook/facebook.h	Sun Jul 05 15:58:47 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.h	Sun Jul 05 16:31:07 2015 -0400
+diff -r 6e3ee8e18697 libpurple/protocols/facebook/facebook.h
+--- a/libpurple/protocols/facebook/facebook.h	Sun Jul 05 18:05:01 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.h	Sun Jul 05 18:31:14 2015 -0400
 @@ -25,29 +25,4 @@
  #include "glibcompat.h"
  #include "protocol.h"

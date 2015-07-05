@@ -27,6 +27,7 @@
 #undef purple_notify_error
 
 #define PurpleChatConversation         PurpleConvChat
+#define PurpleProtocolChatEntry        struct proto_chat_entry
 #define PurpleIMTypingState            PurpleTypingState
 #define PurpleMessage                  const gchar
 #define PurpleProtocol                 void
