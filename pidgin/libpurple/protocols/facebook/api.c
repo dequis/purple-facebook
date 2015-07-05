@@ -1448,7 +1448,7 @@ fb_api_thread_remove(FbApi *api, FbId tid, FbId uid)
 		"DELETE"
 	};
 
-	g_return_if_fail(api != NULL);
+	g_return_if_fail(FB_IS_API(api));
 	priv = api->priv;
 
 	prms = fb_http_params_new();

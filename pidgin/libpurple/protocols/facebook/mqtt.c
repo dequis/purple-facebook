@@ -646,7 +646,7 @@ fb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, const GByteArray *pload)
 	FbMqttMessage *msg;
 	FbMqttPrivate *priv;
 
-	g_return_if_fail(mqtt != NULL);
+	g_return_if_fail(FB_IS_MQTT(mqtt));
 	g_return_if_fail(fb_mqtt_connected(mqtt, FALSE));
 	priv = mqtt->priv;
 
@@ -674,7 +674,7 @@ fb_mqtt_subscribe(FbMqtt *mqtt, const gchar *topic1, guint16 qos1, ...)
 	guint16 qos;
 	va_list ap;
 
-	g_return_if_fail(mqtt != NULL);
+	g_return_if_fail(FB_IS_MQTT(mqtt));
 	g_return_if_fail(fb_mqtt_connected(mqtt, FALSE));
 	priv = mqtt->priv;
 
@@ -708,7 +708,7 @@ fb_mqtt_unsubscribe(FbMqtt *mqtt, const gchar *topic1, ...)
 	FbMqttPrivate *priv;
 	va_list ap;
 
-	g_return_if_fail(mqtt != NULL);
+	g_return_if_fail(FB_IS_MQTT(mqtt));
 	g_return_if_fail(fb_mqtt_connected(mqtt, FALSE));
 	priv = mqtt->priv;
 
