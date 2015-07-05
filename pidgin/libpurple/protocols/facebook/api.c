@@ -1219,6 +1219,7 @@ fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApiPrivate *priv = api->priv;
 	FbApiThread thrd;
 	FbApiUser user;
+	gboolean haself;
 	gchar *str;
 	GError *err = NULL;
 	GList *elms = NULL;
@@ -1258,7 +1259,7 @@ fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		FB_API_ERROR_CHK(api, err, goto finish);
 		elms2 = json_array_get_elements(arr2);
 
-		for (m = elms2; m != NULL; m = m->next) {
+		for (haself = FALSE, m = elms2; m != NULL; m = m->next) {
 			node2 = m->data;
 			fb_api_user_reset(&user, FALSE);
 
@@ -1268,6 +1269,7 @@ fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			g_free(str);
 
 			if (user.uid == priv->uid) {
+				haself = TRUE;
 				continue;
 			}
 
@@ -1289,8 +1291,12 @@ fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			continue;
 		}
 
-		mptr = fb_api_thread_dup(&thrd, FALSE);
-		thrds = g_slist_prepend(thrds, mptr);
+		if (haself) {
+			mptr = fb_api_thread_dup(&thrd, FALSE);
+			thrds = g_slist_prepend(thrds, mptr);
+		} else {
+			fb_api_thread_reset(&thrd, TRUE);
+		}
 	}
 
 	ret = g_slist_reverse(thrds);
@@ -1425,6 +1431,42 @@ fb_api_thread_list(FbApi *api)
 	fb_http_params_set_str(prms, "q", json);
 	fb_api_http_req(api, &info, prms, FB_API_URL_FQL);
 	g_free(json);
+}
+
+void
+fb_api_thread_remove(FbApi *api, FbId tid, FbId uid)
+{
+	FbApiPrivate *priv;
+	FbHttpParams *prms;
+	gchar *json;
+	JsonBuilder *bldr;
+
+	static const FbApiHttpInfo info = {
+		fb_api_cb_http_bool,
+		"com.facebook.orca.protocol.a",
+		"removeMembers",
+		"DELETE"
+	};
+
+	g_return_if_fail(api != NULL);
+	priv = api->priv;
+
+	prms = fb_http_params_new();
+	fb_http_params_set_strf(prms, "id", "t_id.%" FB_ID_FORMAT, tid);
+
+	if (uid == 0) {
+		uid = priv->uid;
+	}
+
+	if (uid != priv->uid) {
+		bldr = fb_json_bldr_new(JSON_NODE_ARRAY);
+		fb_json_bldr_add_strf(bldr, NULL, "%" FB_ID_FORMAT, uid);
+		json = fb_json_bldr_close(bldr, JSON_NODE_ARRAY, NULL);
+		fb_http_params_set_str(prms, "to", json);
+		g_free(json);
+	}
+
+	fb_api_http_req(api, &info, prms, FB_API_URL_PARTS);
 }
 
 void

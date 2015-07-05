@@ -128,28 +128,40 @@ fb_json_bldr_obj_end(JsonBuilder *bldr)
 void
 fb_json_bldr_add_bool(JsonBuilder *bldr, const gchar *name, gboolean value)
 {
-	json_builder_set_member_name(bldr, name);
+	if (name != NULL) {
+		json_builder_set_member_name(bldr, name);
+	}
+
 	json_builder_add_boolean_value(bldr, value);
 }
 
 void
 fb_json_bldr_add_dbl(JsonBuilder *bldr, const gchar *name, gdouble value)
 {
-	json_builder_set_member_name(bldr, name);
+	if (name != NULL) {
+		json_builder_set_member_name(bldr, name);
+	}
+
 	json_builder_add_double_value(bldr, value);
 }
 
 void
 fb_json_bldr_add_int(JsonBuilder *bldr, const gchar *name, gint64 value)
 {
-	json_builder_set_member_name(bldr, name);
+	if (name != NULL) {
+		json_builder_set_member_name(bldr, name);
+	}
+
 	json_builder_add_int_value(bldr, value);
 }
 
 void
 fb_json_bldr_add_str(JsonBuilder *bldr, const gchar *name, const gchar *value)
 {
-	json_builder_set_member_name(bldr, name);
+	if (name != NULL) {
+		json_builder_set_member_name(bldr, name);
+	}
+
 	json_builder_add_string_value(bldr, value);
 }
 
@@ -164,9 +176,7 @@ fb_json_bldr_add_strf(JsonBuilder *bldr, const gchar *name,
 	value = g_strdup_vprintf(format, ap);
 	va_end(ap);
 
-	json_builder_set_member_name(bldr, name);
-	json_builder_add_string_value(bldr, value);
-
+	fb_json_bldr_add_str(bldr, name, value);
 	g_free(value);
 }
 

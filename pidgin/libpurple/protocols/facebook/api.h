@@ -191,6 +191,9 @@ void
 fb_api_thread_list(FbApi *api);
 
 void
+fb_api_thread_remove(FbApi *api, FbId tid, FbId uid);
+
+void
 fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic);
 
 void

@@ -30,11 +30,13 @@
 #include "version.h"
 
 #include "api.h"
+#include "cmds.h"
 #include "data.h"
 #include "facebook.h"
 #include "util.h"
 
-static PurpleProtocol *my_protocol = NULL;
+static GSList *fb_cmds = NULL;
+static PurpleProtocol *fb_protocol = NULL;
 
 static void
 fb_cb_api_error(FbApi *api, GError *error, gpointer data);
@@ -739,6 +741,79 @@ fb_roomlist_cancel(PurpleRoomlist *list)
 	g_object_unref(list);
 }
 
+static PurpleCmdRet
+fb_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args,
+            gchar **error, gpointer data)
+{
+	const gchar *name;
+	FbApi *api;
+	FbData *fata;
+	FbId tid;
+	FbId uid;
+	GError *err = NULL;
+	PurpleAccount *acct;
+	PurpleBuddy *bdy;
+	PurpleConnection *gc;
+	PurpleChatConversation *chat;
+
+	g_return_val_if_fail(PURPLE_IS_CHAT_CONVERSATION(conv),
+	                     PURPLE_CMD_RET_FAILED);
+
+	gc = purple_conversation_get_connection(conv);
+	acct = purple_connection_get_account(gc);
+	chat = PURPLE_CHAT_CONVERSATION(conv);
+	bdy = fb_util_account_find_buddy(acct, chat, args[0], &err);
+
+	if (err != NULL) {
+		*error = g_strdup_printf(_("%s."), err->message);
+		g_error_free(err);
+		return PURPLE_CMD_RET_FAILED;
+	}
+
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+
+	name = purple_conversation_get_name(conv);
+	tid = FB_ID_FROM_STR(name);
+
+	name = purple_buddy_get_name(bdy);
+	uid = FB_ID_FROM_STR(name);
+
+	purple_chat_conversation_remove_user(chat, name, NULL);
+	fb_api_thread_remove(api, tid, uid);
+	return PURPLE_CMD_RET_OK;
+}
+
+static PurpleCmdRet
+fb_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args,
+             gchar **error, gpointer data)
+{
+	const gchar *name;
+	FbApi *api;
+	FbData *fata;
+	FbId tid;
+	gint id;
+	PurpleConnection *gc;
+	PurpleChatConversation *chat;
+
+	g_return_val_if_fail(PURPLE_IS_CHAT_CONVERSATION(conv),
+	                     PURPLE_CMD_RET_FAILED);
+
+	gc = purple_conversation_get_connection(conv);
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+
+	chat = PURPLE_CHAT_CONVERSATION(conv);
+	id = purple_chat_conversation_get_id(chat);
+
+	name = purple_conversation_get_name(conv);
+	tid = FB_ID_FROM_STR(name);
+
+	purple_serv_got_chat_left(gc, id);
+	fb_api_thread_remove(api, tid, 0);
+	return PURPLE_CMD_RET_OK;
+}
+
 static void
 facebook_protocol_init(PurpleProtocol *protocol)
 {
@@ -814,6 +889,43 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	                                  facebook_protocol_roomlist_iface_init)
 );
 
+static void
+fb_cmds_register(void)
+{
+	PurpleCmdId id;
+
+	static PurpleCmdFlag cflags =
+		PURPLE_CMD_FLAG_CHAT |
+		PURPLE_CMD_FLAG_PROTOCOL_ONLY;
+
+	g_return_if_fail(fb_cmds == NULL);
+
+	id = purple_cmd_register("kick", "s", PURPLE_CMD_P_PROTOCOL, cflags,
+				 fb_protocol->id, fb_cmd_kick,
+				 _("kick: Kick someone from the chat"),
+				 NULL);
+	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
+
+	id = purple_cmd_register("leave", "", PURPLE_CMD_P_PROTOCOL, cflags,
+				 fb_protocol->id, fb_cmd_leave,
+				 _("leave: Leave the chat"),
+				 NULL);
+	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
+}
+
+static void
+fb_cmds_unregister_free(gpointer data)
+{
+	PurpleCmdId id = GPOINTER_TO_UINT(data);
+	purple_cmd_unregister(id);
+}
+
+static void
+fb_cmds_unregister(void)
+{
+	g_slist_free_full(fb_cmds, fb_cmds_unregister_free);
+}
+
 static PurplePluginInfo *
 plugin_query(GError **error)
 {
@@ -836,14 +948,21 @@ static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
 	facebook_protocol_register_type(plugin);
-	my_protocol = purple_protocols_add(FACEBOOK_TYPE_PROTOCOL, error);
-	return my_protocol != NULL;
+	fb_protocol = purple_protocols_add(FACEBOOK_TYPE_PROTOCOL, error);
+
+	if (fb_protocol == NULL) {
+		return FALSE;
+	}
+
+	fb_cmds_register();
+	return TRUE;
 }
 
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
-	return purple_protocols_remove(my_protocol, error);
+	fb_cmds_unregister();
+	return purple_protocols_remove(fb_protocol, error);
 }
 
 PURPLE_PLUGIN_INIT(facebook, plugin_query, plugin_load, plugin_unload);
