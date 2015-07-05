@@ -50,7 +50,7 @@ fb_util_account_find_buddy(PurpleAccount *acct, PurpleChatConversation *chat,
 	guint retc;
 	PurpleBuddy *ret = NULL;
 
-	g_return_val_if_fail(acct != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ACCOUNT(acct), NULL);
 	g_return_val_if_fail(search != NULL, NULL);
 
 	buddies = purple_blist_find_buddies(acct, NULL);
