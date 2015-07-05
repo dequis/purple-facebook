@@ -1,3 +1,7 @@
+purple-facebook-2a5decfdeb7b (2015-07-05):
+  - Added kicking/leaving for group chats
+  - Use proper type checks
+
 purple-facebook-0bd9b2c3f5b7 (2015-06-30):
   - Do not error on icon retrieval failtures
   - Only show "Initiate Chat" with buddies
