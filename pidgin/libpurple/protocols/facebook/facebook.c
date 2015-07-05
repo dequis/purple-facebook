@@ -584,6 +584,32 @@ fb_im_send_typing(PurpleConnection *gc, const gchar *name,
 	return 0;
 }
 
+static GList *
+fb_chat_info()
+{
+	GList *pces = NULL;
+	PurpleProtocolChatEntry *pce;
+
+	pce = g_new0(PurpleProtocolChatEntry, 1);
+	pce->label = _("Chat _Name:");
+	pce->identifier = "name";
+	pce->required = TRUE;
+	pces = g_list_prepend(pces, pce);
+
+	return g_list_reverse(pces);
+}
+
+static GHashTable *
+fb_chat_info_defaults(PurpleConnection *gc, const gchar *name)
+{
+	GHashTable *data;
+
+	data = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+	g_hash_table_insert(data, "name", g_strdup(name));
+
+	return data;
+}
+
 static void
 fb_chat_join(PurpleConnection *gc, GHashTable *data)
 {
@@ -600,6 +626,17 @@ fb_chat_join(PurpleConnection *gc, GHashTable *data)
 	tid = FB_ID_FROM_STR(name);
 
 	fb_api_thread_info(api, tid);
+}
+
+static gchar *
+fb_chat_get_name(GHashTable *data)
+{
+	const gchar *name;
+
+	name = g_hash_table_lookup(data, "name");
+	g_return_val_if_fail(name != NULL, NULL);
+
+	return g_strdup(name);
 }
 
 static void
@@ -853,10 +890,13 @@ facebook_protocol_im_iface_init(PurpleProtocolIMIface *iface)
 static void
 facebook_protocol_chat_iface_init(PurpleProtocolChatIface *iface)
 {
-	iface->join      = fb_chat_join;
-	iface->invite    = fb_chat_invite;
-	iface->send      = fb_chat_send;
-	iface->set_topic = fb_chat_set_topic;
+	iface->info          = fb_chat_info;
+	iface->info_defaults = fb_chat_info_defaults;
+	iface->join          = fb_chat_join;
+	iface->get_name      = fb_chat_get_name;
+	iface->invite        = fb_chat_invite;
+	iface->send          = fb_chat_send;
+	iface->set_topic     = fb_chat_set_topic;
 }
 
 static void
