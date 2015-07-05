@@ -27,6 +27,68 @@
 
 #include "util.h"
 
+GQuark
+fb_util_error_quark(void)
+{
+	static GQuark q = 0;
+
+	if (G_UNLIKELY(q == 0)) {
+		q = g_quark_from_static_string("fb-util-error-quark");
+	}
+
+	return q;
+}
+
+PurpleBuddy *
+fb_util_account_find_buddy(PurpleAccount *acct, PurpleChatConversation *chat,
+                           const gchar *search, GError **error)
+{
+	const gchar *alias;
+	const gchar *name;
+	GSList *buddies;
+	GSList *l;
+	guint retc;
+	PurpleBuddy *ret = NULL;
+
+	g_return_val_if_fail(acct != NULL, NULL);
+	g_return_val_if_fail(search != NULL, NULL);
+
+	buddies = purple_blist_find_buddies(acct, NULL);
+
+	for (retc = 0, l = buddies; l != NULL; l = l->next) {
+		name = purple_buddy_get_name(l->data);
+		alias = purple_buddy_get_alias(l->data);
+
+		if ((chat != NULL) &&
+		    !purple_chat_conversation_has_user(chat, name))
+		{
+			continue;
+		}
+
+		if (g_ascii_strcasecmp(name, search) == 0) {
+			ret = l->data;
+			retc++;
+		}
+
+		if (g_ascii_strcasecmp(alias, search) == 0) {
+			ret = l->data;
+			retc++;
+		}
+	}
+
+	if (retc == 0) {
+		g_set_error(error, FB_UTIL_ERROR, FB_UTIL_ERROR_GENERAL,
+		            _("Buddy %s not found"), search);
+	} else if (retc > 1) {
+		g_set_error(error, FB_UTIL_ERROR, FB_UTIL_ERROR_GENERAL,
+		            _("Buddy name %s is ambiguous"), search);
+		ret = NULL;
+	}
+
+	g_slist_free(buddies);
+	return ret;
+}
+
 void
 fb_util_debug(PurpleDebugLevel level, const gchar *format, ...)
 {

@@ -31,7 +31,10 @@
 		FB_UTIL_DEBUG_FLAG_VERBOSE  \
 	)
 
+#define FB_UTIL_ERROR fb_util_error_quark()
+
 typedef enum _FbUtilDebugFlags FbUtilDebugFlags;
+typedef enum _FbUtilError FbUtilError;
 
 typedef void (*FbUtilRequestBuddyFunc) (GSList *buddies, gpointer data);
 
@@ -40,6 +43,19 @@ enum _FbUtilDebugFlags
 	FB_UTIL_DEBUG_FLAG_UNSAFE  = 1 << 25,
 	FB_UTIL_DEBUG_FLAG_VERBOSE = 1 << 26
 };
+
+enum _FbUtilError
+{
+	FB_UTIL_ERROR_GENERAL
+};
+
+
+GQuark
+fb_util_error_quark(void);
+
+PurpleBuddy *
+fb_util_account_find_buddy(PurpleAccount *acct, PurpleChatConversation *chat,
+                           const gchar *name, GError **error);
 
 void
 fb_util_debug(PurpleDebugLevel level, const gchar *format, ...)
