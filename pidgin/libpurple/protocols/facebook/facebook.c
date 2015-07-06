@@ -495,6 +495,7 @@ fb_close(PurpleConnection *gc)
 	fata = purple_connection_get_protocol_data(gc);
 	api = fb_data_get_api(fata);
 
+	fb_data_save(fata);
 	fb_api_disconnect(api);
 	g_object_unref(fata);
 	purple_connection_set_protocol_data(gc, NULL);
