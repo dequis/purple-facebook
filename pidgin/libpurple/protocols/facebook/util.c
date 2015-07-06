@@ -117,6 +117,9 @@ fb_util_vdebug(PurpleDebugLevel level, const gchar *format, va_list ap)
 		return;
 	}
 
+	/* Ensure all local flags are removed */
+	level &= ~FB_UTIL_DEBUG_FLAG_ALL;
+
 	str = g_strdup_vprintf(format, ap);
 	purple_debug(level, "facebook", "%s", str);
 	g_free(str);
