@@ -312,6 +312,12 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 	g_return_val_if_fail(FB_IS_API(api), FALSE);
 	priv = api->priv;
 
+	if (G_UNLIKELY(size == 0)) {
+		g_set_error(&err, FB_API_ERROR, FB_API_ERROR_GENERAL,
+		            _("Invalid JSON data"));
+		FB_API_ERROR_CHK(api, err, return FALSE);
+	}
+
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "Parsing JSON: %.*s",
 	              (gint) size, (const gchar *) data);
 
@@ -356,7 +362,7 @@ fb_api_http_chk(FbApi *api, PurpleHttpResponse *res, JsonNode **root)
 	GError *err = NULL;
 	gsize size;
 
-	if ((res != NULL) && !fb_http_error_chk(res, &err)) {
+	if (!fb_http_error_chk(res, &err)) {
 		FB_API_ERROR_CHK(api, err, return FALSE);
 	}
 
