@@ -15,7 +15,7 @@
 
 AC_INIT(
     [purple-facebook],
-    [6e3ee8e18697],
+    m4_esyscmd_s([cat VERSION]),
     [https://github.com/jgeboski/purple-facebook/issues],
     [purple-facebook],
     [https://github.com/jgeboski/purple-facebook],

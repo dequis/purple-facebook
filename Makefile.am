@@ -11,4 +11,5 @@ EXTRA_DIST = \
 	pidgin/AUTHORS \
 	pidgin/COPYING \
 	pidgin/COPYRIGHT \
-	update.sh
+	update.sh \
+	VERSION

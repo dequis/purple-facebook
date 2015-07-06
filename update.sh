@@ -12,10 +12,7 @@ test -z "$srcdir" && srcdir=$(dirname "$0")
 test -z "$srcdir" && srcdir=.
 
 cd "$srcdir"
-
-if test -z "$REVISION"; then
-    REVISION=$(head -n18 configure.ac | tail -n1 | tr -d '[ ],')
-fi
+REVISION=$(cat VERSION)
 
 if ! test -d .pidgin/.hg; then
     rm -rf .pidgin
