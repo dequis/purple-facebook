@@ -41,7 +41,8 @@ typedef void (*FbUtilRequestBuddyFunc) (GSList *buddies, gpointer data);
 enum _FbUtilDebugFlags
 {
 	FB_UTIL_DEBUG_FLAG_UNSAFE  = 1 << 25,
-	FB_UTIL_DEBUG_FLAG_VERBOSE = 1 << 26
+	FB_UTIL_DEBUG_FLAG_VERBOSE = 1 << 26,
+	FB_UTIL_DEBUG_FLAG_ALL     = 3 << 25
 };
 
 enum _FbUtilError
