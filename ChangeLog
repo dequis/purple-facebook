@@ -1,3 +1,10 @@
+purple-facebook-a34b993324e4 (2015-07-06):
+  - Added a newline to debug messages
+  - Better version handling
+  - Fixed broken logging levels
+  - Fixed erroneous JSON parsing
+  - Fixed updated internal settings not saving
+
 purple-facebook-6e3ee8e18697 (2015-07-05):
   - Fixed chats not being able to be added
 
