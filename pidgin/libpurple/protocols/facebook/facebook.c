@@ -275,7 +275,7 @@ fb_cb_api_thread_info(FbApi *api, FbApiThread *thrd, gpointer data)
 	PurpleConnection *gc;
 
 	gc = fb_data_get_connection(fata);
-	id = fb_data_get_chatid(fata);
+	id = fb_id_hash(&thrd->tid);
 	FB_ID_TO_STR(thrd->tid, tid);
 
 	chat = purple_serv_got_joined_chat(gc, id, tid);
@@ -618,14 +618,23 @@ fb_chat_join(PurpleConnection *gc, GHashTable *data)
 	FbApi *api;
 	FbData *fata;
 	FbId tid;
+	gint id;
+	PurpleChatConversation *chat;
 
 	name = g_hash_table_lookup(data, "name");
 	g_return_if_fail(name != NULL);
 
+	tid = FB_ID_FROM_STR(name);
+	id = fb_id_hash(&tid);
+	chat = purple_conversations_find_chat(gc, id);
+
+	if (chat != NULL) {
+		purple_conversation_present(PURPLE_CONVERSATION(chat));
+		return;
+	}
+
 	fata = purple_connection_get_protocol_data(gc);
 	api = fb_data_get_api(fata);
-	tid = FB_ID_FROM_STR(name);
-
 	fb_api_thread_info(api, tid);
 }
 

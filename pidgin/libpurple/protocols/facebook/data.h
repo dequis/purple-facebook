@@ -75,9 +75,6 @@ fb_data_save(FbData *fata);
 FbApi *
 fb_data_get_api(FbData *fata);
 
-gint
-fb_data_get_chatid(FbData *fata);
-
 PurpleConnection *
 fb_data_get_connection(FbData *fata);
 
