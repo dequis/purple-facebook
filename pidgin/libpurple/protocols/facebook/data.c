@@ -29,7 +29,6 @@ struct _FbDataPrivate
 	FbApi *api;
 	PurpleConnection *gc;
 	PurpleRoomlist *roomlist;
-	gint chatid;
 	GHashTable *icons;
 	GHashTable *icona;
 };
@@ -213,17 +212,6 @@ fb_data_get_api(FbData *fata)
 	priv = fata->priv;
 
 	return priv->api;
-}
-
-gint
-fb_data_get_chatid(FbData *fata)
-{
-	FbDataPrivate *priv;
-
-	g_return_val_if_fail(FB_IS_DATA(fata), 0);
-	priv = fata->priv;
-
-	return priv->chatid++;
 }
 
 PurpleConnection *
