@@ -2,21 +2,56 @@ Purple Facebook implements the Facebook Messenger protocol into pidgin,
 finch, and libpurple. While the primary implementation is for purple3,
 this plugin is back-ported for purple2.
 
-## Building and Installing
+This is a replacement to the built-in "Facebook (XMPP)" protocol, which
+[has been deprecated](https://developers.facebook.com/docs/chat).
+
+## Basic usage
+
+1. Install the plugin (see the corresponding section below)
+2. Restart pidgin
+3. Add a new account or modify your existing one with the following details:
+
+    * Protocol: "Facebook" (**NOT** "Facebook (XMPP)")
+    * Username: Either your email, facebook username or phone will work. If you
+      had "username@chat.facebook.com", remove the "@chat.facebook.com" part.
+
+## Installing on windows
+
+1. Download: [libjson-glib-1.0.dll][dl1]
+2. Copy the downloaded `libjson-glib-1.0.dll` to `C:\Program Files\Pidgin`
+3. Download the latest `libfacebook.dll` from the [releases][dl2]
+4. Copy the downloaded `libfacebook.dll` to `C:\Program Files\Pidgin\plugins`
+
+Note: `Program Files` will be `Program Files (x86)` on 64-bit Windows.
+
+[dl1]: https://github.com/jgeboski/purple-facebook/releases/download/downloads/libjson-glib-1.0.dll
+[dl2]: https://github.com/jgeboski/purple-facebook/releases
+
+## Building and Installing on linux and other platforms
 
 Make sure glib, json-glib, libpurple (pidgin), and zlib are installed
 with their headers and development information. If these packages came
 from the distribution's repository, they will likely need additional
 development packages, usually suffixed with -dev.
 
+If the [release tarballs][dl2] are used:
+
+    $ tar xvf purple-facebook-*.tar.gz
+    $ cd purple-facebook-*
+    $ ./configure
+    $ make
+
+Otherwise, to build from this git repository, which additionally requires
+autoconf, automake and mercurial (for `update.sh`)
+
     $ git clone https://github.com/jgeboski/purple-facebook.git
     $ cd purple-facebook
     $ ./autogen.sh
     $ make
 
-With a "global" (or system) installation:
+With a "global" (or system) installation (usually to /usr/lib/purple-2/) as root:
 
-    $ make install
+    # make install
 
 Or with a "local" installation:
 
@@ -24,6 +59,9 @@ Or with a "local" installation:
     $ cp pidgin/libpurple/protocols/facebook/.libs/libfacebook.so ~/.purple/plugins
 
 ## Building and Installing on Windows
+
+Note that this section is only relevant for development purposes. See
+"installing on windows" above to use the prebuilt dll.
 
 These instructions are simply a continuation of the ones provided by
 pidgin. Start by setting up a built pidgin source tree in
@@ -49,15 +87,6 @@ Compile the plugin:
     $ ./update  # not required for dist tarballs
     $ make -f Makefile.mingw install
     $ cp win32-install-dir/plugins/libfacebook.dll C:/Program Files/Pidgin/plugins  # alternatively: Program Files (x86)
-
-### Installing on Windows
-
-1. Download: [libjson-glib-1.0.dll](https://github.com/jgeboski/purple-facebook/releases/download/downloads/libjson-glib-1.0.dll)
-2. Copy the downloaded `libjson-glib-1.0.dll` to `C:\Program Files\Pidgin`
-3. Download the latest `libfacebook.dll` from the [releases](https://github.com/jgeboski/purple-facebook/releases)
-4. Copy the downloaded `libfacebook.dll` to `C:\Program Files\Pidgin\plugins`
-
-Note: `Program Files` will be `Program Files (x86)` on 64-bit Windows.
 
 ## Debugging
 
