@@ -180,6 +180,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 {
 	FbApiMessage *msg;
 	FbData *fata = data;
+	gchar *html;
 	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
 	gint id;
@@ -194,12 +195,15 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 	for (l = msgs; l != NULL; l = l->next) {
 		msg = l->data;
 		chat = NULL;
+
+		html = purple_markup_escape_text(msg->text, -1);
 		FB_ID_TO_STR(msg->uid, uid);
 
 		if (msg->tid == 0) {
-			purple_serv_got_im(gc, uid, msg->text,
+			purple_serv_got_im(gc, uid, html,
 		                           PURPLE_MESSAGE_RECV,
 			                   time(NULL));
+			g_free(html);
 			continue;
 		}
 
@@ -210,8 +214,10 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 			id = purple_chat_conversation_get_id(chat);
 			purple_serv_got_chat_in(gc, id, uid,
 			                        PURPLE_MESSAGE_RECV,
-		                                msg->text, time(NULL));
+		                                html, time(NULL));
 		}
+
+		g_free(html);
 	}
 }
 
@@ -557,6 +563,7 @@ fb_im_send(PurpleConnection *gc, PurpleMessage *msg)
 	FbApi *api;
 	FbData *fata;
 	FbId uid;
+	gchar *sext;
 
 	fata = purple_connection_get_protocol_data(gc);
 	api = fb_data_get_api(fata);
@@ -565,7 +572,9 @@ fb_im_send(PurpleConnection *gc, PurpleMessage *msg)
 	uid = FB_ID_FROM_STR(name);
 
 	text = purple_message_get_contents(msg);
-	fb_api_message(api, uid, FALSE, text);
+	sext = purple_markup_strip_html(text);
+	fb_api_message(api, uid, FALSE, sext);
+	g_free(sext);
 	return 1;
 }
 
@@ -691,6 +700,7 @@ fb_chat_send(PurpleConnection *gc, gint id, PurpleMessage *msg)
 	FbApi *api;
 	FbData *fata;
 	FbId tid;
+	gchar *sext;
 	PurpleAccount *acct;
 	PurpleChatConversation *chat;
 
@@ -703,7 +713,9 @@ fb_chat_send(PurpleConnection *gc, gint id, PurpleMessage *msg)
 	tid = FB_ID_FROM_STR(name);
 
 	text = purple_message_get_contents(msg);
-	fb_api_message(api, tid, TRUE, text);
+	sext = purple_markup_strip_html(text);
+	fb_api_message(api, tid, TRUE, sext);
+	g_free(sext);
 
 	name = purple_account_get_username(acct);
 	purple_serv_got_chat_in(gc, id, name,
