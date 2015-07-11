@@ -39,9 +39,6 @@ static GSList *fb_cmds = NULL;
 static PurpleProtocol *fb_protocol = NULL;
 
 static void
-fb_cb_api_error(FbApi *api, GError *error, gpointer data);
-
-static void
 fb_cb_api_auth(FbApi *api, gpointer data)
 {
 	FbData *fata = data;
@@ -168,11 +165,24 @@ static void
 fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 {
 	FbData *fata = data;
+	gboolean nfatal;
 	PurpleConnection *gc;
+	PurpleConnectionError reason;
+
+	/* Non-fatal errors */
+	nfatal = (error->domain == FB_API_ERROR) ||
+	         (error->domain == FB_MQTT_ERROR);
+
+	/* Non-fatal HTTP errors */
+	nfatal |= (error->domain == FB_HTTP_ERROR) &&
+	          (error->code < 400) &&
+	          (error->code > 500);
+
+	reason = (nfatal) ? PURPLE_CONNECTION_ERROR_NETWORK_ERROR
+	                  : PURPLE_CONNECTION_ERROR_OTHER_ERROR;
 
 	gc = fb_data_get_connection(fata);
-	purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
-	                        error->message);
+	purple_connection_error(gc, reason, error->message);
 }
 
 static void
