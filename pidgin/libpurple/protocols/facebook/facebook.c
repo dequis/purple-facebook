@@ -565,6 +565,12 @@ fb_client_blist_node_menu(PurpleBlistNode *node)
 	return g_list_reverse(acts);
 }
 
+static gboolean
+fb_client_offline_message(const PurpleBuddy *buddy)
+{
+	return TRUE;
+}
+
 static gint
 fb_im_send(PurpleConnection *gc, PurpleMessage *msg)
 {
@@ -904,6 +910,7 @@ static void
 facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
 {
 	iface->blist_node_menu = fb_client_blist_node_menu;
+	iface->offline_message = fb_client_offline_message;
 }
 
 static void
