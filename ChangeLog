@@ -1,3 +1,11 @@
+purple-facebook-dc35ba3e7fac (2015-07-12):
+  - Added Travis CI support
+  - Escape and unescape HTML within messages
+  - Fixed all errors being marked as fatal
+  - Fixed incorrect usage of AC_REQUIRE()
+  - Refactored the README for clarity
+  - Use persistent chat identifiers (prevents duplicate chats)
+
 purple-facebook-a34b993324e4 (2015-07-06):
   - Added a newline to debug messages
   - Better version handling
