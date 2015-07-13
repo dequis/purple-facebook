@@ -375,8 +375,12 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Response (%p):", con);
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Error: %s", emsg);
-	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Data: %s", data);
 	g_free(emsg);
+
+	if (G_LIKELY(size > 0)) {
+		fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Data: %.*s",
+		              (gint) size, data);
+	}
 
 	if (!fb_http_error_chk(res, &err)) {
 		FB_API_ERROR_CHK(api, err, return FALSE);
