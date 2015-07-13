@@ -318,9 +318,6 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 		FB_API_ERROR_CHK(api, err, return FALSE);
 	}
 
-	fb_util_debug(FB_UTIL_DEBUG_INFO, "Parsing JSON: %.*s",
-	              (gint) size, (const gchar *) data);
-
 	root = fb_json_node_new(data, size, &err);
 	FB_API_ERROR_CHK(api, err, return FALSE);
 
@@ -356,25 +353,22 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 }
 
 static gboolean
-fb_api_http_chk(FbApi *api, PurpleHttpResponse *res, JsonNode **root)
+fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
+                JsonNode **root)
 {
 	const gchar *data;
 	GError *err = NULL;
 	gsize size;
 
+	data = purple_http_response_get_data(res, &size);
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Response (%p):", con);
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Data: %s", data);
+
 	if (!fb_http_error_chk(res, &err)) {
 		FB_API_ERROR_CHK(api, err, return FALSE);
 	}
 
-	if (root != NULL) {
-		data = purple_http_response_get_data(res, &size);
-
-		if (!fb_api_json_chk(api, data, size, root)) {
-			return FALSE;
-		}
-	}
-
-	return TRUE;
+	return (root == NULL) || fb_api_json_chk(api, data, size, root);
 }
 
 static PurpleHttpConnection *
@@ -427,18 +421,22 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 	g_string_free(gstr, TRUE);
 	g_free(data);
 
-	data = fb_http_params_close(params, &size);
-	purple_http_request_set_contents(req, data, size);
-	g_free(data);
-
 	if (priv->token != NULL) {
 		data = g_strdup_printf("OAuth %s", priv->token);
 		purple_http_request_header_set(req, "Authorization", data);
 		g_free(data);
 	}
 
+	data = fb_http_params_close(params, &size);
+	purple_http_request_set_contents(req, data, size);
 	ret = purple_http_request(priv->gc, req, info->callback, api);
 	purple_http_request_unref(req);
+
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", ret);
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request URL: %s", url);
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request Data: %s", data);
+
+	g_free(data);
 	return ret;
 }
 
@@ -449,7 +447,7 @@ fb_api_cb_http_bool(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	const gchar *hata;
 	FbApi *api = data;
 
-	if (!fb_api_http_chk(api, res, NULL)) {
+	if (!fb_api_http_chk(api, con, res, NULL)) {
 		return;
 	}
 
@@ -519,7 +517,7 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	static const gchar *expr =
 		"$.data[0].fql_result_set[0].sync_sequence_id";
 
-	if (!fb_api_http_chk(api, res, &root)) {
+	if (!fb_api_http_chk(api, con, res, &root)) {
 		return;
 	}
 
@@ -952,7 +950,7 @@ fb_api_cb_auth(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApiPrivate *priv = api->priv;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, res, &root)) {
+	if (!fb_api_http_chk(api, con, res, &root)) {
 		return;
 	}
 
@@ -1003,7 +1001,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	static const gchar *expr =
 		"$.viewer.messenger_contacts.nodes";
 
-	if (!fb_api_http_chk(api, res, &root)) {
+	if (!fb_api_http_chk(api, con, res, &root)) {
 		return;
 	}
 
@@ -1160,7 +1158,7 @@ fb_api_cb_thread_create(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	GError *err = NULL;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, res, &root)) {
+	if (!fb_api_http_chk(api, con, res, &root)) {
 		return;
 	}
 
@@ -1243,7 +1241,7 @@ fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	static const gchar *expr = "$.data[0].fql_result_set";
 
-	if (!fb_api_http_chk(api, res, &root)) {
+	if (!fb_api_http_chk(api, con, res, &root)) {
 		return NULL;
 	}
 
