@@ -357,12 +357,26 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
                 JsonNode **root)
 {
 	const gchar *data;
+	const gchar *msg;
+	gchar *emsg;
 	GError *err = NULL;
+	gint code;
 	gsize size;
 
+	msg = purple_http_response_get_error(res);
+	code = purple_http_response_get_code(res);
 	data = purple_http_response_get_data(res, &size);
+
+	if (msg != NULL) {
+		emsg = g_strdup_printf("%s (%d)", msg, code);
+	} else {
+		emsg = g_strdup_printf("%d", code);
+	}
+
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Response (%p):", con);
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Error: %s", emsg);
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Data: %s", data);
+	g_free(emsg);
 
 	if (!fb_http_error_chk(res, &err)) {
 		FB_API_ERROR_CHK(api, err, return FALSE);
