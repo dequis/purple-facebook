@@ -1,3 +1,7 @@
+purple-facebook-4098e875ebcb (2015-07-12):
+  - Added HTTP debug messages
+  - Allow offline messages to buddies
+
 purple-facebook-dc35ba3e7fac (2015-07-12):
   - Added Travis CI support
   - Escape and unescape HTML within messages
