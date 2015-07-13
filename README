@@ -118,3 +118,33 @@ Obtaining a GDB backtrace:
         -ex "set pagination off" \
         -ex run -ex bt \
         --args pidgin --debug
+
+## Debugging Logs
+
+Debugging logs can often be very useful for determining the root cause
+of an issue. Please note, these logs often contain **sensitive** data,
+and are likely not ideal for posting in the issue tracker, or anywhere
+public for that matter. If a log has has been request from you, it is
+preferred you email it directly to the developer, @jgeboski, to prevent
+from publicly displaying the log. By emailing a debugging log to the
+developer, you understand there is a risk of your sensitive information
+potentially being exposed. Before submitting a debugging log, it is
+recommended you change you password, or reset your app password.
+
+### Debug Log on *NIX
+
+In a terminal run the following command:
+
+    $ PURPLE_UNSAFE_DEBUG=1 PURPLE_VERBOSE_DEBUG=1 pidgin --debug &> pidgin.log
+
+### Debug Log on Windows
+
+    set PURPLE_UNSAFE_DEBUG=1
+    set PURPLE_VERBOSE_DEBUG=1
+    cd "C:\Program Files\Pidgin"
+    pidgin.exe --debug 2>&1 > "%USERPROFILE%\pidgin.log"
+    echo %USERPROFILE%
+
+Note: `Program Files` will be `Program Files (x86)` on 64-bit Windows.
+
+Note: The debug log will reside in `%USERPROFILE%`, which is echoed above.
