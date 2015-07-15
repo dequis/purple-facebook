@@ -1,3 +1,9 @@
+purple-facebook-305f27dd23c0 (2015-07-15):
+  - Added debugging log information to the README
+  - Added HTTP statues to debug messages
+  - Added option to install additional CA certs
+  - Fixed dumping of empty HTTP data
+
 purple-facebook-4098e875ebcb (2015-07-12):
   - Added HTTP debug messages
   - Allow offline messages to buddies
