@@ -11,5 +11,11 @@ EXTRA_DIST = \
 	pidgin/AUTHORS \
 	pidgin/COPYING \
 	pidgin/COPYRIGHT \
+	pidgin/share/ca-certs/GTE_CyberTrust_Global_Root.pem \
 	update.sh \
 	VERSION
+
+if WITH_SSL_CERTS
+sslcertsdir   = $(datadir)/purple/ca-certs
+sslcerts_DATA = pidgin/share/ca-certs/GTE_CyberTrust_Global_Root.pem
+endif

@@ -80,6 +80,17 @@ AC_ARG_WITH(
     [PURPLE_PLUGINDIR="$with_plugindir"]
 )
 
+AC_ARG_WITH(
+    [ssl-certs],
+    [AS_HELP_STRING(
+        [--with-ssl-certs],
+        [Install additional CAs for libpurple]
+    )],
+    [WITH_SSL_CERTS="$with_ssl_certs"],
+    [WITH_SSL_CERTS="no"]
+)
+AM_CONDITIONAL([WITH_SSL_CERTS], [test "x$WITH_SSL_CERTS" == "xyes"])
+
 PKG_CHECK_MODULES([GLIB],   [glib-2.0      >= 2.32.0])
 PKG_CHECK_MODULES([JSON],   [json-glib-1.0 >= 0.14.0])
 PKG_CHECK_MODULES([PURPLE], [purple        <= 3])
