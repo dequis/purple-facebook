@@ -91,7 +91,7 @@ AC_ARG_WITH(
 )
 AM_CONDITIONAL([WITH_SSL_CERTS], [test "x$WITH_SSL_CERTS" == "xyes"])
 
-PKG_CHECK_MODULES([GLIB],   [glib-2.0      >= 2.32.0])
+PKG_CHECK_MODULES([GLIB],   [glib-2.0      >= 2.20.0])
 PKG_CHECK_MODULES([JSON],   [json-glib-1.0 >= 0.14.0])
 PKG_CHECK_MODULES([PURPLE], [purple        <= 3])
 PKG_CHECK_MODULES([ZLIB],   [zlib])
