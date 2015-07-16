@@ -42,35 +42,6 @@ m4_define_default(
      AS_IF([test -n "$$1"], [$4], [$5])]
 )
 
-AC_ARG_ENABLE(
-    [debug],
-    [AS_HELP_STRING(
-        [--enable-debug],
-        [Enable debugging features]
-    )],
-    [DEBUG="yes"],
-    [DEBUG="no"]
-)
-
-AC_ARG_ENABLE(
-    [minimal-flags],
-    [AS_HELP_STRING(
-        [--enable-minimal-flags],
-        [Disable internal CFLAGS which are not required]
-    )],
-    [MINIMAL_FLAGS="yes"],
-    [MINIMAL_FLAGS="no"]
-)
-
-AS_IF(
-    [test "x$DEBUG" == "xyes"],
-    [AS_IF(
-        [test "x$MINIMAL_FLAGS" == "xno"],
-        [CFLAGS="$CFLAGS -Wall -Wformat-nonliteral -g -O0"
-         CFLAGS="$CFLAGS -Wno-unused-variable -Wno-unused-but-set-variable"]
-    )]
-)
-
 AC_ARG_WITH(
     [plugindir],
     [AS_HELP_STRING(
