@@ -100,7 +100,7 @@ fb_cb_data_icon(PurpleHttpConnection *con, PurpleHttpResponse *res,
 }
 
 static void
-fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
+fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 {
 	const gchar *alias;
 	const gchar *csum;
@@ -113,12 +113,14 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 	PurpleAccount *acct;
 	PurpleBuddy *bdy;
 	PurpleConnection *gc;
+	PurpleConnectionState state;
 	PurpleGroup *grp;
 
 	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
 	grp = purple_blist_get_default_group();
 	alias = purple_account_get_private_alias(acct);
+	state = purple_connection_get_state(gc);
 
 	g_value_init(&val, FB_TYPE_ID);
 	g_object_get_property(G_OBJECT(api), "uid", &val);
@@ -157,8 +159,11 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gpointer data)
 	}
 
 	fb_data_icon_queue(fata);
-	purple_connection_update_progress(gc, _("Connecting"), 3, 4);
-	fb_api_connect(api);
+
+	if (complete && (state != PURPLE_CONNECTION_CONNECTED)) {
+		purple_connection_update_progress(gc, _("Connecting"), 3, 4);
+		fb_api_connect(api);
+	}
 }
 
 static void

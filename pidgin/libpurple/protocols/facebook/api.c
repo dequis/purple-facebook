@@ -58,6 +58,9 @@ struct _FbApiPrivate
 
 };
 
+static void
+fb_api_contacts_after(FbApi *api, const gchar *writeid);
+
 G_DEFINE_TYPE(FbApi, fb_api, G_TYPE_OBJECT);
 
 static void
@@ -217,9 +220,9 @@ fb_api_class_init(FbApiClass *klass)
 	             G_SIGNAL_ACTION,
 	             0,
 	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             fb_marshal_VOID__POINTER_BOOLEAN,
 	             G_TYPE_NONE,
-	             1, G_TYPE_POINTER);
+	             2, G_TYPE_POINTER, G_TYPE_BOOLEAN);
 	g_signal_new("error",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -321,7 +324,9 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 	root = fb_json_node_new(data, size, &err);
 	FB_API_ERROR_CHK(api, err, return FALSE);
 
-	if (fb_json_node_chk_str(root, "$.failedSend.errorMessage", &msg)) {
+	if (fb_json_node_chk_str(root, "$.error.summary", &msg) ||
+	    fb_json_node_chk_str(root, "$.failedSend.errorMessage", &msg))
+	{
 		fb_api_error(api, FB_API_ERROR_GENERAL, "%s", msg);
 	} else if (fb_json_node_chk_int(root, "$.error_code", &code)) {
 		if (!fb_json_node_chk_str(root, "$.error_msg", &msg)) {
@@ -1007,6 +1012,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApiUser user;
 	FbHttpParams *params;
 	gchar *str;
+	gchar *writeid = NULL;
 	GError *err = NULL;
 	GList *elms = NULL;
 	GList *l;
@@ -1031,6 +1037,11 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		node = l->data;
 		fb_api_user_reset(&user, FALSE);
 
+		g_free(writeid);
+		writeid = fb_json_node_get_str(node, "$.graph_api_write_id",
+		                               &err);
+		FB_API_ERROR_CHK(api, err, goto finish);
+
 		str = fb_json_node_get_str(node, "$.represented_profile.id",
 		                           NULL);
 
@@ -1045,7 +1056,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		                                 "$.structured_name.text",
 		                                 NULL);
 		user.icon = fb_json_node_get_str(node,
-		                                 "$.huge_picture_url.uri",
+		                                 "$.hugePictureUrl.uri",
 		                                 NULL);
 
 		params = fb_http_params_new_parse(user.icon, TRUE);
@@ -1057,13 +1068,18 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		users = g_slist_prepend(users, mptr);
 	}
 
-	g_signal_emit_by_name(api, "contacts", users);
+	g_signal_emit_by_name(api, "contacts", users, writeid == NULL);
+
+	if (writeid != NULL) {
+		fb_api_contacts_after(api, writeid);
+	}
 
 finish:
 	if (G_LIKELY(arr != NULL)) {
 		json_array_unref(arr);
 	}
 
+	g_free(writeid);
 	g_list_free(elms);
 	g_slist_free_full(users, (GDestroyNotify) fb_api_user_free);
 	json_node_free(root);
@@ -1073,18 +1089,86 @@ void
 fb_api_contacts(FbApi *api)
 {
 	FbHttpParams *prms;
+	gchar *json;
+	JsonBuilder *bldr;
 
 	static const FbApiHttpInfo info = {
 		fb_api_cb_contacts,
-		"com.facebook.contacts.service.d",
+		"com.facebook.contacts.service.c",
 		"FetchContactsFullQuery",
 		"get"
 	};
 
+	/* Object key mapping:
+	 *   0 = profile_types
+	 *   1 = limit
+	 *   2 = small_img_size
+	 *   3 = big_img_size
+	 *   4 = huge_img_size
+	 *   5 = low_res_cover_size
+	 *   6 = media_type
+	 *   7 = high_res_cover_size
+	 */
+
+	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
+	fb_json_bldr_arr_begin(bldr, "0");
+	fb_json_bldr_add_str(bldr, NULL, "user");
+	fb_json_bldr_arr_end(bldr);
+
+	fb_json_bldr_add_str(bldr, "1", FB_API_CONTACTS_COUNT);
+
+	json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
 	prms = fb_http_params_new();
 	fb_http_params_set_str(prms, "query_id", FB_API_QRYID_CONTACTS);
-	fb_http_params_set_str(prms, "query_params", "{}");
+	fb_http_params_set_str(prms, "query_params", json);
 	fb_api_http_req(api, &info, prms, FB_API_URL_GQL);
+	g_free(json);
+}
+
+static void
+fb_api_contacts_after(FbApi *api, const gchar *writeid)
+{
+	FbHttpParams *prms;
+	gchar *json;
+	JsonBuilder *bldr;
+
+	static const FbApiHttpInfo info = {
+		fb_api_cb_contacts,
+		"com.facebook.contacts.service.c",
+		"FetchContactsFullWithAfterQuery",
+		"get"
+	};
+
+	/* Object key mapping:
+	 *   0 = profile_types
+	 *   1 = after
+	 *   2 = limit
+	 *   3 = small_img_size
+	 *   4 = big_img_size
+	 *   5 = huge_img_size
+	 *   6 = low_res_cover_size
+	 *   7 = media_type
+	 *   8 = high_res_cover_size
+	 */
+
+	if (g_str_has_prefix(writeid, "contact_")) {
+		writeid += 8;
+	}
+
+	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
+	fb_json_bldr_arr_begin(bldr, "0");
+	fb_json_bldr_add_str(bldr, NULL, "user");
+	fb_json_bldr_arr_end(bldr);
+
+	fb_json_bldr_add_str(bldr, "1", writeid);
+	fb_json_bldr_add_str(bldr, "2", FB_API_CONTACTS_COUNT);
+
+	json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
+	prms = fb_http_params_new();
+	fb_http_params_set_str(prms, "query_id", FB_API_QRYID_CONTACTS_AFTER);
+	fb_http_params_set_str(prms, "query_params", json);
+	fb_api_http_req(api, &info, prms, FB_API_URL_GQL);
+	g_free(json);
 }
 
 void
