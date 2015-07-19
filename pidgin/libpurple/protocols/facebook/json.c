@@ -234,6 +234,13 @@ fb_json_node_get(JsonNode *root, const gchar *expr, GError **error)
 		return NULL;
 	}
 
+	if (json_array_get_null_element(rslt, 0)) {
+		g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_NULL,
+		            _("Null value for %s"), expr);
+		json_node_free(node);
+		return NULL;
+	}
+
 	ret = json_array_dup_element(rslt, 0);
 	json_node_free(node);
 	return ret;

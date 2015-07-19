@@ -39,7 +39,6 @@
 #define FB_API_CONTACTS_COUNT  "200"
 
 #define FB_API_URL_AUTH   FB_API_BHOST "/method/auth.login"
-#define FB_API_URL_FQL    FB_API_GHOST "/fql"
 #define FB_API_URL_GQL    FB_API_GHOST "/graphql"
 #define FB_API_URL_PARTS  FB_API_GHOST "/participants"
 #define FB_API_URL_THRDS  FB_API_GHOST "/me/threads"
@@ -47,6 +46,8 @@
 
 #define FB_API_QRYID_CONTACTS        "10153746900696729"
 #define FB_API_QRYID_CONTACTS_AFTER  "10153746900731729"
+#define FB_API_QRYID_THREAD_INFO     "10153813976871729"
+#define FB_API_QRYID_THREAD_LIST     "10153813976891729"
 
 #define FB_TYPE_API             (fb_api_get_type())
 #define FB_API(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_API, FbApi))
