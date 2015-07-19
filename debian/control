@@ -1,0 +1,11 @@
+Source: purple-facebook
+Maintainer: jgeboski <jgeboski@gmail.com>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9), libglib2.0-dev (>= 2.32), libjson-glib-dev, libpurple-dev, zlib1g-dev
+
+Package: purple-facebook
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libpurple0, libjson-glib
+Description: Facebook protocol plugin for libpurple
