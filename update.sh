@@ -31,7 +31,7 @@ done
 touch $(cat MANIFEST_VOIDS)
 
 patchdir="$(pwd)/patches"
-cd "$srcdir/pidgin"
+cd pidgin
 
 for patch in $(ls -1 "$patchdir"); do
     patch -p1 -i "$patchdir/$patch"
