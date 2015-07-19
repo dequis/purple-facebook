@@ -1,3 +1,12 @@
+purple-facebook-565fbae05259 (2015-07-18):
+  - Dropped required glib version to 2.20.0
+  - Fixed libpurple check within autoconf
+  - Fixed memory leak with HTTP requests
+  - Fixed the fetching of large amounts of contacts
+  - Migrated all instructions from the README to the wiki
+  - Migrated from FQL to GraphQL
+  - Removed useless CFLAGS options from autoconf
+
 purple-facebook-305f27dd23c0 (2015-07-15):
   - Added debugging log information to the README
   - Added HTTP statues to debug messages
