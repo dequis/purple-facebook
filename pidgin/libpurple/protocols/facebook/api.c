@@ -442,6 +442,7 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 	                                     gstr->len);
 	fb_http_params_set_str(params, "sig", data);
 	g_string_free(gstr, TRUE);
+	g_list_free(keys);
 	g_free(data);
 
 	if (priv->token != NULL) {
