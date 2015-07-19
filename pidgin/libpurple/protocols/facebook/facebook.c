@@ -180,8 +180,7 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 
 	/* Non-fatal HTTP errors */
 	nfatal |= (error->domain == FB_HTTP_ERROR) &&
-	          (error->code < 400) &&
-	          (error->code > 500);
+	          ((error->code < 400) || (error->code > 500));
 
 	reason = (nfatal) ? PURPLE_CONNECTION_ERROR_NETWORK_ERROR
 	                  : PURPLE_CONNECTION_ERROR_OTHER_ERROR;
