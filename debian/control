@@ -7,5 +7,5 @@ Build-Depends: debhelper (>= 9), libglib2.0-dev (>= 2.32), libjson-glib-dev, lib
 
 Package: purple-facebook
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libpurple0, libjson-glib
+Depends: ${shlibs:Depends}, ${misc:Depends}, libpurple0, libjson-glib-1.0-0
 Description: Facebook protocol plugin for libpurple
