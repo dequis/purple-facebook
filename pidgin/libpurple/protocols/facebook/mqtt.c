@@ -550,6 +550,11 @@ fb_mqtt_cb_open_error(PurpleSslConnection *ssl, PurpleSslErrorType error,
                       gpointer data)
 {
 	FbMqtt *mqtt = data;
+	FbMqttPrivate *priv = mqtt->priv;
+
+	/* Do not call purple_ssl_close() from the error_func */
+	priv->gsc = NULL;
+
 	fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL, _("Failed to connect"));
 }
 
