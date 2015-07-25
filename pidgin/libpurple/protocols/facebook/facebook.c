@@ -531,11 +531,16 @@ fb_status_types(PurpleAccount *acct)
 	                              NULL, NULL, TRUE);
 	types = g_list_prepend(types, type);
 
+	/* Just a NULL state (as of now) for compatibility */
+	type = purple_status_type_new(PURPLE_STATUS_AWAY,
+	                              NULL, NULL, TRUE);
+	types = g_list_prepend(types, type);
+
 	type = purple_status_type_new(PURPLE_STATUS_OFFLINE,
 	                              NULL, NULL, TRUE);
 	types = g_list_prepend(types, type);
 
-	return types;
+	return g_list_reverse(types);
 }
 
 static const char *
