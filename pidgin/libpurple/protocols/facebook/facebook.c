@@ -195,6 +195,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 	FbApiMessage *msg;
 	FbData *fata = data;
 	gboolean mark;
+	gboolean open;
 	gchar *html;
 	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
@@ -207,6 +208,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
 	mark = purple_account_get_bool(acct, "mark-read", TRUE);
+	open = purple_account_get_bool(acct, "group-chat-open", TRUE);
 
 	for (l = msgs; l != NULL; l = l->next) {
 		msg = l->data;
@@ -230,17 +232,26 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 		FB_ID_TO_STR(msg->tid, tid);
 		chat = purple_conversations_find_chat_with_account(tid, acct);
 
-		if (chat != NULL) {
-			if (mark) {
-				fb_api_read(api, msg->tid, TRUE);
+		if (chat == NULL) {
+			if (!open) {
+				g_free(html);
+				continue;
 			}
 
+			id = fb_id_hash(&msg->tid);
+			purple_serv_got_joined_chat(gc, id, tid);
+			fb_api_thread_info(api, msg->tid);
+		} else {
 			id = purple_chat_conversation_get_id(chat);
-			purple_serv_got_chat_in(gc, id, uid,
-			                        PURPLE_MESSAGE_RECV,
-		                                html, time(NULL));
 		}
 
+		if (mark) {
+			fb_api_read(api, msg->tid, TRUE);
+		}
+
+		purple_serv_got_chat_in(gc, id, uid,
+					PURPLE_MESSAGE_RECV,
+					html, time(NULL));
 		g_free(html);
 	}
 }
@@ -301,14 +312,21 @@ fb_cb_api_thread_info(FbApi *api, FbApiThread *thrd, gpointer data)
 	gchar uid[FB_ID_STRMAX];
 	gint id;
 	GSList *l;
+	PurpleAccount *acct;
 	PurpleChatConversation *chat;
 	PurpleConnection *gc;
 
 	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
 	id = fb_id_hash(&thrd->tid);
 	FB_ID_TO_STR(thrd->tid, tid);
 
-	chat = purple_serv_got_joined_chat(gc, id, tid);
+	chat = purple_conversations_find_chat_with_account(tid, acct);
+
+	if (chat == NULL) {
+		chat = purple_serv_got_joined_chat(gc, id, tid);
+	}
+
 	purple_chat_conversation_set_topic(chat, NULL, thrd->topic);
 
 	for (l = thrd->users; l != NULL; l = l->next) {
@@ -920,6 +938,11 @@ facebook_protocol_init(PurpleProtocol *protocol)
 
 	opt = purple_account_option_bool_new(_("Mark messages as read"),
 	                                     "mark-read", TRUE);
+	opts = g_list_prepend(opts, opt);
+
+	opt = purple_account_option_bool_new(_("Open new group chats with "
+	                                       "incoming messages"),
+	                                     "group-chat-open", TRUE);
 	opts = g_list_prepend(opts, opt);
 	protocol->account_options = g_list_reverse(opts);
 }
