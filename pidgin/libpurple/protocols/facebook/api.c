@@ -50,6 +50,7 @@ struct _FbApiPrivate
 	FbMqtt *mqtt;
 
 	FbId uid;
+	gint64 sid;
 	guint64 mid;
 	gchar *cid;
 	gchar *did;
@@ -551,7 +552,6 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	gchar *json;
 	gchar *str;
 	GError *err = NULL;
-	gint64 nid;
 	JsonBuilder *bldr;
 	JsonNode *root;
 
@@ -565,7 +565,7 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	str = fb_json_node_get_str(root, expr, &err);
 	json_node_free(root);
 	FB_API_ERROR_CHK(api, err, return);
-	nid = g_ascii_strtoll(str, NULL, 10);
+	priv->sid = g_ascii_strtoll(str, NULL, 10);
 	g_free(str);
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
@@ -575,7 +575,8 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	fb_json_bldr_add_str(bldr, "encoding", "JSON");
 
 	if (priv->stoken == NULL) {
-		fb_json_bldr_add_int(bldr, "initial_titan_sequence_id", nid);
+		fb_json_bldr_add_int(bldr, "initial_titan_sequence_id",
+		                     priv->sid);
 		fb_json_bldr_add_str(bldr, "device_id", priv->did);
 		fb_json_bldr_obj_begin(bldr, "device_params");
 		fb_json_bldr_obj_end(bldr);
@@ -587,7 +588,7 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	}
 
-	fb_json_bldr_add_int(bldr, "last_seq_id", nid);
+	fb_json_bldr_add_int(bldr, "last_seq_id", priv->sid);
 	fb_json_bldr_add_str(bldr, "sync_token", priv->stoken);
 
 	json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
@@ -643,7 +644,25 @@ fb_api_cb_mqtt_connect(FbMqtt *mqtt, gpointer data)
 }
 
 static void
-fb_api_cb_publish_tn(FbApi *api, const GByteArray *pload)
+fb_api_cb_publish_mark(FbApi *api, const GByteArray *pload)
+{
+	gboolean res;
+	JsonNode *root;
+
+	if (!fb_api_json_chk(api, pload->data, pload->len, &root)) {
+		return;
+	}
+
+	if (fb_json_node_chk_bool(root, "$.succeeded", &res) && !res) {
+		fb_api_error(api, FB_API_ERROR_GENERAL,
+		             _("Failed to mark thread as read"));
+	}
+
+	json_node_free(root);
+}
+
+static void
+fb_api_cb_publish_typing(FbApi *api, const GByteArray *pload)
 {
 	FbApiTyping typg;
 	gboolean res;
@@ -711,6 +730,8 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 		g_signal_emit_by_name(api, "connect");
 		goto finish;
 	}
+
+	fb_json_node_chk_int(root, "$.lastIssuedSeqId", &priv->sid);
 
 	arr = fb_json_node_get_arr(root, "$.deltas", &err);
 	FB_API_ERROR_CHK(api, err, goto finish);
@@ -863,6 +884,17 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic,
 	FbApi *api = data;
 	gboolean comp;
 	GByteArray *bytes;
+	guint i;
+
+	static const struct {
+		const gchar *topic;
+		void (*func) (FbApi *api, const GByteArray *pload);
+	} parsers[] = {
+		{"/mark_thread_response", fb_api_cb_publish_mark},
+		{"/orca_typing_notifications", fb_api_cb_publish_typing},
+		{"/t_ms", fb_api_cb_publish_ms},
+		{"/t_p", fb_api_cb_publish_p}
+	};
 
 	comp = fb_util_zcompressed(pload);
 
@@ -882,12 +914,11 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic,
 	                      "Reading message (topic: %s)",
 			      topic);
 
-	if (g_ascii_strcasecmp(topic, "/orca_typing_notifications") == 0) {
-		fb_api_cb_publish_tn(api, bytes);
-	} else if (g_ascii_strcasecmp(topic, "/t_ms") == 0) {
-		fb_api_cb_publish_ms(api, bytes);
-	} else if (g_ascii_strcasecmp(topic, "/t_p") == 0) {
-		fb_api_cb_publish_p(api, bytes);
+	for (i = 0; i < G_N_ELEMENTS(parsers); i++) {
+		if (g_ascii_strcasecmp(topic, parsers[i].topic) == 0) {
+			parsers[i].func(api, bytes);
+			break;
+		}
 	}
 
 	if (G_LIKELY(comp)) {
@@ -1240,6 +1271,30 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *fmt, ...)
 	fb_mqtt_publish(priv->mqtt, topic, cytes);
 	g_byte_array_free(cytes, TRUE);
 	g_byte_array_free(bytes, TRUE);
+}
+
+void
+fb_api_read(FbApi *api, FbId id, gboolean thread)
+{
+	const gchar *key;
+	FbApiPrivate *priv;
+	gchar *json;
+	JsonBuilder *bldr;
+
+	g_return_if_fail(FB_IS_API(api));
+	priv = api->priv;
+
+	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
+	fb_json_bldr_add_bool(bldr, "state", TRUE);
+	fb_json_bldr_add_int(bldr, "syncSeqId", priv->sid);
+	fb_json_bldr_add_str(bldr, "mark", "read");
+
+	key = thread ? "threadFbId" : "otherUserFbId";
+	fb_json_bldr_add_strf(bldr, key, "%" FB_ID_FORMAT, id);
+
+	json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
+	fb_api_publish(api, "/mark_thread", "%s", json);
+	g_free(json);
 }
 
 static void

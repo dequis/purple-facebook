@@ -183,6 +183,9 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *fmt, ...)
                G_GNUC_PRINTF(3, 4);
 
 void
+fb_api_read(FbApi *api, FbId id, gboolean thread);
+
+void
 fb_api_thread_create(FbApi *api, GSList *uids);
 
 void
