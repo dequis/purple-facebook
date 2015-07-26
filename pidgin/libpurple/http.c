@@ -2452,6 +2452,8 @@ static void purple_http_request_free(PurpleHttpRequest *request)
 	purple_http_headers_free(request->headers);
 	purple_http_cookie_jar_unref(request->cookie_jar);
 	purple_http_keepalive_pool_unref(request->keepalive_pool);
+	g_free(request->method);
+	g_free(request->contents);
 	g_free(request->url);
 	g_free(request);
 }
