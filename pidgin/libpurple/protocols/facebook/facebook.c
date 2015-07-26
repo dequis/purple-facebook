@@ -194,6 +194,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 {
 	FbApiMessage *msg;
 	FbData *fata = data;
+	gboolean mark;
 	gchar *html;
 	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
@@ -205,6 +206,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 
 	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
+	mark = purple_account_get_bool(acct, "mark-read", TRUE);
 
 	for (l = msgs; l != NULL; l = l->next) {
 		msg = l->data;
@@ -214,6 +216,10 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 		FB_ID_TO_STR(msg->uid, uid);
 
 		if (msg->tid == 0) {
+			if (mark) {
+				fb_api_read(api, msg->uid, TRUE);
+			}
+
 			purple_serv_got_im(gc, uid, html,
 		                           PURPLE_MESSAGE_RECV,
 			                   time(NULL));
@@ -225,6 +231,10 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 		chat = purple_conversations_find_chat_with_account(tid, acct);
 
 		if (chat != NULL) {
+			if (mark) {
+				fb_api_read(api, msg->tid, TRUE);
+			}
+
 			id = purple_chat_conversation_get_id(chat);
 			purple_serv_got_chat_in(gc, id, uid,
 			                        PURPLE_MESSAGE_RECV,
@@ -901,9 +911,17 @@ fb_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args,
 static void
 facebook_protocol_init(PurpleProtocol *protocol)
 {
+	GList *opts = NULL;
+	PurpleAccountOption *opt;
+
 	protocol->id      = "prpl-facebook";
 	protocol->name    = "Facebook";
 	protocol->options = OPT_PROTO_CHAT_TOPIC;
+
+	opt = purple_account_option_bool_new(_("Mark messages as read"),
+	                                     "mark-read", TRUE);
+	opts = g_list_prepend(opts, opt);
+	protocol->account_options = g_list_reverse(opts);
 }
 
 static void
