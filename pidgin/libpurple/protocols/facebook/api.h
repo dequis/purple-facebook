@@ -87,7 +87,8 @@ typedef struct _FbApiHttpInfo FbApiHttpInfo;
 
 enum _FbApiError
 {
-	FB_API_ERROR_GENERAL
+	FB_API_ERROR_GENERAL,
+	FB_API_ERROR_AUTH
 };
 
 struct _FbApi

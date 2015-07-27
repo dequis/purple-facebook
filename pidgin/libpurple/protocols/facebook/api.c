@@ -306,12 +306,23 @@ fb_api_error_quark(void)
 static gboolean
 fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 {
+	FbApiError errc = FB_API_ERROR_GENERAL;
 	FbApiPrivate *priv;
-	gboolean success = FALSE;
+	gboolean success = TRUE;
 	gchar *msg = NULL;
+	gchar *str;
 	GError *err = NULL;
 	gint64 code;
+	guint i;
 	JsonNode *root;
+
+	static const gchar *exprs[] = {
+		"$.error.message",
+		"$.error.summary",
+		"$.error_msg",
+		"$.errorCode",
+		"$.failedSend.errorMessage",
+	};
 
 	g_return_val_if_fail(FB_IS_API(api), FALSE);
 	priv = api->priv;
@@ -325,37 +336,71 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 	root = fb_json_node_new(data, size, &err);
 	FB_API_ERROR_CHK(api, err, return FALSE);
 
-	if (fb_json_node_chk_str(root, "$.error.summary", &msg) ||
-	    fb_json_node_chk_str(root, "$.failedSend.errorMessage", &msg))
+	if (fb_json_node_chk_int(root, "$.error_code", &code) &&
+	    (code == 401))
 	{
-		fb_api_error(api, FB_API_ERROR_GENERAL, "%s", msg);
-	} else if (fb_json_node_chk_int(root, "$.error_code", &code)) {
-		if (!fb_json_node_chk_str(root, "$.error_msg", &msg)) {
-			msg = g_strdup(_("Generic error"));
-		}
+		errc = FB_API_ERROR_AUTH;
+		success = FALSE;
 
-		fb_api_error(api, FB_API_ERROR_GENERAL, "%s", msg);
-	} else if (fb_json_node_chk_str(root, "$.errorCode", &msg)) {
-		if ((g_ascii_strcasecmp(msg, "ERROR_QUEUE_NOT_FOUND") == 0) ||
-		    (g_ascii_strcasecmp(msg, "ERROR_QUEUE_LOST") == 0))
-		{
-			g_free(priv->stoken);
-			priv->stoken = NULL;
-		}
+		g_free(priv->stoken);
+		priv->stoken = NULL;
 
-		fb_api_error(api, FB_API_ERROR_GENERAL, "%s", msg);
-	} else {
-		success = TRUE;
+		g_free(priv->token);
+		priv->token = NULL;
 	}
 
-	if (success && (node != NULL)) {
+	if (fb_json_node_chk_str(root, "$.error.type", &str) &&
+	    (g_ascii_strcasecmp(str, "OAuthException") == 0))
+	{
+		errc = FB_API_ERROR_AUTH;
+		success = FALSE;
+		g_free(str);
+
+		g_free(priv->stoken);
+		priv->stoken = NULL;
+
+		g_free(priv->token);
+		priv->token = NULL;
+
+	}
+
+	if (fb_json_node_chk_str(root, "$.errorCode", &str) && (
+		(g_ascii_strcasecmp(str, "ERROR_QUEUE_NOT_FOUND") == 0) ||
+		(g_ascii_strcasecmp(str, "ERROR_QUEUE_LOST") == 0)))
+	{
+		errc = FB_API_ERROR_AUTH;
+		success = FALSE;
+		g_free(str);
+
+		g_free(priv->stoken);
+		priv->stoken = NULL;
+	}
+
+	for (i = 0; i < G_N_ELEMENTS(exprs); i++) {
+		if (fb_json_node_chk_str(root, exprs[i], &msg)) {
+			success = FALSE;
+			break;
+		}
+	}
+
+	if (!success && (msg == NULL)) {
+		msg = g_strdup(_("Unknown error"));
+	}
+
+	if (msg != NULL) {
+		fb_api_error(api, errc, "%s", msg);
+		json_node_free(root);
+		g_free(msg);
+		return FALSE;
+	}
+
+	if (node != NULL) {
 		*node = root;
 	} else {
 		json_node_free(root);
 	}
 
-	g_free(msg);
-	return success;
+	return TRUE;
 }
 
 static gboolean
@@ -388,11 +433,21 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 		              (gint) size, data);
 	}
 
-	if (!fb_http_error_chk(res, &err)) {
+	if ((root == NULL) && fb_http_error_chk(res, &err)) {
+		return TRUE;
+	}
+
+	/* Rudimentary check to prevent wrongful error parsing */
+	if ((size < 2) || (data[0] != '{') || (data[size - 1] != '}')) {
 		FB_API_ERROR_CHK(api, err, return FALSE);
 	}
 
-	return (root == NULL) || fb_api_json_chk(api, data, size, root);
+	if (fb_api_json_chk(api, data, size, root)) {
+		FB_API_ERROR_CHK(api, err, return FALSE);
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 static PurpleHttpConnection *
