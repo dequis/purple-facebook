@@ -18,6 +18,7 @@
 #ifndef _PURPLE_COMPAT_H_
 #define _PURPLE_COMPAT_H_
 
+#include "accountopt.h"
 #include "connection.h"
 #include "debug.h"
 #include "notify.h"

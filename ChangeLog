@@ -1,3 +1,12 @@
+purple-facebook-f80258f7ce6f (2015-07-26):
+  - Added debian support
+  - Added NULL Away state for compatibility
+  - Fixed double free with MQTT SSL errors
+  - Fixed logic error with error detection
+  - Fixed out of tree updating with update.sh
+  - Implemented marking threads as read
+  - Open new group chats with incoming messages
+
 purple-facebook-565fbae05259 (2015-07-18):
   - Dropped required glib version to 2.20.0
   - Fixed libpurple check within autoconf
