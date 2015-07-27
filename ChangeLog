@@ -1,3 +1,6 @@
+purple-facebook-7c454f51b56b (2015-07-27):
+  - Handle authentication errors
+
 purple-facebook-f80258f7ce6f (2015-07-26):
   - Added debian support
   - Added NULL Away state for compatibility
