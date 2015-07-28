@@ -95,7 +95,7 @@ marshal.h: marshaller.list
 ## CLEAN RULES
 ##
 clean:
-	rm -f $(OBJECTS)
+	rm -f $(OBJECTS) marshal.c marshal.h
 	rm -f $(TARGET).dll
 
 include $(PIDGIN_COMMON_TARGETS)
