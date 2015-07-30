@@ -143,13 +143,11 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 		bdy = purple_blist_find_buddy(acct, uid);
 
 		if (bdy == NULL) {
-			bdy = purple_buddy_new(acct, uid, user->name);
+			bdy = purple_buddy_new(acct, uid, NULL);
 			purple_blist_add_buddy(bdy, NULL, grp, NULL);
-			fb_data_icon_add(fata, bdy, user->icon,
-			                 fb_cb_data_icon);
-			continue;
 		}
 
+		purple_buddy_set_server_alias(bdy, user->name);
 		csum = purple_buddy_icons_get_checksum_for_user(bdy);
 
 		if (!purple_strequal(csum, user->csum)) {
@@ -576,6 +574,27 @@ fb_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
 	return "facebook";
 }
 
+static void
+fb_client_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *info,
+                       gboolean full)
+{
+	const gchar *name;
+	PurplePresence *pres;
+	PurpleStatus *status;
+
+	pres = purple_buddy_get_presence(buddy);
+	status = purple_presence_get_active_status(pres);
+
+	if (!PURPLE_BUDDY_IS_ONLINE(buddy)) {
+		/* Prevent doubles statues for Offline buddies */
+		/* See: pidgin_get_tooltip_text() in gtkblist.c */
+		purple_notify_user_info_remove_last_item(info);
+	}
+
+	name = purple_status_get_name(status);
+	purple_notify_user_info_add_pair_plaintext(info, _("Status"), name);
+}
+
 static GList *
 fb_client_blist_node_menu(PurpleBlistNode *node)
 {
@@ -958,6 +977,7 @@ facebook_protocol_class_init(PurpleProtocolClass *klass)
 static void
 facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
 {
+	iface->tooltip_text    = fb_client_tooltip_text;
 	iface->blist_node_menu = fb_client_blist_node_menu;
 	iface->offline_message = fb_client_offline_message;
 }
