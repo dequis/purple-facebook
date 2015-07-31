@@ -1,3 +1,7 @@
+purple-facebook-27833e4fcb1f (2015-07-30):
+  - Added additional tooltip pairs
+  - Fixed Makefile.mingw not removing marshal sources
+
 purple-facebook-7c454f51b56b (2015-07-27):
   - Handle authentication errors
 

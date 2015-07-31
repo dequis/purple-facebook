@@ -52,6 +52,7 @@
 #define purple_blist_get_default_group()        NULL
 #define purple_blist_find_buddies               purple_find_buddies
 #define purple_blist_find_buddy                 purple_find_buddy
+#define purple_buddy_set_server_alias           purple_blist_server_alias_buddy
 #define purple_chat_conversation_add_user       purple_conv_chat_add_user
 #define purple_chat_conversation_get_id         purple_conv_chat_get_id
 #define purple_chat_conversation_has_user       purple_conv_chat_find_user
