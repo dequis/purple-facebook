@@ -23,6 +23,7 @@
 
 #include "account.h"
 #include "connection.h"
+#include "glibcompat.h"
 #include "plugins.h"
 #include "protocol.h"
 #include "protocols.h"

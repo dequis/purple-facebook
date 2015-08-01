@@ -22,8 +22,9 @@
 #ifndef _FACEBOOK_DATA_H_
 #define _FACEBOOK_DATA_H_
 
+#include <glib.h>
+
 #include "connection.h"
-#include "glibcompat.h"
 
 #define FB_DATA_ICON_MAX 4
 

@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "api.h"
+#include "glibcompat.h"
 #include "http.h"
 #include "json.h"
 #include "marshal.h"

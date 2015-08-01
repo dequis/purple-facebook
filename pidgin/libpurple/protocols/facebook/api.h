@@ -22,9 +22,10 @@
 #ifndef _FACEBOOK_API_H_
 #define _FACEBOOK_API_H_
 
+#include <glib.h>
+
 #include "internal.h"
 
-#include "glibcompat.h"
 #include "http.h"
 #include "id.h"
 #include "mqtt.h"

@@ -23,6 +23,7 @@
 
 #include "api.h"
 #include "data.h"
+#include "glibcompat.h"
 
 struct _FbDataPrivate
 {

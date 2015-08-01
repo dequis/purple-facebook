@@ -22,9 +22,8 @@
 #ifndef _FACEBOOK_MQTT_H_
 #define _FACEBOOK_MQTT_H_
 
+#include <glib.h>
 #include <string.h>
-
-#include "glibcompat.h"
 
 #define FB_MQTT_NAME "MQIsdp"
 #define FB_MQTT_VERS 3
