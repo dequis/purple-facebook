@@ -24,6 +24,11 @@
 
 #include <glib.h>
 
+#include <libpurple/util.h>
+
+#include "account.h"
+#include "conversationtypes.h"
+#include "debug.h"
 #include "connection.h"
 
 #define FB_UTIL_DEBUG_INFO (        \

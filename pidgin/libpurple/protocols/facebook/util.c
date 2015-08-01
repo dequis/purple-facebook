@@ -25,7 +25,10 @@
 #include <string.h>
 #include <zlib.h>
 
+#include "blistnodetypes.h"
+#include "buddylist.h"
 #include "glibcompat.h"
+#include "request.h"
 
 #include "util.h"
 

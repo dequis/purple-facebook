@@ -25,6 +25,8 @@
 #include <glib.h>
 #include <string.h>
 
+#include "connection.h"
+
 #define FB_MQTT_NAME "MQIsdp"
 #define FB_MQTT_VERS 3
 #define FB_MQTT_KA   60
