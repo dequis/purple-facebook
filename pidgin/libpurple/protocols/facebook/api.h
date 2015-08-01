@@ -22,9 +22,11 @@
 #ifndef _FACEBOOK_API_H_
 #define _FACEBOOK_API_H_
 
+#include "internal.h"
+
 #include <glib.h>
 
-#include "internal.h"
+#include "connection.h"
 
 #include "http.h"
 #include "id.h"

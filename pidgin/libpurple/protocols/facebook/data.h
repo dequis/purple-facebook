@@ -24,7 +24,11 @@
 
 #include <glib.h>
 
+#include "blistnodetypes.h"
 #include "connection.h"
+#include "roomlist.h"
+
+#include "http.h"
 
 #define FB_DATA_ICON_MAX 4
 

@@ -25,6 +25,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include "account.h"
 #include "eventloop.h"
 #include "sslconn.h"
 
