@@ -189,6 +189,13 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 	PurpleConnection *gc;
 	PurpleConnectionError errc;
 
+	gc = fb_data_get_connection(fata);
+
+	if (error->domain == FB_MQTT_SSL_ERROR) {
+		purple_connection_ssl_error(gc, error->code);
+		return;
+	}
+
 	if ((error->domain == FB_HTTP_ERROR) &&
 	    (error->code >= 400) &&
 	    (error->code <= 500))
@@ -200,7 +207,6 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 		errc = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
 	}
 
-	gc = fb_data_get_connection(fata);
 	purple_connection_error(gc, errc, error->message);
 }
 

@@ -170,6 +170,18 @@ fb_mqtt_error_quark(void)
 	return q;
 }
 
+GQuark
+fb_mqtt_ssl_error_quark(void)
+{
+	static GQuark q = 0;
+
+	if (G_UNLIKELY(q == 0)) {
+		q = g_quark_from_static_string("fb-mqtt-ssl-error-quark");
+	}
+
+	return q;
+}
+
 FbMqtt *
 fb_mqtt_new(PurpleConnection *gc)
 {
@@ -550,13 +562,20 @@ static void
 fb_mqtt_cb_open_error(PurpleSslConnection *ssl, PurpleSslErrorType error,
                       gpointer data)
 {
+	const gchar *str;
 	FbMqtt *mqtt = data;
 	FbMqttPrivate *priv = mqtt->priv;
+	GError *err;
+
+	str = purple_ssl_strerror(error);
+	err = g_error_new_literal(FB_MQTT_SSL_ERROR, error, str);
+
+	g_signal_emit_by_name(mqtt, "error", err);
+	g_error_free(err);
 
 	/* Do not call purple_ssl_close() from the error_func */
 	priv->gsc = NULL;
-
-	fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL, _("Failed to connect"));
+	fb_mqtt_close(mqtt);
 }
 
 void
