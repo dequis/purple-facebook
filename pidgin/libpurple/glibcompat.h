@@ -61,6 +61,24 @@ static inline gboolean g_close(gint fd, GError **error)
 	return FALSE;
 }
 
+#if !GLIB_CHECK_VERSION(2, 34, 0)
+
+static inline GSList * g_slist_copy_deep(GSList *list, GCopyFunc func,
+	gpointer data)
+{
+	GSList *ret = NULL;
+	GSList *l;
+	gpointer *ptr;
+
+	if (G_UNLIKELY(func == NULL))
+		return g_slist_copy(list);
+
+	for (l = list; l != NULL; l = l->next)
+		ret = g_slist_prepend(ret, func(l->data, data));
+
+	return g_slist_reverse(ret);
+}
+
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
 #include <glib-object.h>
@@ -76,6 +94,17 @@ static inline gboolean g_close(gint fd, GError **error)
 	g_signal_handlers_disconnect_matched((instance), G_SIGNAL_MATCH_DATA, \
 			0, 0, NULL, NULL, (data))
 
+static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
+{
+	GByteArray *array;
+
+	array = g_byte_array_new();
+	g_byte_array_append(array, data, len);
+	g_free(data);
+
+	return array;
+}
+
 static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
 	gpointer data, GError **error)
 {
@@ -83,6 +112,8 @@ static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
 }
 
 #if !GLIB_CHECK_VERSION(2, 30, 0)
+
+#define G_VALUE_INIT {0, {{0}}}
 
 static inline gchar *g_utf8_substring(const gchar *str, glong start_pos,
 	glong end_pos)
@@ -144,6 +175,8 @@ static inline void g_object_class_install_properties(GObjectClass *oclass,
 #endif /* < 2.30.0 */
 
 #endif /* < 2.32.0 */
+
+#endif /* < 2.34.0 */
 
 #endif /* < 2.36.0 */
 

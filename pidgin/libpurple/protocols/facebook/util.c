@@ -25,6 +25,8 @@
 #include <string.h>
 #include <zlib.h>
 
+#include "glibcompat.h"
+
 #include "util.h"
 
 GQuark

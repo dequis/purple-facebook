@@ -22,8 +22,9 @@
 #ifndef _FACEBOOK_UTIL_H_
 #define _FACEBOOK_UTIL_H_
 
+#include <glib.h>
+
 #include "connection.h"
-#include "glibcompat.h"
 
 #define FB_UTIL_DEBUG_INFO (        \
 		PURPLE_DEBUG_INFO |         \

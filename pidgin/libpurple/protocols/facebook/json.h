@@ -22,9 +22,8 @@
 #ifndef _FACEBOOK_JSON_H_
 #define _FACEBOOK_JSON_H_
 
+#include <glib.h>
 #include <json-glib/json-glib.h>
-
-#include "glibcompat.h"
 
 #define FB_JSON_ERROR fb_json_error_quark()
 
