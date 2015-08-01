@@ -53,6 +53,7 @@
 #define FB_MQTT_MESSAGE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_MQTT_MESSAGE, FbMqttMessageClass))
 
 #define FB_MQTT_ERROR  fb_mqtt_error_quark()
+#define FB_MQTT_SSL_ERROR  fb_mqtt_ssl_error_quark()
 
 typedef enum _FbMqttConnectFlags FbMqttConnectFlags;
 typedef enum _FbMqttError FbMqttError;
@@ -146,6 +147,9 @@ fb_mqtt_message_get_type(void);
 
 GQuark
 fb_mqtt_error_quark(void);
+
+GQuark
+fb_mqtt_ssl_error_quark(void);
 
 FbMqtt *
 fb_mqtt_new(PurpleConnection *gc);
