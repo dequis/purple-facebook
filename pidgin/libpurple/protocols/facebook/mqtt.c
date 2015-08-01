@@ -27,6 +27,7 @@
 
 #include "account.h"
 #include "eventloop.h"
+#include "glibcompat.h"
 #include "sslconn.h"
 
 #include "marshal.h"
@@ -237,18 +238,14 @@ fb_mqtt_close(FbMqtt *mqtt)
 void
 fb_mqtt_error(FbMqtt *mqtt, FbMqttError error, const gchar *format, ...)
 {
-	gchar *str;
-	GError *err = NULL;
+	GError *err;
 	va_list ap;
 
 	g_return_if_fail(FB_IS_MQTT(mqtt));
 
 	va_start(ap, format);
-	str = g_strdup_vprintf(format, ap);
+	err = g_error_new_valist(FB_MQTT_ERROR, error, format, ap);
 	va_end(ap);
-
-	g_set_error(&err, FB_MQTT_ERROR, error, "%s", str);
-	g_free(str);
 
 	g_signal_emit_by_name(mqtt, "error", err);
 	fb_mqtt_close(mqtt);

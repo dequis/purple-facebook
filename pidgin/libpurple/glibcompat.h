@@ -168,6 +168,25 @@ static inline void g_object_class_install_properties(GObjectClass *oclass,
 		g_object_class_install_property(oclass, i, pspecs[i]);
 }
 
+#if !GLIB_CHECK_VERSION(2, 22, 0)
+
+#include <stdarg.h>
+
+static inline GError * g_error_new_valist(GQuark domain, gint code,
+	const gchar *format, va_list args)
+{
+	gchar *str;
+	GError *error;
+
+	str = g_strdup_vprintf(format, args);
+	error = g_error_new_literal(domain, code, str);
+
+	g_free(str);
+	return error;
+}
+
+#endif /* < 2.22.0 */
+
 #endif /* < 2.26.0 */
 
 #endif /* < 2.28.0 */

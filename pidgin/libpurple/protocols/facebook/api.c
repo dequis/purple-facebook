@@ -23,8 +23,9 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "api.h"
 #include "glibcompat.h"
+
+#include "api.h"
 #include "http.h"
 #include "json.h"
 #include "marshal.h"
@@ -329,9 +330,8 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
 	priv = api->priv;
 
 	if (G_UNLIKELY(size == 0)) {
-		g_set_error(&err, FB_API_ERROR, FB_API_ERROR_GENERAL,
-		            _("Invalid JSON data"));
-		FB_API_ERROR_CHK(api, err, return FALSE);
+		fb_api_error(api, FB_API_ERROR_GENERAL, _("Empty JSON data"));
+		return FALSE;
 	}
 
 	root = fb_json_node_new(data, size, &err);
@@ -1043,18 +1043,14 @@ fb_api_rehash(FbApi *api)
 void
 fb_api_error(FbApi *api, FbApiError error, const gchar *format, ...)
 {
-	gchar *str;
-	GError *err = NULL;
+	GError *err;
 	va_list ap;
 
 	g_return_if_fail(FB_IS_API(api));
 
 	va_start(ap, format);
-	str = g_strdup_vprintf(format, ap);
+	err = g_error_new_valist(FB_API_ERROR, error, format, ap);
 	va_end(ap);
-
-	g_set_error(&err, FB_API_ERROR, error, "%s", str);
-	g_free(str);
 
 	g_signal_emit_by_name(api, "error", err);
 	g_error_free(err);
