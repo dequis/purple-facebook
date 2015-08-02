@@ -1102,6 +1102,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApi *api = data;
 	FbApiUser user;
 	FbHttpParams *params;
+	gboolean friend;
 	gchar *str;
 	gchar *writeid = NULL;
 	GError *err = NULL;
@@ -1132,6 +1133,17 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		writeid = fb_json_node_get_str(node, "$.graph_api_write_id",
 		                               &err);
 		FB_API_ERROR_CHK(api, err, goto finish);
+
+		str = fb_json_node_get_str(node, "$.represented_profile"
+				                  ".friendship_status", &err);
+		FB_API_ERROR_CHK(api, err, goto finish);
+
+		friend = g_ascii_strcasecmp(str, "ARE_FRIENDS") == 0;
+		g_free(str);
+
+		if (!friend) {
+			continue;
+		}
 
 		str = fb_json_node_get_str(node, "$.represented_profile.id",
 		                           NULL);
