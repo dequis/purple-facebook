@@ -28,13 +28,33 @@
 #define FB_JSON_ERROR fb_json_error_quark()
 
 typedef enum _FbJsonError FbJsonError;
+typedef struct _FbJsonValue FbJsonValue;
+typedef struct _FbJsonValues FbJsonValues;
 
 enum _FbJsonError
 {
 	FB_JSON_ERROR_SUCCESS = 0,
 	FB_JSON_ERROR_AMBIGUOUS,
+	FB_JSON_ERROR_GENERAL,
 	FB_JSON_ERROR_NOMATCH,
 	FB_JSON_ERROR_NULL
+};
+
+struct _FbJsonValue
+{
+	const gchar *expr;
+	gboolean required;
+	GValue value;
+};
+
+struct _FbJsonValues
+{
+	JsonNode *root;
+	GQueue *queue;
+	GList *next;
+	JsonArray *array;
+	guint index;
+	gboolean success;
 };
 
 GQuark
@@ -96,22 +116,44 @@ fb_json_node_get_int(JsonNode *root, const gchar *expr, GError **error);
 gchar *
 fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error);
 
-gboolean
-fb_json_node_chk(JsonNode *root, const gchar *expr, JsonNode **value);
+FbJsonValues *
+fb_json_values_new(JsonNode *root);
+
+void
+fb_json_values_free(FbJsonValues *values);
+
+void
+fb_json_values_add(FbJsonValues *values, gboolean required, const gchar *expr);
+
+JsonNode *
+fb_json_values_get_root(FbJsonValues *values);
+
+void
+fb_json_values_set_array(FbJsonValues *values, const gchar *expr,
+                         GError **error);
 
 gboolean
-fb_json_node_chk_arr(JsonNode *root, const gchar *expr, JsonArray **value);
+fb_json_values_successful(FbJsonValues *values);
 
 gboolean
-fb_json_node_chk_bool(JsonNode *root, const gchar *expr, gboolean *value);
+fb_json_values_update(FbJsonValues *values, GError **error);
+
+const GValue *
+fb_json_values_next(FbJsonValues *values, GType type);
 
 gboolean
-fb_json_node_chk_dbl(JsonNode *root, const gchar *expr, gdouble *value);
+fb_json_values_next_bool(FbJsonValues *values, gboolean defval);
 
-gboolean
-fb_json_node_chk_int(JsonNode *root, const gchar *expr, gint64 *value);
+gdouble
+fb_json_values_next_dbl(FbJsonValues *values, gdouble defval);
 
-gboolean
-fb_json_node_chk_str(JsonNode *root, const gchar *expr, gchar **value);
+gint64
+fb_json_values_next_int(FbJsonValues *values, gint64 defval);
+
+const gchar *
+fb_json_values_next_str(FbJsonValues *values, const gchar *defval);
+
+gchar *
+fb_json_values_next_str_dup(FbJsonValues *values, const gchar *defval);
 
 #endif /* _FACEBOOK_JSON_H_ */
