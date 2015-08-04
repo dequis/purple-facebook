@@ -71,22 +71,6 @@ const gchar *
 fb_http_params_get_str(FbHttpParams *params, const gchar *name,
                        GError **error);
 
-gboolean
-fb_http_params_chk_bool(FbHttpParams *params, const gchar *name,
-                        gboolean *value);
-
-gboolean
-fb_http_params_chk_dbl(FbHttpParams *params, const gchar *name,
-                       gdouble *value);
-
-gboolean
-fb_http_params_chk_int(FbHttpParams *params, const gchar *name,
-                       gint64 *value);
-
-gboolean
-fb_http_params_chk_str(FbHttpParams *params, const gchar *name,
-                       const gchar **value);
-
 void
 fb_http_params_set_bool(FbHttpParams *params, const gchar *name,
 		        gboolean value);

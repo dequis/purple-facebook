@@ -67,7 +67,7 @@
 
 #define FB_API_ERROR_CHK(a, e, c)                             \
 	G_STMT_START {                                        \
-		if (G_UNLIKELY((e) != NULL)) {                \
+		if ((e) != NULL) {                            \
 			g_signal_emit_by_name(a, "error", e); \
 			g_error_free(e);                      \
 			{c;}                                  \

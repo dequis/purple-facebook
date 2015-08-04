@@ -22,8 +22,10 @@
 #include "internal.h"
 
 #include <stdarg.h>
+#include <string.h>
 
 #include "json.h"
+#include "util.h"
 
 GQuark
 fb_json_error_quark(void)
@@ -331,105 +333,258 @@ fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error)
 	return ret;
 }
 
-gboolean
-fb_json_node_chk(JsonNode *root, const gchar *expr, JsonNode **value)
+FbJsonValues *
+fb_json_values_new(JsonNode *root)
 {
-	JsonNode *rslt;
+	FbJsonValues *ret;
 
-	rslt = fb_json_node_get(root, expr, NULL);
+	ret = g_new0(FbJsonValues, 1);
+	ret->root = root;
+	ret->queue = g_queue_new();
 
-	if (rslt == NULL) {
-		return FALSE;
+	return ret;
+}
+
+void
+fb_json_values_free(FbJsonValues *values)
+{
+	FbJsonValue *value;
+
+	if (G_UNLIKELY(values == NULL)) {
+		return;
 	}
 
-	if (value != NULL) {
-		*value = rslt;
+	while (!g_queue_is_empty(values->queue)) {
+		value = g_queue_pop_head(values->queue);
+
+		if (G_IS_VALUE(&value->value)) {
+			g_value_unset(&value->value);
+		}
+
+		g_free(value);
 	}
 
-	return TRUE;
+	if (values->array != NULL) {
+		json_array_unref(values->array);
+	}
+
+	g_queue_free(values->queue);
+	g_free(values);
+}
+
+void
+fb_json_values_add(FbJsonValues *values, gboolean required, const gchar *expr)
+{
+	FbJsonValue *value;
+
+	g_return_if_fail(values != NULL);
+	g_return_if_fail(expr != NULL);
+
+	value = g_new0(FbJsonValue, 1);
+	value->expr = expr;
+	value->required = required;
+
+	g_queue_push_tail(values->queue, value);
+}
+
+JsonNode *
+fb_json_values_get_root(FbJsonValues *values)
+{
+	guint index;
+
+	g_return_val_if_fail(values != NULL, NULL);
+	g_return_val_if_fail(values->index > 0, NULL);
+
+	if (values->array == NULL) {
+		return values->root;
+	}
+
+	index = values->index - 1;
+
+	if (json_array_get_length(values->array) <= index) {
+		return NULL;
+	}
+
+	return json_array_get_element(values->array, index);
+}
+
+void
+fb_json_values_set_array(FbJsonValues *values, const gchar *expr,
+                         GError **error)
+{
+	GError *err = NULL;
+
+	g_return_if_fail(values != NULL);
+
+	if (values->array != NULL) {
+		json_array_unref(values->array);
+	}
+
+	values->array = fb_json_node_get_arr(values->root, expr, &err);
+	values->index = 0;
+
+	if (G_UNLIKELY(err != NULL)) {
+		g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_GENERAL,
+	                    _("Failed to obtain JSON array"));
+		fb_util_debug_error("%s", err->message);
+		g_error_free(err);
+	}
 }
 
 gboolean
-fb_json_node_chk_arr(JsonNode *root, const gchar *expr, JsonArray **value)
+fb_json_values_successful(FbJsonValues *values)
 {
-	JsonNode *rslt;
-
-	if (!fb_json_node_chk(root, expr, &rslt)) {
-		return FALSE;
-	}
-
-	if (value != NULL) {
-		*value = json_node_dup_array(rslt);
-	}
-
-	json_node_free(rslt);
-	return TRUE;
+	g_return_val_if_fail(values != NULL, FALSE);
+	return values->success;
 }
 
 gboolean
-fb_json_node_chk_bool(JsonNode *root, const gchar *expr, gboolean *value)
+fb_json_values_update(FbJsonValues *values, GError **error)
 {
-	JsonNode *rslt;
+	FbJsonValue *value;
+	GError *err = NULL;
+	GList *l;
+	JsonNode *root;
+	JsonNode *node;
 
-	if (!fb_json_node_chk(root, expr, &rslt)) {
-		return FALSE;
+	g_return_val_if_fail(values != NULL, FALSE);
+
+	if (values->array != NULL) {
+		if (json_array_get_length(values->array) <= values->index) {
+			return FALSE;
+		}
+
+		root = json_array_get_element(values->array, values->index++);
+	} else {
+		root = values->root;
 	}
 
-	if (value != NULL) {
-		*value = json_node_get_boolean(rslt);
+	g_return_val_if_fail(root != NULL, FALSE);
+	values->success = TRUE;
+
+	for (l = values->queue->head; l != NULL; l = l->next) {
+		value = l->data;
+		node = fb_json_node_get(root, value->expr, &err);
+
+		if (err != NULL) {
+			if (value->required) {
+				fb_util_debug_error("%s", err->message);
+				values->success = FALSE;
+			}
+
+			g_clear_error(&err);
+			continue;
+		}
+
+		if (G_IS_VALUE(&value->value)) {
+			g_value_unset(&value->value);
+		}
+
+		json_node_get_value(node, &value->value);
+		json_node_free(node);
 	}
 
-	json_node_free(rslt);
+	if (!values->success) {
+		g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_GENERAL,
+		            _("Failed to obtain JSON values"));
+	}
+
+	values->next = values->queue->head;
 	return TRUE;
 }
 
-gboolean
-fb_json_node_chk_dbl(JsonNode *root, const gchar *expr, gdouble *value)
+const GValue *
+fb_json_values_next(FbJsonValues *values, GType type)
 {
-	JsonNode *rslt;
+	FbJsonValue *value;
 
-	if (!fb_json_node_chk(root, expr, &rslt)) {
-		return FALSE;
+	g_return_val_if_fail(values != NULL, NULL);
+	g_return_val_if_fail(values->next != NULL, NULL);
+
+	value = values->next->data;
+	values->next = values->next->next;
+
+	if (!G_IS_VALUE(&value->value)) {
+		return NULL;
 	}
 
-	if (value != NULL) {
-		*value = json_node_get_double(rslt);
+	if (G_VALUE_TYPE(&value->value) != type) {
+		fb_util_debug_error("Excepted %s but got %s for %s",
+		                    g_type_name(type),
+		                    G_VALUE_TYPE_NAME(&value->value),
+		                    value->expr);
+		return NULL;
 	}
 
-	json_node_free(rslt);
-	return TRUE;
+	return &value->value;
 }
 
 gboolean
-fb_json_node_chk_int(JsonNode *root, const gchar *expr, gint64 *value)
+fb_json_values_next_bool(FbJsonValues *values, gboolean defval)
 {
-	JsonNode *rslt;
+	const GValue *value;
 
-	if (!fb_json_node_chk(root, expr, &rslt)) {
-		return FALSE;
+	value = fb_json_values_next(values, G_TYPE_BOOLEAN);
+
+	if (G_UNLIKELY(value == NULL)) {
+		return defval;
 	}
 
-	if (value != NULL) {
-		*value = json_node_get_int(rslt);
-	}
-
-	json_node_free(rslt);
-	return TRUE;
+	return g_value_get_boolean(value);
 }
 
-gboolean
-fb_json_node_chk_str(JsonNode *root, const gchar *expr, gchar **value)
+gdouble
+fb_json_values_next_dbl(FbJsonValues *values, gdouble defval)
 {
-	JsonNode *rslt;
+	const GValue *value;
 
-	if (!fb_json_node_chk(root, expr, &rslt)) {
-		return FALSE;
+	value = fb_json_values_next(values, G_TYPE_DOUBLE);
+
+	if (G_UNLIKELY(value == NULL)) {
+		return defval;
 	}
 
-	if (value != NULL) {
-		*value = json_node_dup_string(rslt);
+	return g_value_get_double(value);
+}
+
+gint64
+fb_json_values_next_int(FbJsonValues *values, gint64 defval)
+{
+	const GValue *value;
+
+	value = fb_json_values_next(values, G_TYPE_INT64);
+
+	if (G_UNLIKELY(value == NULL)) {
+		return defval;
 	}
 
-	json_node_free(rslt);
-	return TRUE;
+	return g_value_get_int64(value);
+}
+
+const gchar *
+fb_json_values_next_str(FbJsonValues *values, const gchar *defval)
+{
+	const GValue *value;
+
+	value = fb_json_values_next(values, G_TYPE_STRING);
+
+	if (G_UNLIKELY(value == NULL)) {
+		return defval;
+	}
+
+	return g_value_get_string(value);
+}
+
+gchar *
+fb_json_values_next_str_dup(FbJsonValues *values, const gchar *defval)
+{
+	const GValue *value;
+
+	value = fb_json_values_next(values, G_TYPE_STRING);
+
+	if (G_UNLIKELY(value == NULL)) {
+		return g_strdup(defval);
+	}
+
+	return g_value_dup_string(value);
 }
