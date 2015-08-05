@@ -28,6 +28,7 @@
 #define FB_JSON_ERROR fb_json_error_quark()
 
 typedef enum _FbJsonError FbJsonError;
+typedef enum _FbJsonType FbJsonType;
 typedef struct _FbJsonValue FbJsonValue;
 typedef struct _FbJsonValues FbJsonValues;
 
@@ -37,12 +38,23 @@ enum _FbJsonError
 	FB_JSON_ERROR_AMBIGUOUS,
 	FB_JSON_ERROR_GENERAL,
 	FB_JSON_ERROR_NOMATCH,
-	FB_JSON_ERROR_NULL
+	FB_JSON_ERROR_NULL,
+	FB_JSON_ERROR_TYPE
+};
+
+enum _FbJsonType
+{
+	FB_JSON_TYPE_NULL = 0,
+	FB_JSON_TYPE_BOOL = G_TYPE_BOOLEAN,
+	FB_JSON_TYPE_DBL  = G_TYPE_DOUBLE,
+	FB_JSON_TYPE_INT  = G_TYPE_INT64,
+	FB_JSON_TYPE_STR  = G_TYPE_STRING
 };
 
 struct _FbJsonValue
 {
 	const gchar *expr;
+	FbJsonType type;
 	gboolean required;
 	GValue value;
 };
@@ -54,7 +66,7 @@ struct _FbJsonValues
 	GList *next;
 	JsonArray *array;
 	guint index;
-	gboolean success;
+	GError *error;
 };
 
 GQuark
@@ -120,29 +132,23 @@ gchar *
 fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error);
 
 FbJsonValues *
-fb_json_values_new(JsonNode *root);
+fb_json_values_new(JsonNode *root, const gchar *arrexpr);
 
 void
 fb_json_values_free(FbJsonValues *values);
 
 void
-fb_json_values_add(FbJsonValues *values, gboolean required, const gchar *expr);
+fb_json_values_add(FbJsonValues *values, FbJsonType type, gboolean required,
+                   const gchar *expr);
 
 JsonNode *
 fb_json_values_get_root(FbJsonValues *values);
-
-void
-fb_json_values_set_array(FbJsonValues *values, const gchar *expr,
-                         GError **error);
-
-gboolean
-fb_json_values_successful(FbJsonValues *values);
 
 gboolean
 fb_json_values_update(FbJsonValues *values, GError **error);
 
 const GValue *
-fb_json_values_next(FbJsonValues *values, GType type);
+fb_json_values_next(FbJsonValues *values);
 
 gboolean
 fb_json_values_next_bool(FbJsonValues *values, gboolean defval);

@@ -349,13 +349,19 @@ fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error)
 }
 
 FbJsonValues *
-fb_json_values_new(JsonNode *root)
+fb_json_values_new(JsonNode *root, const gchar *arrexpr)
 {
 	FbJsonValues *ret;
+
+	g_return_val_if_fail(root != NULL, NULL);
 
 	ret = g_new0(FbJsonValues, 1);
 	ret->root = root;
 	ret->queue = g_queue_new();
+
+	if (arrexpr != NULL) {
+		ret->array = fb_json_node_get_arr(root, arrexpr, &ret->error);
+	}
 
 	return ret;
 }
@@ -383,12 +389,17 @@ fb_json_values_free(FbJsonValues *values)
 		json_array_unref(values->array);
 	}
 
+	if (values->error != NULL) {
+		g_error_free(values->error);
+	}
+
 	g_queue_free(values->queue);
 	g_free(values);
 }
 
 void
-fb_json_values_add(FbJsonValues *values, gboolean required, const gchar *expr)
+fb_json_values_add(FbJsonValues *values, FbJsonType type, gboolean required,
+                   const gchar *expr)
 {
 	FbJsonValue *value;
 
@@ -397,6 +408,7 @@ fb_json_values_add(FbJsonValues *values, gboolean required, const gchar *expr)
 
 	value = g_new0(FbJsonValue, 1);
 	value->expr = expr;
+	value->type = type;
 	value->required = required;
 
 	g_queue_push_tail(values->queue, value);
@@ -408,12 +420,13 @@ fb_json_values_get_root(FbJsonValues *values)
 	guint index;
 
 	g_return_val_if_fail(values != NULL, NULL);
-	g_return_val_if_fail(values->index > 0, NULL);
 
 	if (values->array == NULL) {
 		return values->root;
 	}
 
+	g_return_val_if_fail(values->array != NULL, NULL);
+	g_return_val_if_fail(values->index > 0, NULL);
 	index = values->index - 1;
 
 	if (json_array_get_length(values->array) <= index) {
@@ -423,46 +436,23 @@ fb_json_values_get_root(FbJsonValues *values)
 	return json_array_get_element(values->array, index);
 }
 
-void
-fb_json_values_set_array(FbJsonValues *values, const gchar *expr,
-                         GError **error)
-{
-	GError *err = NULL;
-
-	g_return_if_fail(values != NULL);
-
-	if (values->array != NULL) {
-		json_array_unref(values->array);
-	}
-
-	values->array = fb_json_node_get_arr(values->root, expr, &err);
-	values->index = 0;
-
-	if (G_UNLIKELY(err != NULL)) {
-		g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_GENERAL,
-	                    _("Failed to obtain JSON array"));
-		fb_util_debug_error("%s", err->message);
-		g_error_free(err);
-	}
-}
-
-gboolean
-fb_json_values_successful(FbJsonValues *values)
-{
-	g_return_val_if_fail(values != NULL, FALSE);
-	return values->success;
-}
-
 gboolean
 fb_json_values_update(FbJsonValues *values, GError **error)
 {
 	FbJsonValue *value;
 	GError *err = NULL;
 	GList *l;
+	GType type;
 	JsonNode *root;
 	JsonNode *node;
 
 	g_return_val_if_fail(values != NULL, FALSE);
+
+	if (G_UNLIKELY(values->error != NULL)) {
+		g_propagate_error(error, err);
+		values->error = NULL;
+		return FALSE;
+	}
 
 	if (values->array != NULL) {
 		if (json_array_get_length(values->array) <= values->index) {
@@ -475,7 +465,6 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 	}
 
 	g_return_val_if_fail(root != NULL, FALSE);
-	values->success = TRUE;
 
 	for (l = values->queue->head; l != NULL; l = l->next) {
 		value = l->data;
@@ -486,22 +475,31 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 		}
 
 		if (err != NULL) {
+			json_node_free(node);
+
 			if (value->required) {
-				fb_util_debug_error("%s", err->message);
-				values->success = FALSE;
+				g_propagate_error(error, err);
+				return FALSE;
 			}
 
 			g_clear_error(&err);
 			continue;
 		}
 
+		type = json_node_get_value_type(node);
+
+		if (G_UNLIKELY(type != value->type)) {
+			g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_TYPE,
+			            _("Expected a %s but got a %s for %s"),
+			            g_type_name(value->type),
+			            G_VALUE_TYPE_NAME(&value->value),
+				    value->expr);
+			json_node_free(node);
+			return FALSE;
+		}
+
 		json_node_get_value(node, &value->value);
 		json_node_free(node);
-	}
-
-	if (!values->success) {
-		g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_GENERAL,
-		            _("Failed to obtain JSON values"));
 	}
 
 	values->next = values->queue->head;
@@ -509,7 +507,7 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 }
 
 const GValue *
-fb_json_values_next(FbJsonValues *values, GType type)
+fb_json_values_next(FbJsonValues *values)
 {
 	FbJsonValue *value;
 
@@ -523,14 +521,6 @@ fb_json_values_next(FbJsonValues *values, GType type)
 		return NULL;
 	}
 
-	if (G_VALUE_TYPE(&value->value) != type) {
-		fb_util_debug_error("Excepted %s but got %s for %s",
-		                    g_type_name(type),
-		                    G_VALUE_TYPE_NAME(&value->value),
-		                    value->expr);
-		return NULL;
-	}
-
 	return &value->value;
 }
 
@@ -539,7 +529,7 @@ fb_json_values_next_bool(FbJsonValues *values, gboolean defval)
 {
 	const GValue *value;
 
-	value = fb_json_values_next(values, G_TYPE_BOOLEAN);
+	value = fb_json_values_next(values);
 
 	if (G_UNLIKELY(value == NULL)) {
 		return defval;
@@ -553,7 +543,7 @@ fb_json_values_next_dbl(FbJsonValues *values, gdouble defval)
 {
 	const GValue *value;
 
-	value = fb_json_values_next(values, G_TYPE_DOUBLE);
+	value = fb_json_values_next(values);
 
 	if (G_UNLIKELY(value == NULL)) {
 		return defval;
@@ -567,7 +557,7 @@ fb_json_values_next_int(FbJsonValues *values, gint64 defval)
 {
 	const GValue *value;
 
-	value = fb_json_values_next(values, G_TYPE_INT64);
+	value = fb_json_values_next(values);
 
 	if (G_UNLIKELY(value == NULL)) {
 		return defval;
@@ -581,7 +571,7 @@ fb_json_values_next_str(FbJsonValues *values, const gchar *defval)
 {
 	const GValue *value;
 
-	value = fb_json_values_next(values, G_TYPE_STRING);
+	value = fb_json_values_next(values);
 
 	if (G_UNLIKELY(value == NULL)) {
 		return defval;
@@ -595,7 +585,7 @@ fb_json_values_next_str_dup(FbJsonValues *values, const gchar *defval)
 {
 	const GValue *value;
 
-	value = fb_json_values_next(values, G_TYPE_STRING);
+	value = fb_json_values_next(values);
 
 	if (G_UNLIKELY(value == NULL)) {
 		return g_strdup(defval);
