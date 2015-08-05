@@ -1,7 +1,7 @@
-diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.am
---- a/libpurple/protocols/facebook/Makefile.am	Thu Jun 18 00:45:16 2015 -0400
-+++ b/libpurple/protocols/facebook/Makefile.am	Fri Jun 19 07:20:43 2015 -0400
-@@ -24,7 +24,12 @@
+diff -r 9e3520d6ec49 libpurple/protocols/facebook/Makefile.am
+--- a/libpurple/protocols/facebook/Makefile.am	Wed Aug 05 17:57:33 2015 -0400
++++ b/libpurple/protocols/facebook/Makefile.am	Wed Aug 05 19:22:43 2015 -0400
+@@ -23,7 +23,12 @@
  	thrift.c \
  	thrift.h \
  	util.c \
@@ -15,7 +15,7 @@ diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.am
  
  CLEANFILES = \
  	marshal.c \
-@@ -58,10 +63,9 @@
+@@ -57,10 +62,9 @@
  endif
  
  AM_CPPFLAGS = \
@@ -28,9 +28,9 @@ diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.am
 -	$(GPLUGIN_CFLAGS) \
 +	$(PLUGIN_CFLAGS) \
  	$(DEBUG_CFLAGS)
-diff -r 5abaecb5a83d libpurple/protocols/facebook/Makefile.mingw
---- a/libpurple/protocols/facebook/Makefile.mingw	Thu Jun 18 00:45:16 2015 -0400
-+++ b/libpurple/protocols/facebook/Makefile.mingw	Fri Jun 19 07:20:43 2015 -0400
+diff -r 9e3520d6ec49 libpurple/protocols/facebook/Makefile.mingw
+--- a/libpurple/protocols/facebook/Makefile.mingw	Wed Aug 05 17:57:33 2015 -0400
++++ b/libpurple/protocols/facebook/Makefile.mingw	Wed Aug 05 19:22:43 2015 -0400
 @@ -50,7 +50,9 @@
  			json.c \
  			mqtt.c \

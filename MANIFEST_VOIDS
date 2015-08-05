@@ -1,3 +1,10 @@
+include/blistnode.h
+include/blistnodetypes.h
+include/buddylist.h
+include/conversations.h
+include/conversationtypes.h
+include/message.h
 include/plugins.h
+include/presence.h
 include/protocol.h
 include/protocols.h

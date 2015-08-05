@@ -1,3 +1,12 @@
+purple-facebook-9e3520d6ec49 (2015-08-05):
+  - Cleaned up the libpurple includes
+  - Fixed non-friends being added as buddies
+  - Fixed propagation of MQTT SSL errors
+  - Implemented handling of message attachments
+  - Merged the local glibcompat.h into libpurple
+  - Refactored error propagation
+  - Refactored the parsing of JSON values
+
 purple-facebook-27833e4fcb1f (2015-07-30):
   - Added additional tooltip pairs
   - Fixed Makefile.mingw not removing marshal sources
