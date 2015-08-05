@@ -248,6 +248,21 @@ fb_json_node_get(JsonNode *root, const gchar *expr, GError **error)
 	return ret;
 }
 
+JsonNode *
+fb_json_node_get_nth(JsonNode *root, guint n)
+{
+	GList *vals;
+	JsonNode *ret;
+	JsonObject *obj;
+
+	obj = json_node_get_object(root);
+	vals = json_object_get_values(obj);
+	ret = g_list_nth_data(vals, n);
+
+	g_list_free(vals);
+	return ret;
+}
+
 JsonArray *
 fb_json_node_get_arr(JsonNode *root, const gchar *expr, GError **error)
 {
@@ -466,6 +481,10 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 		value = l->data;
 		node = fb_json_node_get(root, value->expr, &err);
 
+		if (G_IS_VALUE(&value->value)) {
+			g_value_unset(&value->value);
+		}
+
 		if (err != NULL) {
 			if (value->required) {
 				fb_util_debug_error("%s", err->message);
@@ -474,10 +493,6 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 
 			g_clear_error(&err);
 			continue;
-		}
-
-		if (G_IS_VALUE(&value->value)) {
-			g_value_unset(&value->value);
 		}
 
 		json_node_get_value(node, &value->value);

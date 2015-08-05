@@ -53,7 +53,7 @@ void
 fb_http_params_free(FbHttpParams *params);
 
 gchar *
-fb_http_params_close(FbHttpParams *params, gsize *size);
+fb_http_params_close(FbHttpParams *params, const gchar *url);
 
 gboolean
 fb_http_params_get_bool(FbHttpParams *params, const gchar *name,
@@ -69,6 +69,10 @@ fb_http_params_get_int(FbHttpParams *params, const gchar *name,
 
 const gchar *
 fb_http_params_get_str(FbHttpParams *params, const gchar *name,
+                       GError **error);
+
+gchar *
+fb_http_params_dup_str(FbHttpParams *params, const gchar *name,
                        GError **error);
 
 void

@@ -306,7 +306,7 @@ fb_api_error_quark(void)
 }
 
 static gboolean
-fb_api_json_chk(FbApi *api, gconstpointer data, gsize size, JsonNode **node)
+fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 {
 	const gchar *str;
 	FbApiError errc = FB_API_ERROR_GENERAL;
@@ -458,7 +458,6 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 	gchar *val;
 	GList *keys;
 	GList *l;
-	gsize size;
 	GString *gstr;
 	PurpleHttpConnection *ret;
 	PurpleHttpRequest *req;
@@ -505,8 +504,8 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 		g_free(data);
 	}
 
-	data = fb_http_params_close(params, &size);
-	purple_http_request_set_contents(req, data, size);
+	data = fb_http_params_close(params, NULL);
+	purple_http_request_set_contents(req, data, -1);
 	ret = purple_http_request(priv->gc, req, info->callback, api);
 	purple_http_request_unref(req);
 
@@ -632,14 +631,41 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_int(bldr, "delta_batch_size", 125);
 	fb_json_bldr_add_int(bldr, "max_deltas_able_to_process", 1250);
-	fb_json_bldr_add_int(bldr, "sync_api_version", 2);
+	fb_json_bldr_add_int(bldr, "sync_api_version", 3);
 	fb_json_bldr_add_str(bldr, "encoding", "JSON");
 
 	if (priv->stoken == NULL) {
 		fb_json_bldr_add_int(bldr, "initial_titan_sequence_id",
 		                     priv->sid);
 		fb_json_bldr_add_str(bldr, "device_id", priv->did);
+		fb_json_bldr_add_int(bldr, "entity_fbid", priv->uid);
+
 		fb_json_bldr_obj_begin(bldr, "device_params");
+		fb_json_bldr_add_str(bldr, "animated_image_format", "GIF");
+
+		fb_json_bldr_obj_begin(bldr, "animated_image_sizes");
+		fb_json_bldr_add_str(bldr, "0", "9001x9001");
+		fb_json_bldr_obj_end(bldr);
+
+		fb_json_bldr_obj_begin(bldr, "image_sizes");
+		fb_json_bldr_add_str(bldr, "0", "9001x9001");
+		fb_json_bldr_obj_end(bldr);
+		fb_json_bldr_obj_end(bldr);
+
+		fb_json_bldr_obj_begin(bldr, "queue_params");
+		fb_json_bldr_add_str(bldr, "buzz_on_deltas_enabled", "false");
+
+		fb_json_bldr_obj_begin(bldr, "graphql_query_hashes");
+		fb_json_bldr_add_str(bldr, "xma_query_id", FB_API_QRYID_XMA);
+		fb_json_bldr_obj_end(bldr);
+
+		fb_json_bldr_obj_begin(bldr, "graphql_query_params");
+		fb_json_bldr_obj_begin(bldr, FB_API_QRYID_XMA);
+		fb_json_bldr_add_str(bldr, "xma_id", "<ID>");
+		fb_json_bldr_add_str(bldr, "small_preview_size", "9001");
+		fb_json_bldr_add_str(bldr, "large_preview_size", "9001");
+		fb_json_bldr_obj_end(bldr);
+		fb_json_bldr_obj_end(bldr);
 		fb_json_bldr_obj_end(bldr);
 
 		json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
@@ -771,34 +797,160 @@ fb_api_cb_publish_typing(FbApi *api, const GByteArray *pload)
 	json_node_free(root);
 }
 
+static gchar *
+fb_api_message_parse_xma(FbApi *api, const gchar *json)
+{
+	const gchar *str;
+	FbHttpParams *params;
+	FbJsonValues *values;
+	gchar *ret;
+	GError *err = NULL;
+	JsonNode *node;
+	JsonNode *root;
+
+	if (!fb_api_json_chk(api, json, -1, &root)) {
+		return NULL;
+	}
+
+	node = fb_json_node_get_nth(root, 0);
+	values = fb_json_values_new(node);
+	fb_json_values_add(values, TRUE, "$.story_attachment.target"
+	                                  ".__type__.name");
+	fb_json_values_add(values, TRUE, "$.story_attachment.url");
+	fb_json_values_update(values, &err);
+
+	FB_API_ERROR_CHK(api, err,
+		fb_json_values_free(values);
+		json_node_free(root);
+		return NULL;
+	);
+
+	str = fb_json_values_next_str(values, NULL);
+
+	if (!purple_strequal(str, "ExternalUrl")) {
+		fb_util_debug_warning("Unknown XMA type %s", str);
+		fb_json_values_free(values);
+		json_node_free(root);
+		return NULL;
+	}
+
+	str = fb_json_values_next_str(values, NULL);
+	params = fb_http_params_new_parse(str, TRUE);
+	ret = fb_http_params_dup_str(params, "u", NULL);
+	fb_http_params_free(params);
+
+	fb_json_values_free(values);
+	json_node_free(root);
+	return ret;
+}
+
+static GSList *
+fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
+                            JsonNode *root)
+{
+	const gchar *body = msg->text;
+	const gchar *str;
+	FbJsonValues *values;
+	gpointer mptr;
+
+	values = fb_json_values_new(root);
+	fb_json_values_add(values, FALSE, "$.imageMetadata.imageURIMap.0");
+	fb_json_values_add(values, FALSE, "$.xmaGraphQL");
+	fb_json_values_add(values, FALSE, "$.filename");
+	fb_json_values_set_array(values, "$.deltaNewMessage.attachments",
+	                         NULL);
+
+	while (fb_json_values_update(values, NULL)) {
+		if (!fb_json_values_successful(values)) {
+			continue;
+		}
+
+		msg->text = fb_json_values_next_str_dup(values, NULL);
+
+		if (msg->text != NULL) {
+			mptr = fb_api_message_dup(msg, FALSE);
+			msgs = g_slist_prepend(msgs, mptr);
+			continue;
+		}
+
+		str = fb_json_values_next_str(values, NULL);
+
+		if (str != NULL) {
+			msg->text = fb_api_message_parse_xma(api, str);
+
+			if (msg->text == NULL) {
+				continue;
+			}
+
+			if (purple_strequal(msg->text, body)) {
+				g_free(msg->text);
+				continue;
+			}
+
+			mptr = fb_api_message_dup(msg, FALSE);
+			msgs = g_slist_prepend(msgs, mptr);
+			continue;
+		}
+
+		str = fb_json_values_next_str(values, NULL);
+
+		if (G_UNLIKELY(str == NULL)) {
+			str = _("unknown attachment");
+		}
+
+		msg->text = g_strdup_printf("%s/%" FB_ID_FORMAT " [%s]",
+					    FB_API_URL_MESSAGES,
+					    msg->uid, str);
+		mptr = fb_api_message_dup(msg, FALSE);
+		msgs = g_slist_prepend(msgs, mptr);
+	}
+
+	fb_json_values_free(values);
+	return msgs;
+}
+
 static void
 fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 {
-	const gchar *str;
+	const gchar *data;
 	FbApiMessage msg;
 	FbApiPrivate *priv = api->priv;
+	FbHttpParams *params;
 	FbJsonValues *values;
 	FbThrift *thft;
+	gchar *json;
 	gchar *stoken;
 	GError *err = NULL;
+	gint64 id;
 	gpointer mptr;
+	GRegex *regex;
 	GSList *msgs = NULL;
-	guint i;
-	JsonArray *arr;
+	guint size;
 	JsonNode *root;
 	JsonNode *node;
 
 	thft = fb_thrift_new((GByteArray*) pload, 0, TRUE);
 	fb_thrift_read_str(thft, NULL);
-	i = fb_thrift_get_pos(thft);
+	size = fb_thrift_get_pos(thft);
 	g_object_unref(thft);
 
-	g_return_if_fail(i < pload->len);
+	g_return_if_fail(size < pload->len);
 
-	if (!fb_api_json_chk(api, pload->data + i, pload->len - i, &root)) {
+	data = (gchar *) pload->data + size;
+	size = pload->len - size;
+
+	/* Ugly hack to fix broken JSON from Facebook */
+	regex = g_regex_new("(\\d+)(:\")", 0, 0, &err);
+	json = g_regex_replace(regex, data, size, 0, "\"\\1\"\\2", 0, &err);
+	g_regex_unref(regex);
+	FB_API_ERROR_CHK(api, err, return);
+
+	if (!fb_api_json_chk(api, json, -1, &root)) {
+		g_free(json);
 		return;
 	}
 
+	g_free(json);
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FALSE, "$.lastIssuedSeqId");
 	fb_json_values_add(values, FALSE, "$.syncToken");
@@ -828,6 +980,7 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	fb_json_values_add(values, FALSE, "$.deltaNewMessage.messageMetadata"
 	                                   ".threadKey.threadFbId");
 	fb_json_values_add(values, FALSE, "$.deltaNewMessage.body");
+	fb_json_values_add(values, FALSE, "$.deltaNewMessage.stickerId");
 	fb_json_values_set_array(values, "$.deltas", &err);
 
 	FB_API_ERROR_CHK(api, err,
@@ -856,22 +1009,20 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 			msgs = g_slist_prepend(msgs, mptr);
 		}
 
-		node = fb_json_values_get_root(values);
-		arr = fb_json_node_get_arr(node, "$.deltaNewMessage"
-		                                  ".attachments", NULL);
+		id = fb_json_values_next_int(values, 0);
 
-		if (G_UNLIKELY(arr == NULL)) {
+		if (id != 0) {
+			params = fb_http_params_new();
+			fb_http_params_set_int(params, "sticker_id", id);
+			msg.text = fb_http_params_close(params,
+			                                FB_API_URL_STICKER);
+			mptr = fb_api_message_dup(&msg, FALSE);
+			msgs = g_slist_prepend(msgs, mptr);
 			continue;
 		}
 
-		if (json_array_get_length(arr) > 0) {
-			str = _("* Non-Displayable Attachments *");
-			msg.text = g_strdup(str);
-			mptr = fb_api_message_dup(&msg, FALSE);
-			msgs = g_slist_prepend(msgs, mptr);
-		}
-
-		json_array_unref(arr);
+		node = fb_json_values_get_root(values);
+		msgs = fb_api_message_parse_attach(api, &msg, msgs, node);
 	}
 
 	msgs = g_slist_reverse(msgs);
@@ -1528,19 +1679,14 @@ fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
 {
 	FbApi *api = data;
 	FbApiThread thrd;
-	GList *vals;
-	JsonNode *node = NULL;
+	JsonNode *node;
 	JsonNode *root;
-	JsonObject *obj;
 
 	if (!fb_api_http_chk(api, con, res, &root)) {
 		return;
 	}
 
-	obj = json_node_get_object(root);
-	vals = json_object_get_values(obj);
-	node = vals->data;
-	g_list_free(vals);
+	node = fb_json_node_get_nth(root, 0);
 
 	if (node == NULL) {
 		fb_api_error(api, FB_API_ERROR_GENERAL,

@@ -101,6 +101,9 @@ fb_json_node_new(const gchar *data, gssize size, GError **error);
 JsonNode *
 fb_json_node_get(JsonNode *root, const gchar *expr, GError **error);
 
+JsonNode *
+fb_json_node_get_nth(JsonNode *root, guint n);
+
 JsonArray *
 fb_json_node_get_arr(JsonNode *root, const gchar *expr, GError **error);
 
