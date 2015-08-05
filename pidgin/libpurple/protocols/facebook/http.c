@@ -122,7 +122,7 @@ fb_http_params_free(FbHttpParams *params)
 }
 
 gchar *
-fb_http_params_close(FbHttpParams *params, gsize *size)
+fb_http_params_close(FbHttpParams *params, const gchar *url)
 {
 	GHashTableIter iter;
 	gpointer key;
@@ -147,8 +147,9 @@ fb_http_params_close(FbHttpParams *params, gsize *size)
 		g_string_append_uri_escaped(ret, val, NULL, TRUE);
 	}
 
-	if (size != NULL) {
-		*size = ret->len;
+	if (url != NULL) {
+		g_string_prepend_c(ret, '?');
+		g_string_prepend(ret, url);
 	}
 
 	fb_http_params_free(params);
@@ -221,6 +222,16 @@ fb_http_params_get_str(FbHttpParams *params, const gchar *name,
                        GError **error)
 {
 	return fb_http_params_get(params, name, error);
+}
+
+gchar *
+fb_http_params_dup_str(FbHttpParams *params, const gchar *name,
+                       GError **error)
+{
+	const gchar *str;
+
+	str = fb_http_params_get(params, name, error);
+	return g_strdup(str);
 }
 
 static void

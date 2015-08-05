@@ -32,25 +32,29 @@
 #include "id.h"
 #include "mqtt.h"
 
-#define FB_API_HOST    "https://api.facebook.com"
+#define FB_API_AHOST   "https://api.facebook.com"
 #define FB_API_BHOST   "https://b-api.facebook.com"
 #define FB_API_GHOST   "https://graph.facebook.com"
+#define FB_API_WHOST   "https://www.facebook.com"
 #define FB_API_AGENT   "Facebook App / " PACKAGE " / " VERSION
 #define FB_API_KEY     "256002347743983"
 #define FB_API_SECRET  "374e60f8b9bb6b8cbb30f78030438895"
 
 #define FB_API_CONTACTS_COUNT  "200"
 
-#define FB_API_URL_AUTH   FB_API_BHOST "/method/auth.login"
-#define FB_API_URL_GQL    FB_API_GHOST "/graphql"
-#define FB_API_URL_PARTS  FB_API_GHOST "/participants"
-#define FB_API_URL_THRDS  FB_API_GHOST "/me/threads"
-#define FB_API_URL_TOPIC  FB_API_HOST  "/method/messaging.setthreadname"
+#define FB_API_URL_AUTH     FB_API_BHOST "/method/auth.login"
+#define FB_API_URL_GQL      FB_API_GHOST "/graphql"
+#define FB_API_URL_MESSAGES FB_API_WHOST "/messages"
+#define FB_API_URL_PARTS    FB_API_GHOST "/participants"
+#define FB_API_URL_STICKER  FB_API_WHOST "/stickers/asset/"
+#define FB_API_URL_THRDS    FB_API_GHOST "/me/threads"
+#define FB_API_URL_TOPIC    FB_API_AHOST "/method/messaging.setthreadname"
 
 #define FB_API_QRYID_CONTACTS        "10153746900696729"
 #define FB_API_QRYID_CONTACTS_AFTER  "10153746900731729"
 #define FB_API_QRYID_THREAD_INFO     "10153813976871729"
 #define FB_API_QRYID_THREAD_LIST     "10153813976891729"
+#define FB_API_QRYID_XMA             "10153896863741729"
 
 #define FB_TYPE_API             (fb_api_get_type())
 #define FB_API(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_API, FbApi))
