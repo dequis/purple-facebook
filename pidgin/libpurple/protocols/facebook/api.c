@@ -336,14 +336,20 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 	}
 
 	root = fb_json_node_new(data, size, &err);
-	FB_API_ERROR_CHK(api, err, return FALSE);
+	FB_API_ERROR_EMIT(api, err, return FALSE);
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, FALSE, "$.error_code");
-	fb_json_values_add(values, FALSE, "$.error.type");
-	fb_json_values_add(values, FALSE, "$.errorCode");
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE, "$.error_code");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.error.type");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.errorCode");
+	fb_json_values_update(values, &err);
 
-	fb_json_values_update(values, NULL);
+	FB_API_ERROR_EMIT(api, err,
+		fb_json_values_free(values);
+		json_node_free(root);
+		return FALSE
+	);
+
 	code = fb_json_values_next_int(values, 0);
 	str = fb_json_values_next_str(values, 0);
 
@@ -437,11 +443,11 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	/* Rudimentary check to prevent wrongful error parsing */
 	if ((size < 2) || (data[0] != '{') || (data[size - 1] != '}')) {
-		FB_API_ERROR_CHK(api, err, return FALSE);
+		FB_API_ERROR_EMIT(api, err, return FALSE);
 	}
 
 	if (fb_api_json_chk(api, data, size, root)) {
-		FB_API_ERROR_CHK(api, err, return FALSE);
+		FB_API_ERROR_EMIT(api, err, return FALSE);
 		return TRUE;
 	}
 
@@ -612,12 +618,12 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	}
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, TRUE, "$.viewer.message_threads"
-	                                  ".sync_sequence_id");
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.viewer.message_threads.sync_sequence_id");
 	fb_json_values_update(values, &err);
 
-	FB_API_ERROR_CHK(api, err,
+	FB_API_ERROR_EMIT(api, err,
 		fb_json_values_free(values);
 		json_node_free(root);
 		return;
@@ -741,11 +747,11 @@ fb_api_cb_publish_mark(FbApi *api, const GByteArray *pload)
 		return;
 	}
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, FALSE, "$.succeeded");
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_BOOL, FALSE, "$.succeeded");
 	fb_json_values_update(values, &err);
 
-	FB_API_ERROR_CHK(api, err,
+	FB_API_ERROR_EMIT(api, err,
 		fb_json_values_free(values);
 		json_node_free(root);
 		return;
@@ -773,13 +779,13 @@ fb_api_cb_publish_typing(FbApi *api, const GByteArray *pload)
 		return;
 	}
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, TRUE, "$.type");
-	fb_json_values_add(values, TRUE, "$.sender_fbid");
-	fb_json_values_add(values, TRUE, "$.state");
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.type");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, TRUE, "$.sender_fbid");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, TRUE, "$.state");
 	fb_json_values_update(values, &err);
 
-	FB_API_ERROR_CHK(api, err,
+	FB_API_ERROR_EMIT(api, err,
 		fb_json_values_free(values);
 		json_node_free(root);
 		return;
@@ -798,7 +804,7 @@ fb_api_cb_publish_typing(FbApi *api, const GByteArray *pload)
 }
 
 static gchar *
-fb_api_message_parse_xma(FbApi *api, const gchar *json)
+fb_api_message_parse_xma(FbApi *api, const gchar *json, GError **error)
 {
 	const gchar *str;
 	FbHttpParams *params;
@@ -813,17 +819,19 @@ fb_api_message_parse_xma(FbApi *api, const gchar *json)
 	}
 
 	node = fb_json_node_get_nth(root, 0);
-	values = fb_json_values_new(node);
-	fb_json_values_add(values, TRUE, "$.story_attachment.target"
-	                                  ".__type__.name");
-	fb_json_values_add(values, TRUE, "$.story_attachment.url");
+	values = fb_json_values_new(node, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.story_attachment.target.__type__.name");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.story_attachment.url");
 	fb_json_values_update(values, &err);
 
-	FB_API_ERROR_CHK(api, err,
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
 		fb_json_values_free(values);
 		json_node_free(root);
 		return NULL;
-	);
+	}
 
 	str = fb_json_values_next_str(values, NULL);
 
@@ -846,25 +854,21 @@ fb_api_message_parse_xma(FbApi *api, const gchar *json)
 
 static GSList *
 fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
-                            JsonNode *root)
+                            JsonNode *root, GError **error)
 {
 	const gchar *body = msg->text;
 	const gchar *str;
 	FbJsonValues *values;
+	GError *err = NULL;
 	gpointer mptr;
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, FALSE, "$.imageMetadata.imageURIMap.0");
-	fb_json_values_add(values, FALSE, "$.xmaGraphQL");
-	fb_json_values_add(values, FALSE, "$.filename");
-	fb_json_values_set_array(values, "$.deltaNewMessage.attachments",
-	                         NULL);
+	values = fb_json_values_new(root, "$.deltaNewMessage.attachments");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.imageMetadata.imageURIMap.0");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.xmaGraphQL");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.filename");
 
-	while (fb_json_values_update(values, NULL)) {
-		if (!fb_json_values_successful(values)) {
-			continue;
-		}
-
+	while (fb_json_values_update(values, &err)) {
 		msg->text = fb_json_values_next_str_dup(values, NULL);
 
 		if (msg->text != NULL) {
@@ -876,10 +880,12 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 		str = fb_json_values_next_str(values, NULL);
 
 		if (str != NULL) {
-			msg->text = fb_api_message_parse_xma(api, str);
+			msg->text = fb_api_message_parse_xma(api, str, &err);
 
-			if (msg->text == NULL) {
-				continue;
+			if (err != NULL) {
+				g_propagate_error(error, err);
+				fb_json_values_free(values);
+				return msgs;
 			}
 
 			if (purple_strequal(msg->text, body)) {
@@ -903,6 +909,10 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 					    msg->uid, str);
 		mptr = fb_api_message_dup(msg, FALSE);
 		msgs = g_slist_prepend(msgs, mptr);
+	}
+
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
 	}
 
 	fb_json_values_free(values);
@@ -943,7 +953,7 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	regex = g_regex_new("(\\d+)(:\")", 0, 0, &err);
 	json = g_regex_replace(regex, data, size, 0, "\"\\1\"\\2", 0, &err);
 	g_regex_unref(regex);
-	FB_API_ERROR_CHK(api, err, return);
+	FB_API_ERROR_EMIT(api, err, return);
 
 	if (!fb_api_json_chk(api, json, -1, &root)) {
 		g_free(json);
@@ -951,12 +961,13 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	}
 
 	g_free(json);
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, FALSE, "$.lastIssuedSeqId");
-	fb_json_values_add(values, FALSE, "$.syncToken");
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.lastIssuedSeqId");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.syncToken");
 	fb_json_values_update(values, &err);
 
-	FB_API_ERROR_CHK(api, err,
+	FB_API_ERROR_EMIT(api, err,
 		fb_json_values_free(values);
 		json_node_free(root);
 		return;
@@ -974,26 +985,18 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 		return;
 	}
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, FALSE, "$.deltaNewMessage.messageMetadata"
-	                                  ".actorFbId");
-	fb_json_values_add(values, FALSE, "$.deltaNewMessage.messageMetadata"
-	                                   ".threadKey.threadFbId");
-	fb_json_values_add(values, FALSE, "$.deltaNewMessage.body");
-	fb_json_values_add(values, FALSE, "$.deltaNewMessage.stickerId");
-	fb_json_values_set_array(values, "$.deltas", &err);
+	values = fb_json_values_new(root, "$.deltas");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.deltaNewMessage.messageMetadata.actorFbId");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.deltaNewMessage.messageMetadata"
+	                    ".threadKey.threadFbId");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.deltaNewMessage.body");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.deltaNewMessage.stickerId");
 
-	FB_API_ERROR_CHK(api, err,
-		fb_json_values_free(values);
-		json_node_free(root);
-		return;
-	);
-
-	while (fb_json_values_update(values, NULL)) {
-		if (!fb_json_values_successful(values)) {
-			continue;
-		}
-
+	while (fb_json_values_update(values, &err)) {
 		fb_api_message_reset(&msg, FALSE);
 		msg.uid = fb_json_values_next_int(values, 0);
 		msg.tid = fb_json_values_next_int(values, 0);
@@ -1022,11 +1025,20 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 		}
 
 		node = fb_json_values_get_root(values);
-		msgs = fb_api_message_parse_attach(api, &msg, msgs, node);
+		msgs = fb_api_message_parse_attach(api, &msg, msgs, node,
+		                                   &err);
+
+		if (G_UNLIKELY(err != NULL)) {
+			break;
+		}
 	}
 
-	msgs = g_slist_reverse(msgs);
-	g_signal_emit_by_name(api, "message", msgs);
+	if (G_LIKELY(err == NULL)) {
+		msgs = g_slist_reverse(msgs);
+		g_signal_emit_by_name(api, "message", msgs);
+	} else {
+		fb_api_error_emit(api, err);
+	}
 
 	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
 	fb_json_values_free(values);
@@ -1238,8 +1250,17 @@ fb_api_error(FbApi *api, FbApiError error, const gchar *format, ...)
 	err = g_error_new_valist(FB_API_ERROR, error, format, ap);
 	va_end(ap);
 
-	g_signal_emit_by_name(api, "error", err);
-	g_error_free(err);
+	fb_api_error_emit(api, err);
+}
+
+void
+fb_api_error_emit(FbApi *api, GError *error)
+{
+	g_return_if_fail(FB_IS_API(api));
+	g_return_if_fail(error != NULL);
+
+	g_signal_emit_by_name(api, "error", error);
+	g_error_free(error);
 }
 
 static void
@@ -1248,17 +1269,31 @@ fb_api_cb_auth(PurpleHttpConnection *con, PurpleHttpResponse *res,
 {
 	FbApi *api = data;
 	FbApiPrivate *priv = api->priv;
+	FbJsonValues *values;
+	GError *err = NULL;
 	JsonNode *root;
 
 	if (!fb_api_http_chk(api, con, res, &root)) {
 		return;
 	}
 
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.access_token");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, TRUE, "$.uid");
+	fb_json_values_update(values, &err);
+
+	FB_API_ERROR_EMIT(api, err,
+		fb_json_values_free(values);
+		json_node_free(root);
+		return;
+	);
+
 	g_free(priv->token);
-	priv->token = fb_json_node_get_str(root, "$.access_token", NULL);
-	priv->uid = fb_json_node_get_int(root, "$.uid", NULL);
+	priv->token = fb_json_values_next_str_dup(values, NULL);
+	priv->uid = fb_json_values_next_int(values, 0);
 
 	g_signal_emit_by_name(api, "auth");
+	fb_json_values_free(values);
 	json_node_free(root);
 }
 
@@ -1299,27 +1334,19 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	}
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, TRUE, "$.graph_api_write_id");
-	fb_json_values_add(values, TRUE, "$.represented_profile"
-	                                  ".friendship_status");
-	fb_json_values_add(values, TRUE, "$.represented_profile.id");
-	fb_json_values_add(values, TRUE, "$.structured_name.text");
-	fb_json_values_add(values, TRUE, "$.hugePictureUrl.uri");
-	fb_json_values_set_array(values, "$.viewer.messenger_contacts.nodes",
-	                         &err);
+	values = fb_json_values_new(root, "$.viewer.messenger_contacts.nodes");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.graph_api_write_id");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.represented_profile.friendship_status");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.represented_profile.id");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.structured_name.text");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.hugePictureUrl.uri");
 
-	FB_API_ERROR_CHK(api, err,
-		fb_json_values_free(values);
-		json_node_free(root);
-		return;
-	);
-
-	while (fb_json_values_update(values, NULL)) {
-		if (!fb_json_values_successful(values)) {
-			continue;
-		}
-
+	while (fb_json_values_update(values, &err)) {
 		g_free(writeid);
 		writeid = fb_json_values_next_str_dup(values, NULL);
 		str = fb_json_values_next_str(values, NULL);
@@ -1344,10 +1371,14 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		users = g_slist_prepend(users, mptr);
 	}
 
-	g_signal_emit_by_name(api, "contacts", users, writeid == NULL);
+	if (G_UNLIKELY(err == NULL)) {
+		g_signal_emit_by_name(api, "contacts", users, writeid == NULL);
 
-	if (writeid != NULL) {
-		fb_api_contacts_after(api, writeid);
+		if (writeid != NULL) {
+			fb_api_contacts_after(api, writeid);
+		}
+	} else {
+		fb_api_error_emit(api, err);
 	}
 
 	g_free(writeid);
@@ -1544,11 +1575,11 @@ fb_api_cb_thread_create(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	}
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, TRUE, "$.thread_fbid");
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.thread_fbid");
 	fb_json_values_update(values, &err);
 
-	FB_API_ERROR_CHK(api, err,
+	FB_API_ERROR_EMIT(api, err,
 		fb_json_values_free(values);
 		json_node_free(root);
 		return;
@@ -1605,7 +1636,8 @@ fb_api_thread_create(FbApi *api, GSList *uids)
 }
 
 static gboolean
-fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root)
+fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
+                    GError **error)
 {
 	const gchar *str;
 	FbApiPrivate *priv = api->priv;
@@ -1615,12 +1647,13 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root)
 	GError *err = NULL;
 	gpointer mptr;
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, FALSE, "$.thread_key.thread_fbid");
-	fb_json_values_add(values, FALSE, "$.name");
-
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.thread_key.thread_fbid");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.name");
 	fb_json_values_update(values, &err);
-	FB_API_ERROR_CHK(api, err,
+
+	FB_API_ERROR_EMIT(api, err,
 		fb_json_values_free(values);
 		return FALSE;
 	);
@@ -1636,21 +1669,13 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root)
 	thrd->topic = fb_json_values_next_str_dup(values, NULL);
 	fb_json_values_free(values);
 
-	values = fb_json_values_new(root);
-	fb_json_values_add(values, TRUE, "$.messaging_actor.id");
-	fb_json_values_add(values, TRUE, "$.messaging_actor.name");
-	fb_json_values_set_array(values, "$.all_participants.nodes", &err);
+	values = fb_json_values_new(root, "$.all_participants.nodes");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.messaging_actor.id");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.messaging_actor.name");
 
-	FB_API_ERROR_CHK(api, err,
-		fb_json_values_free(values);
-		return FALSE;
-	);
-
-	while (fb_json_values_update(values, NULL)) {
-		if (!fb_json_values_successful(values)) {
-			continue;
-		}
-
+	while (fb_json_values_update(values, &err)) {
 		fb_api_user_reset(&user, FALSE);
 		str = fb_json_values_next_str(values, "0");
 		user.uid = FB_ID_FROM_STR(str);
@@ -1669,6 +1694,10 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root)
 		return FALSE;
 	}
 
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
+	}
+
 	fb_json_values_free(values);
 	return TRUE;
 }
@@ -1679,6 +1708,7 @@ fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
 {
 	FbApi *api = data;
 	FbApiThread thrd;
+	GError *err = NULL;
 	JsonNode *node;
 	JsonNode *root;
 
@@ -1691,21 +1721,26 @@ fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	if (node == NULL) {
 		fb_api_error(api, FB_API_ERROR_GENERAL,
 		             _("Failed to obtain thread information"));
-		goto finish;
+		json_node_free(root);
+		return;
 	}
 
 	fb_api_thread_reset(&thrd, FALSE);
 
-	if (!fb_api_thread_parse(api, &thrd, node)) {
+	if (!fb_api_thread_parse(api, &thrd, node, &err)) {
 		fb_api_error(api, FB_API_ERROR_GENERAL,
 		             _("Failed to parse thread information"));
-		goto finish;
+		json_node_free(root);
+		return;
 	}
 
-	g_signal_emit_by_name(api, "thread-info", &thrd);
-	fb_api_thread_reset(&thrd, TRUE);
+	if (G_LIKELY(err == NULL)) {
+		g_signal_emit_by_name(api, "thread-info", &thrd);
+	} else {
+		fb_api_error_emit(api, err);
+	}
 
-finish:
+	fb_api_thread_reset(&thrd, TRUE);
 	json_node_free(root);
 }
 
@@ -1801,7 +1836,7 @@ fb_api_cb_thread_list(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	arr = fb_json_node_get_arr(root, "$.viewer.message_threads.nodes",
 	                           &err);
-	FB_API_ERROR_CHK(api, err,
+	FB_API_ERROR_EMIT(api, err,
 		json_node_free(root);
 		return;
 	);
@@ -1810,18 +1845,26 @@ fb_api_cb_thread_list(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	fb_api_thread_reset(&thrd, FALSE);
 
 	for (l = elms; l != NULL; l = l->next) {
-		if (fb_api_thread_parse(api, &thrd, l->data)) {
+		if (fb_api_thread_parse(api, &thrd, l->data, &err)) {
 			mptr = fb_api_thread_dup(&thrd, TRUE);
 			thrds = g_slist_prepend(thrds, mptr);
+		}
+
+		if (G_UNLIKELY(err != NULL)) {
+			break;
 		}
 
 		fb_api_thread_reset(&thrd, TRUE);
 	}
 
-	thrds = g_slist_reverse(thrds);
-	g_signal_emit_by_name(api, "thread-list", thrds);
-	g_slist_free_full(thrds, (GDestroyNotify) fb_api_thread_free);
+	if (G_LIKELY(err == NULL)) {
+		thrds = g_slist_reverse(thrds);
+		g_signal_emit_by_name(api, "thread-list", thrds);
+	} else {
+		fb_api_error_emit(api, err);
+	}
 
+	g_slist_free_full(thrds, (GDestroyNotify) fb_api_thread_free);
 	g_list_free(elms);
 	json_array_unref(arr);
 	json_node_free(root);

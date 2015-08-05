@@ -69,13 +69,12 @@
 		(((guint64) m) << 22)        \
 	))
 
-#define FB_API_ERROR_CHK(a, e, c)                             \
-	G_STMT_START {                                        \
-		if ((e) != NULL) {                            \
-			g_signal_emit_by_name(a, "error", e); \
-			g_error_free(e);                      \
-			{c;}                                  \
-		}                                             \
+#define FB_API_ERROR_EMIT(a, e, c)               \
+	G_STMT_START {                           \
+		if (G_UNLIKELY((e) != NULL)) {   \
+			fb_api_error_emit(a, e); \
+			{c;}                     \
+		}                                \
 	} G_STMT_END
 
 #define FB_API_ERROR fb_api_error_quark()
@@ -170,6 +169,9 @@ fb_api_free(FbApi *api);
 void
 fb_api_error(FbApi *api, FbApiError err, const gchar *fmt, ...)
              G_GNUC_PRINTF(3, 4);
+
+void
+fb_api_error_emit(FbApi *api, GError *error);
 
 void
 fb_api_auth(FbApi *api, const gchar *user, const gchar *pass);
