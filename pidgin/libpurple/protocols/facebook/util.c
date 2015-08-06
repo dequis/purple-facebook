@@ -27,8 +27,11 @@
 
 #include "blistnodetypes.h"
 #include "buddylist.h"
+#include "conversations.h"
 #include "glibcompat.h"
+#include "message.h"
 #include "request.h"
+#include "server.h"
 
 #include "util.h"
 
@@ -406,6 +409,56 @@ fb_util_request_buddy(PurpleConnection *gc, const gchar *title,
 				     _("Cancel"),
 	                             G_CALLBACK(fb_util_request_buddy_cancel),
 				     cpar, mata);
+}
+
+void
+fb_util_serv_got_im(PurpleConnection *gc, const gchar *who, const gchar *text,
+                    PurpleMessageFlags flags, guint64 timestamp)
+{
+	const gchar *name;
+	PurpleAccount *acct;
+	PurpleIMConversation *conv;
+	PurpleMessage *msg;
+
+	if (!(flags & PURPLE_MESSAGE_SEND)) {
+		purple_serv_got_im(gc, who, text, flags, timestamp);
+		return;
+	}
+
+	acct = purple_connection_get_account(gc);
+	conv = purple_conversations_find_im_with_account(who, acct);
+
+	if (conv == NULL) {
+		conv = purple_im_conversation_new(acct, who);
+		purple_conversations_add(PURPLE_CONVERSATION(conv));
+	}
+
+	name = purple_account_get_username(acct);
+	msg = purple_message_new_outgoing(name, text, flags);
+	purple_conversation_write_message(PURPLE_CONVERSATION(conv), msg);
+}
+
+void
+fb_util_serv_got_chat_in(PurpleConnection *gc, gint id, const gchar *who,
+                         const gchar *text, PurpleMessageFlags flags,
+			 guint64 timestamp)
+{
+	const gchar *name;
+	PurpleAccount *acct;
+	PurpleChatConversation *conv;
+	PurpleMessage *msg;
+
+	if (!(flags & PURPLE_MESSAGE_SEND)) {
+		purple_serv_got_chat_in(gc, id, who, flags, text, timestamp);
+		return;
+	}
+
+	acct = purple_connection_get_account(gc);
+	conv = purple_conversations_find_chat(gc, id);
+
+	name = purple_account_get_username(acct);
+	msg = purple_message_new_outgoing(name, text, flags);
+	purple_conversation_write_message(PURPLE_CONVERSATION(conv), msg);
 }
 
 gboolean

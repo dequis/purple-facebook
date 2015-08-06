@@ -113,6 +113,7 @@ struct _FbApiMessage
 	FbId uid;
 	FbId tid;
 	gchar *text;
+	gboolean isself;
 };
 
 struct _FbApiPresence
@@ -217,7 +218,7 @@ void
 fb_api_typing(FbApi *api, FbId uid, gboolean state);
 
 FbApiMessage *
-fb_api_message_new(FbId uid, FbId tid, const gchar *text);
+fb_api_message_new(FbId uid, FbId tid, const gchar *text, gboolean isself);
 
 FbApiMessage *
 fb_api_message_dup(FbApiMessage *msg, gboolean deep);
