@@ -1356,6 +1356,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 {
 	const gchar *str;
 	FbApi *api = data;
+	FbApiPrivate *priv = api->priv;
 	FbApiUser user;
 	FbHttpParams *params;
 	FbJsonValues *values;
@@ -1371,28 +1372,30 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	values = fb_json_values_new(root, "$.viewer.messenger_contacts.nodes");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.represented_profile.id");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.graph_api_write_id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.represented_profile.friendship_status");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
-	                   "$.represented_profile.id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.structured_name.text");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.hugePictureUrl.uri");
 
 	while (fb_json_values_update(values, &err)) {
+		fb_api_user_reset(&user, FALSE);
+		str = fb_json_values_next_str(values, NULL);
+		user.uid = FB_ID_FROM_STR(str);
+
 		g_free(writeid);
 		writeid = fb_json_values_next_str_dup(values, NULL);
 		str = fb_json_values_next_str(values, NULL);
 
-		if (!purple_strequal(str, "ARE_FRIENDS")) {
+		if (!purple_strequal(str, "ARE_FRIENDS") &&
+		    (user.uid != priv->uid))
+		{
 			continue;
 		}
-
-		fb_api_user_reset(&user, FALSE);
-		str = fb_json_values_next_str(values, NULL);
-		user.uid = FB_ID_FROM_STR(str);
 
 		user.name = fb_json_values_next_str_dup(values, NULL);
 		user.icon = fb_json_values_next_str_dup(values, NULL);
