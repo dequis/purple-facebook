@@ -1019,7 +1019,6 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 		id = fb_json_values_next_int(values, 0);
 
 		if (g_hash_table_remove(priv->msgids, &id)) {
-			g_print("GOT OUR OWN MESSAGE!\n");
 			continue;
 		}
 
