@@ -59,6 +59,8 @@ struct _FbApiPrivate
 	gchar *stoken;
 	gchar *token;
 
+	GHashTable *msgids;
+
 };
 
 static void
@@ -146,6 +148,8 @@ fb_api_dispose(GObject *obj)
 	if (G_UNLIKELY(priv->mqtt != NULL)) {
 		g_object_unref(priv->mqtt);
 	}
+
+	g_hash_table_destroy(priv->msgids);
 
 	g_free(priv->cid);
 	g_free(priv->did);
@@ -291,6 +295,9 @@ fb_api_init(FbApi *api)
 
 	priv = G_TYPE_INSTANCE_GET_PRIVATE(api, FB_TYPE_API, FbApiPrivate);
 	api->priv = priv;
+
+	priv->msgids = g_hash_table_new_full(g_int64_hash, g_int64_equal,
+	                                     g_free, NULL);
 }
 
 GQuark
@@ -770,6 +777,7 @@ static void
 fb_api_cb_publish_typing(FbApi *api, const GByteArray *pload)
 {
 	const gchar *str;
+	FbApiPrivate *priv = api->priv;
 	FbApiTyping typg;
 	FbJsonValues *values;
 	GError *err = NULL;
@@ -795,8 +803,11 @@ fb_api_cb_publish_typing(FbApi *api, const GByteArray *pload)
 
 	if (g_ascii_strcasecmp(str, "typ") == 0) {
 		typg.uid = fb_json_values_next_int(values, 0);
-		typg.state = fb_json_values_next_int(values, 0);
-		g_signal_emit_by_name(api, "typing", &typg);
+
+		if (typg.uid != priv->uid) {
+			typg.state = fb_json_values_next_int(values, 0);
+			g_signal_emit_by_name(api, "typing", &typg);
+		}
 	}
 
 	fb_json_values_free(values);
@@ -926,6 +937,8 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	FbApiMessage msg;
 	FbApiPrivate *priv = api->priv;
 	FbHttpParams *params;
+	FbId oid;
+	FbId uid;
 	FbJsonValues *values;
 	FbThrift *thft;
 	gchar *json;
@@ -987,7 +1000,13 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 
 	values = fb_json_values_new(root, "$.deltas");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.deltaNewMessage.messageMetadata"
+			    ".offlineThreadingId");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
 	                   "$.deltaNewMessage.messageMetadata.actorFbId");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.deltaNewMessage.messageMetadata"
+	                    ".threadKey.otherUserFbId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
 	                   "$.deltaNewMessage.messageMetadata"
 	                    ".threadKey.threadFbId");
@@ -997,11 +1016,27 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	                   "$.deltaNewMessage.stickerId");
 
 	while (fb_json_values_update(values, &err)) {
+		id = fb_json_values_next_int(values, 0);
+
+		if (g_hash_table_remove(priv->msgids, &id)) {
+			g_print("GOT OUR OWN MESSAGE!\n");
+			continue;
+		}
+
 		fb_api_message_reset(&msg, FALSE);
-		msg.uid = fb_json_values_next_int(values, 0);
+		uid = fb_json_values_next_int(values, 0);
+		oid = fb_json_values_next_int(values, 0);
 		msg.tid = fb_json_values_next_int(values, 0);
 
-		if ((msg.uid == 0) || (msg.uid == priv->uid)) {
+		if (uid != priv->uid) {
+			msg.isself = FALSE;
+			msg.uid = uid;
+		} else {
+			msg.isself = TRUE;
+			msg.uid = oid;
+		}
+
+		if (msg.uid == 0) {
 			continue;
 		}
 
@@ -1485,6 +1520,7 @@ fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *msg)
 	const gchar *tpfx;
 	FbApiPrivate *priv;
 	gchar *json;
+	gpointer mptr;
 	guint64 msgid;
 	JsonBuilder *bldr;
 
@@ -1494,6 +1530,9 @@ fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *msg)
 
 	msgid = FB_API_MSGID(g_get_real_time() / 1000, g_random_int());
 	tpfx = thread ? "tfbid_" : "";
+
+	mptr = g_memdup(&msgid, sizeof msgid);
+	g_hash_table_replace(priv->msgids, mptr, mptr);
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_int(bldr, "msgid", msgid);
@@ -1983,7 +2022,7 @@ fb_api_typing(FbApi *api, FbId uid, gboolean state)
 }
 
 FbApiMessage *
-fb_api_message_new(FbId uid, FbId tid, const gchar *text)
+fb_api_message_new(FbId uid, FbId tid, const gchar *text, gboolean isself)
 {
 	FbApiMessage *msg;
 
@@ -1991,6 +2030,7 @@ fb_api_message_new(FbId uid, FbId tid, const gchar *text)
 	msg->uid = uid;
 	msg->tid = tid;
 	msg->text = g_strdup(text);
+	msg->isself = isself;
 
 	return msg;
 }
@@ -2001,7 +2041,7 @@ fb_api_message_dup(FbApiMessage *msg, gboolean deep)
 	FbApiMessage *ret;
 
 	g_return_val_if_fail(msg != NULL, NULL);
-	ret = fb_api_message_new(msg->uid, msg->tid, NULL);
+	ret = fb_api_message_new(msg->uid, msg->tid, NULL, msg->isself);
 
 	if (deep) {
 		ret->text = g_strdup(msg->text);

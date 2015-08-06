@@ -225,6 +225,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 	PurpleAccount *acct;
 	PurpleChatConversation *chat;
 	PurpleConnection *gc;
+	PurpleMessageFlags flags;
 
 	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
@@ -233,19 +234,18 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 
 	for (l = msgs; l != NULL; l = l->next) {
 		msg = l->data;
-		chat = NULL;
-
 		html = purple_markup_escape_text(msg->text, -1);
 		FB_ID_TO_STR(msg->uid, uid);
 
+		flags = (msg->isself) ? PURPLE_MESSAGE_SEND
+		                      : PURPLE_MESSAGE_RECV;
+
 		if (msg->tid == 0) {
-			if (mark) {
-				fb_api_read(api, msg->uid, TRUE);
+			if (mark && !msg->isself) {
+				fb_api_read(api, msg->uid, FALSE);
 			}
 
-			purple_serv_got_im(gc, uid, html,
-		                           PURPLE_MESSAGE_RECV,
-			                   time(NULL));
+			fb_util_serv_got_im(gc, uid, html, flags, time(NULL));
 			g_free(html);
 			continue;
 		}
@@ -266,13 +266,11 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 			id = purple_chat_conversation_get_id(chat);
 		}
 
-		if (mark) {
+		if (mark && !msg->isself) {
 			fb_api_read(api, msg->tid, TRUE);
 		}
 
-		purple_serv_got_chat_in(gc, id, uid,
-					PURPLE_MESSAGE_RECV,
-					html, time(NULL));
+		fb_util_serv_got_chat_in(gc, id, uid, html, flags, time(NULL));
 		g_free(html);
 	}
 }

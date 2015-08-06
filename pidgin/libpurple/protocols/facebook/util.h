@@ -30,6 +30,7 @@
 #include "conversationtypes.h"
 #include "debug.h"
 #include "connection.h"
+#include "conversation.h"
 
 #define FB_UTIL_DEBUG_INFO (        \
 		PURPLE_DEBUG_INFO |         \
@@ -107,6 +108,15 @@ fb_util_request_buddy(PurpleConnection *gc, const gchar *title,
                       const gchar *primary, const gchar *secondary,
                       GSList *select, gboolean multi, GCallback ok_cb,
                       GCallback cancel_cb, gpointer data);
+
+void
+fb_util_serv_got_im(PurpleConnection *gc, const gchar *who, const gchar *text,
+                    PurpleMessageFlags flags, guint64 timestamp);
+
+void
+fb_util_serv_got_chat_in(PurpleConnection *gc, gint id, const gchar *who,
+                         const gchar *text, PurpleMessageFlags flags,
+                         guint64 timestamp);
 
 gboolean
 fb_util_str_is(const gchar *str, GAsciiType type);
