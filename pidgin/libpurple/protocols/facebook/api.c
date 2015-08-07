@@ -1437,12 +1437,11 @@ fb_api_contacts(FbApi *api)
 	/* Object key mapping:
 	 *   0: profile_types
 	 *   1: limit
-	 *   2: small_img_size
-	 *   3: big_img_size
-	 *   4: huge_img_size
+	 *   2: big_img_size
+	 *   3: huge_img_size
+	 *   4: small_img_size
 	 *   5: low_res_cover_size
 	 *   6: media_type
-	 *   7: high_res_cover_size
 	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
@@ -1470,12 +1469,11 @@ fb_api_contacts_after(FbApi *api, const gchar *writeid)
 	 *   0: profile_types
 	 *   1: after
 	 *   2: limit
-	 *   3: small_img_size
-	 *   4: big_img_size
-	 *   5: huge_img_size
+	 *   3: big_img_size
+	 *   4: huge_img_size
+	 *   5: small_img_size
 	 *   6: low_res_cover_size
 	 *   7: media_type
-	 *   8: high_res_cover_size
 	 */
 
 	if (g_str_has_prefix(writeid, "contact_")) {
@@ -1802,20 +1800,20 @@ fb_api_thread_info(FbApi *api, FbId tid)
 	 *   0: thread_ids
 	 *   1: verification_type
 	 *   2: hash_key
-	 *   3: medium_preview_size
-	 *   4: item_count
-	 *   5: itemCount
-	 *   6: full_screen_height
-	 *   7: full_screen_width
-	 *   8: small_preview_size
-	 *   9: large_preview_size
+	 *   3: small_preview_size
+	 *   4: large_preview_size
+	 *   5: item_count
+	 *   6: event_count
+	 *   7: full_screen_height
+	 *   8: full_screen_width
+	 *   9: medium_preview_size
 	 *   10: fetch_users_separately
 	 *   11: include_message_info
 	 *   12: msg_count
 	 *   13: include_full_user_info
-	 *   14: profile_pic_small_size
+	 *   14: profile_pic_large_size
 	 *   15: profile_pic_medium_size
-	 *   16: profile_pic_large_size
+	 *   16: profile_pic_small_size
 	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
@@ -1825,7 +1823,6 @@ fb_api_thread_info(FbApi *api, FbId tid)
 
 	fb_json_bldr_add_str(bldr, "10", "false");
 	fb_json_bldr_add_str(bldr, "11", "false");
-	fb_json_bldr_add_str(bldr, "12", "false");
 	fb_json_bldr_add_str(bldr, "13", "false");
 	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_THREAD_INFO);
 }
@@ -1930,28 +1927,26 @@ fb_api_thread_list(FbApi *api)
 	 *   2: include_thread_info
 	 *   3: verification_type
 	 *   4: hash_key
-	 *   5: medium_preview_size
-	 *   6: item_count
-	 *   7: itemCount
-	 *   8: full_screen_height
-	 *   9: full_screen_width
-	 *   10: small_preview_size
-	 *   11: large_preview_size
+	 *   5: small_preview_size
+	 *   6: large_preview_size
+	 *   7: item_count
+	 *   8: event_count
+	 *   9: full_screen_height
+	 *   10: full_screen_width
+	 *   11: medium_preview_size
 	 *   12: fetch_users_separately
 	 *   13: include_message_info
 	 *   14: msg_count
-	 *   15: include_full_user_info
-	 *   16: profile_pic_small_size
+	 *   15: <UNKNOWN>
+	 *   16: profile_pic_large_size
 	 *   17: profile_pic_medium_size
-	 *   18: profile_pic_large_size
+	 *   18: profile_pic_small_size
 	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_str(bldr, "2", "true");
 	fb_json_bldr_add_str(bldr, "12", "false");
 	fb_json_bldr_add_str(bldr, "13", "false");
-	fb_json_bldr_add_str(bldr, "14", "false");
-	fb_json_bldr_add_str(bldr, "15", "false");
 	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_THREAD_LIST);
 }
 
