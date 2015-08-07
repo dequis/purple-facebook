@@ -57,10 +57,6 @@ fb_data_dispose(GObject *obj)
 		g_object_unref(priv->api);
 	}
 
-	if (priv->roomlist != NULL) {
-		g_object_unref(priv->roomlist);
-	}
-
 	g_hash_table_destroy(priv->icons);
 	g_hash_table_destroy(priv->icona);
 }

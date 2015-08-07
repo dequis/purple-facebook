@@ -369,6 +369,11 @@ fb_cb_api_thread_list(FbApi *api, GSList *thrds, gpointer data)
 	PurpleRoomlistRoom *room;
 
 	list = fb_data_get_roomlist(fata);
+
+	if (G_UNLIKELY(list == NULL)) {
+		return;
+	}
+
 	gstr = g_string_new(NULL);
 
 	for (l = thrds; l != NULL; l = l->next) {
@@ -394,6 +399,7 @@ fb_cb_api_thread_list(FbApi *api, GSList *thrds, gpointer data)
 	}
 
 	purple_roomlist_set_in_progress(list, FALSE);
+	fb_data_set_roomlist(fata, NULL);
 	g_string_free(gstr, TRUE);
 }
 
@@ -852,6 +858,9 @@ fb_roomlist_get_list(PurpleConnection *gc)
 	PurpleRoomlistField *fld;
 
 	fata = purple_connection_get_protocol_data(gc);
+	list = fb_data_get_roomlist(fata);
+	g_return_val_if_fail(list == NULL, NULL);
+
 	api = fb_data_get_api(fata);
 	acct = purple_connection_get_account(gc);
 	list = purple_roomlist_new(acct);
@@ -868,6 +877,7 @@ fb_roomlist_get_list(PurpleConnection *gc)
 	flds = g_list_reverse(flds);
 	purple_roomlist_set_fields(list, flds);
 
+	purple_roomlist_set_in_progress(list, TRUE);
 	fb_api_thread_list(api);
 	return list;
 }
