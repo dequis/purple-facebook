@@ -893,10 +893,8 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 		if (str != NULL) {
 			msg->text = fb_api_message_parse_xma(api, str, &err);
 
-			if (err != NULL) {
-				g_propagate_error(error, err);
-				fb_json_values_free(values);
-				return msgs;
+			if (G_UNLIKELY(err != NULL)) {
+				break;
 			}
 
 			if (purple_strequal(msg->text, body)) {
@@ -1694,10 +1692,11 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.name");
 	fb_json_values_update(values, &err);
 
-	FB_API_ERROR_EMIT(api, err,
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
 		fb_json_values_free(values);
 		return FALSE;
-	);
+	}
 
 	str = fb_json_values_next_str(values, NULL);
 
@@ -1730,13 +1729,17 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
 		}
 	}
 
-	if ((g_slist_length(thrd->users) < 2) || !haself) {
-		fb_api_thread_reset(thrd, FALSE);
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
+		fb_api_thread_reset(thrd, TRUE);
+		fb_json_values_free(values);
 		return FALSE;
 	}
 
-	if (G_UNLIKELY(err != NULL)) {
-		g_propagate_error(error, err);
+	if ((g_slist_length(thrd->users) < 2) || !haself) {
+		fb_api_thread_reset(thrd, TRUE);
+		fb_json_values_free(values);
+		return FALSE;
 	}
 
 	fb_json_values_free(values);
@@ -1769,16 +1772,14 @@ fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	fb_api_thread_reset(&thrd, FALSE);
 
 	if (!fb_api_thread_parse(api, &thrd, node, &err)) {
-		fb_api_error(api, FB_API_ERROR_GENERAL,
-		             _("Failed to parse thread information"));
-		json_node_free(root);
-		return;
-	}
-
-	if (G_LIKELY(err == NULL)) {
-		g_signal_emit_by_name(api, "thread-info", &thrd);
+		if (G_LIKELY(err == NULL)) {
+			fb_api_error(api, FB_API_ERROR_GENERAL,
+			             _("Failed to parse thread information"));
+		} else {
+			fb_api_error_emit(api, err);
+		}
 	} else {
-		fb_api_error_emit(api, err);
+		g_signal_emit_by_name(api, "thread-info", &thrd);
 	}
 
 	fb_api_thread_reset(&thrd, TRUE);

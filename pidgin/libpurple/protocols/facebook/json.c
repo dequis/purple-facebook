@@ -449,7 +449,7 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 	g_return_val_if_fail(values != NULL, FALSE);
 
 	if (G_UNLIKELY(values->error != NULL)) {
-		g_propagate_error(error, err);
+		g_propagate_error(error, values->error);
 		values->error = NULL;
 		return FALSE;
 	}
