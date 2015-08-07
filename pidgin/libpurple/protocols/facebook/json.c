@@ -492,7 +492,7 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 			g_set_error(error, FB_JSON_ERROR, FB_JSON_ERROR_TYPE,
 			            _("Expected a %s but got a %s for %s"),
 			            g_type_name(value->type),
-			            G_VALUE_TYPE_NAME(&value->value),
+			            g_type_name(type),
 				    value->expr);
 			json_node_free(node);
 			return FALSE;
