@@ -73,18 +73,12 @@ static void
 fb_cb_api_connect(FbApi *api, gpointer data)
 {
 	FbData *fata = data;
-	PurpleAccount *acct;
 	PurpleConnection *gc;
 
 	gc = fb_data_get_connection(fata);
-	acct = purple_connection_get_account(gc);
 
 	fb_data_save(fata);
 	purple_connection_set_state(gc, PURPLE_CONNECTION_CONNECTED);
-
-	if (purple_account_get_bool(acct, "show-unread", TRUE)) {
-		fb_api_unread(api);
-	}
 }
 
 static void
@@ -994,10 +988,6 @@ facebook_protocol_init(PurpleProtocol *protocol)
 
 	opt = purple_account_option_bool_new(_("Mark messages as read"),
 	                                     "mark-read", TRUE);
-	opts = g_list_prepend(opts, opt);
-
-	opt = purple_account_option_bool_new(_("Show unread messages"),
-	                                     "show-unread", TRUE);
 	opts = g_list_prepend(opts, opt);
 
 	opt = purple_account_option_bool_new(_("Open new group chats with "

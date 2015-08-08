@@ -197,9 +197,6 @@ void
 fb_api_read(FbApi *api, FbId id, gboolean thread);
 
 void
-fb_api_unread(FbApi *api);
-
-void
 fb_api_thread_create(FbApi *api, GSList *uids);
 
 void
