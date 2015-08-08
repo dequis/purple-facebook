@@ -77,6 +77,7 @@ fb_thrift_new(GByteArray *bytes, guint offset, gboolean compact)
 		priv->bytes  = bytes;
 		priv->offset = offset;
 	} else {
+		priv->bytes  = g_byte_array_new();
 		priv->flags |= FB_THRIFT_FLAG_INTERNAL;
 	}
 
@@ -86,6 +87,16 @@ fb_thrift_new(GByteArray *bytes, guint offset, gboolean compact)
 
 	priv->pos = priv->offset;
 	return thft;
+}
+
+const GByteArray *
+fb_thrift_get_bytes(FbThrift *thft)
+{
+	FbThriftPrivate *priv;
+
+	g_return_val_if_fail(FB_IS_THRIFT(thft), NULL);
+	priv = thft->priv;
+	return priv->bytes;
 }
 
 guint
@@ -728,7 +739,7 @@ fb_thrift_write_i16(FbThrift *thft, gint16 i16)
 void
 fb_thrift_write_vi16(FbThrift *thft, guint16 u16)
 {
-	fb_thrift_write_vi32(thft, u16);
+	fb_thrift_write_vi64(thft, u16);
 }
 
 void
@@ -754,7 +765,6 @@ fb_thrift_write_vi32(FbThrift *thft, guint32 u32)
 {
 	fb_thrift_write_vi64(thft, u32);
 }
-
 
 void
 fb_thrift_write_i64(FbThrift *thft, gint64 i64)
@@ -790,10 +800,14 @@ fb_thrift_write_vi64(FbThrift *thft, guint64 u64)
 
 	do {
 		last = (u64 & ~0x7F) == 0;
-		byte = !last ? ((u64 & 0x7F) | 0x80) : (u64 & 0x0F);
+		byte = u64 & 0x7F;
+
+		if (!last) {
+			byte |= 0x80;
+			u64 >>= 7;
+		}
 
 		fb_thrift_write_byte(thft, byte);
-		u64 >>= 7;
 	} while (!last);
 }
 

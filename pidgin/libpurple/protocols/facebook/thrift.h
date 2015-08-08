@@ -84,6 +84,9 @@ fb_thrift_get_type(void);
 FbThrift *
 fb_thrift_new(GByteArray *bytes, guint offset, gboolean compact);
 
+const GByteArray *
+fb_thrift_get_bytes(FbThrift *thft);
+
 guint
 fb_thrift_get_pos(FbThrift *thft);
 

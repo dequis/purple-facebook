@@ -27,11 +27,11 @@
 
 #include "connection.h"
 
-#define FB_MQTT_NAME "MQIsdp"
-#define FB_MQTT_VERS 3
-#define FB_MQTT_KA   60
-#define FB_MQTT_HOST "mqtt.facebook.com"
-#define FB_MQTT_PORT 443
+#define FB_MQTT_NAME  "MQTToT"
+#define FB_MQTT_LEVEL 3
+#define FB_MQTT_KA    60
+#define FB_MQTT_HOST  "mqtt.facebook.com"
+#define FB_MQTT_PORT  443
 
 #define FB_MQTT_TIMEOUT_CONN (FB_MQTT_KA * 1500)
 #define FB_MQTT_TIMEOUT_PING (FB_MQTT_KA * 1000)
@@ -171,8 +171,7 @@ void
 fb_mqtt_open(FbMqtt *mqtt, const gchar *host, gint port);
 
 void
-fb_mqtt_connect(FbMqtt *mqtt, guint8 flags, const gchar *cid, ...)
-                G_GNUC_NULL_TERMINATED;
+fb_mqtt_connect(FbMqtt *mqtt, guint8 flags, const GByteArray *pload);
 
 gboolean
 fb_mqtt_connected(FbMqtt *mqtt, gboolean error);
