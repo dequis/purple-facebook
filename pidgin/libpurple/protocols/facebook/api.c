@@ -577,36 +577,92 @@ fb_api_cb_mqtt_error(FbMqtt *mqtt, GError *error, gpointer data)
 static void
 fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 {
+	const GByteArray *bytes;
 	FbApi *api = data;
 	FbApiPrivate *priv = api->priv;
-	gchar *json;
-	JsonBuilder *bldr;
+	FbThrift *thft;
+	GByteArray *cytes;
 
 	static guint8 flags = FB_MQTT_CONNECT_FLAG_USER |
 	                      FB_MQTT_CONNECT_FLAG_PASS |
 	                      FB_MQTT_CONNECT_FLAG_CLR;
 
-	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
-	fb_json_bldr_add_bool(bldr, "chat_on", TRUE);
-	fb_json_bldr_add_bool(bldr, "fg", FALSE);
-	fb_json_bldr_add_bool(bldr, "no_auto_fg", TRUE);
-	fb_json_bldr_add_int(bldr, "mqtt_sid", priv->mid);
-	fb_json_bldr_add_int(bldr, "nwt", 1);
-	fb_json_bldr_add_int(bldr, "nwst", 0);
-	fb_json_bldr_add_str(bldr, "a", FB_API_AGENT);
-	fb_json_bldr_add_str(bldr, "d", priv->did);
-	fb_json_bldr_add_str(bldr, "pf", "jz");
-	fb_json_bldr_add_strf(bldr, "u", "%" FB_ID_FORMAT, priv->uid);
+	thft = fb_thrift_new(NULL, 0, TRUE);
 
-	json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
-	fb_mqtt_connect(mqtt,
-		flags,       /* Flags */
-		priv->cid,   /* Client identifier */
-		json,        /* Will message */
-		priv->token, /* Username */
-		NULL);
+	/* Write the client identifier */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 1);
+	fb_thrift_write_str(thft, priv->cid);
 
-	g_free(json);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRUCT, 4);
+
+	/* Write the user identifier */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 5);
+	fb_thrift_write_i64(thft, priv->uid);
+
+	/* Write the information string */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 6);
+	fb_thrift_write_str(thft, "");
+
+	/* Write the UNKNOWN ("cp"?) */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 7);
+	fb_thrift_write_i64(thft, 23);
+
+	/* Write the UNKNOWN ("ecp"?) */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 8);
+	fb_thrift_write_i64(thft, 26);
+
+	/* Write the UNKNOWN */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 9);
+	fb_thrift_write_i32(thft, 1);
+
+	/* Write the UNKNOWN ("chat_on"?) */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 10);
+	fb_thrift_write_bool(thft, TRUE);
+
+	/* Write the UNKNOWN ("no_auto_fg"?) */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 11);
+	fb_thrift_write_bool(thft, TRUE);
+
+	/* Write the device identifier */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 12);
+	fb_thrift_write_str(thft, priv->did);
+
+	/* Write the UNKNOWN ("fg"?) */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 13);
+	fb_thrift_write_bool(thft, TRUE);
+
+	/* Write the UNKNOWN ("nwt"?) */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 14);
+	fb_thrift_write_i32(thft, 1);
+
+	/* Write the UNKNOWN ("nwst"?) */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 15);
+	fb_thrift_write_i32(thft, 0);
+
+	/* Write the MQTT identifier */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 16);
+	fb_thrift_write_i64(thft, priv->mid);
+
+	/* Write the UNKNOWN */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_LIST, 18);
+	fb_thrift_write_list(thft, FB_THRIFT_TYPE_I32, 0);
+	fb_thrift_write_stop(thft);
+
+	/* Write the token */
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 19);
+	fb_thrift_write_str(thft, priv->token);
+
+	/* Write the STOP for the struct */
+	fb_thrift_write_stop(thft);
+
+	bytes = fb_thrift_get_bytes(thft);
+	cytes = fb_util_zcompress(bytes);
+
+	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, bytes, "Writing connect");
+	fb_mqtt_connect(mqtt, flags, cytes);
+
+	g_byte_array_free(cytes, TRUE);
+	g_object_unref(thft);
 }
 
 static void

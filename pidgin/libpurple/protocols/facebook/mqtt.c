@@ -598,35 +598,27 @@ fb_mqtt_open(FbMqtt *mqtt, const gchar *host, gint port)
 }
 
 void
-fb_mqtt_connect(FbMqtt *mqtt, guint8 flags, const gchar *cid, ...)
+fb_mqtt_connect(FbMqtt *mqtt, guint8 flags, const GByteArray *pload)
 {
-	const gchar *str;
 	FbMqttMessage *msg;
-	va_list ap;
 
-	g_return_if_fail(cid != NULL);
 	g_return_if_fail(!fb_mqtt_connected(mqtt, FALSE));
+	g_return_if_fail(pload != NULL);
 
 	/* Facebook always sends a CONNACK, use QoS1 */
 	flags |= FB_MQTT_CONNECT_FLAG_QOS1;
 
 	msg = fb_mqtt_message_new(FB_MQTT_MESSAGE_TYPE_CONNECT, 0);
-	fb_mqtt_message_write_str(msg, FB_MQTT_NAME);  /* Protocol name */
-	fb_mqtt_message_write_byte(msg, FB_MQTT_VERS); /* Protocol version */
-	fb_mqtt_message_write_byte(msg, flags);        /* Flags */
-	fb_mqtt_message_write_u16(msg, FB_MQTT_KA);    /* Keep alive */
-	fb_mqtt_message_write_str(msg, cid);           /* Client identifier */
+	fb_mqtt_message_write_str(msg, FB_MQTT_NAME);   /* Protocol name */
+	fb_mqtt_message_write_byte(msg, FB_MQTT_LEVEL); /* Protocol level */
+	fb_mqtt_message_write_byte(msg, flags);         /* Flags */
+	fb_mqtt_message_write_u16(msg, FB_MQTT_KA);     /* Keep alive */
 
-	va_start(ap, cid);
-
-	while ((str = va_arg(ap, const gchar*)) != NULL) {
-		fb_mqtt_message_write_str(msg, str);
-	}
-
-	va_end(ap);
+	fb_mqtt_message_write(msg, pload->data, pload->len);
 	fb_mqtt_write(mqtt, msg);
-	g_object_unref(msg);
+
 	fb_mqtt_timeout(mqtt);
+	g_object_unref(msg);
 }
 
 gboolean
