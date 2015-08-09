@@ -588,7 +588,7 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	                      FB_MQTT_CONNECT_FLAG_PASS |
 	                      FB_MQTT_CONNECT_FLAG_CLR;
 
-	thft = fb_thrift_new(NULL, 0, TRUE);
+	thft = fb_thrift_new(NULL, 0);
 
 	/* Write the client identifier */
 	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 1);
@@ -819,7 +819,7 @@ fb_api_cb_mqtt_connect(FbMqtt *mqtt, gpointer data)
 }
 
 static void
-fb_api_cb_publish_mark(FbApi *api, const GByteArray *pload)
+fb_api_cb_publish_mark(FbApi *api, GByteArray *pload)
 {
 	FbJsonValues *values;
 	GError *err = NULL;
@@ -849,7 +849,7 @@ fb_api_cb_publish_mark(FbApi *api, const GByteArray *pload)
 }
 
 static void
-fb_api_cb_publish_typing(FbApi *api, const GByteArray *pload)
+fb_api_cb_publish_typing(FbApi *api, GByteArray *pload)
 {
 	const gchar *str;
 	FbApiPrivate *priv = api->priv;
@@ -1007,7 +1007,7 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 }
 
 static void
-fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
+fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 {
 	const gchar *body;
 	const gchar *data;
@@ -1029,7 +1029,7 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 	JsonNode *root;
 	JsonNode *node;
 
-	thft = fb_thrift_new((GByteArray*) pload, 0, TRUE);
+	thft = fb_thrift_new(pload, 0);
 	fb_thrift_read_str(thft, NULL);
 	size = fb_thrift_get_pos(thft);
 	g_object_unref(thft);
@@ -1157,7 +1157,7 @@ fb_api_cb_publish_ms(FbApi *api, const GByteArray *pload)
 }
 
 static void
-fb_api_cb_publish_p(FbApi *api, const GByteArray *pload)
+fb_api_cb_publish_p(FbApi *api, GByteArray *pload)
 {
 	FbApiPresence pres;
 	FbThrift *thft;
@@ -1170,7 +1170,7 @@ fb_api_cb_publish_p(FbApi *api, const GByteArray *pload)
 	guint size;
 
 	/* Start at 1 to skip the NULL byte */
-	thft  = fb_thrift_new((GByteArray*) pload, 1, TRUE);
+	thft  = fb_thrift_new(pload, 1);
 	press = NULL;
 
 	/* Skip the full list boolean field */
@@ -1243,8 +1243,8 @@ fb_api_cb_publish_p(FbApi *api, const GByteArray *pload)
 }
 
 static void
-fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic,
-                       const GByteArray *pload, gpointer data)
+fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
+                       gpointer data)
 {
 	FbApi *api = data;
 	gboolean comp;
@@ -1253,7 +1253,7 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic,
 
 	static const struct {
 		const gchar *topic;
-		void (*func) (FbApi *api, const GByteArray *pload);
+		void (*func) (FbApi *api, GByteArray *pload);
 	} parsers[] = {
 		{"/mark_thread_response", fb_api_cb_publish_mark},
 		{"/orca_typing_notifications", fb_api_cb_publish_typing},
