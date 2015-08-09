@@ -139,6 +139,9 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 	PurpleConnection *gc;
 	PurpleConnectionState state;
 	PurpleGroup *grp;
+	PurpleStatus *status;
+	PurpleStatusPrimitive pstat;
+	PurpleStatusType *type;
 
 	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
@@ -183,8 +186,12 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 	fb_data_icon_queue(fata);
 
 	if (complete && (state != PURPLE_CONNECTION_CONNECTED)) {
+		status = purple_account_get_active_status(acct);
+		type = purple_status_get_status_type(status);
+		pstat = purple_status_type_get_primitive(type);
+
 		purple_connection_update_progress(gc, _("Connecting"), 3, 4);
-		fb_api_connect(api);
+		fb_api_connect(api, pstat == PURPLE_STATUS_INVISIBLE);
 	}
 }
 
@@ -595,6 +602,10 @@ fb_status_types(PurpleAccount *acct)
 	                              NULL, NULL, TRUE);
 	types = g_list_prepend(types, type);
 
+	type = purple_status_type_new(PURPLE_STATUS_INVISIBLE,
+	                              NULL, NULL, TRUE);
+	types = g_list_prepend(types, type);
+
 	type = purple_status_type_new(PURPLE_STATUS_OFFLINE,
 	                              NULL, NULL, TRUE);
 	types = g_list_prepend(types, type);
@@ -658,6 +669,31 @@ static gboolean
 fb_client_offline_message(const PurpleBuddy *buddy)
 {
 	return TRUE;
+}
+
+static void
+fb_server_set_status(PurpleAccount *acct, PurpleStatus *status)
+{
+	FbApi *api;
+	FbData *fata;
+	gboolean invis;
+	PurpleConnection *gc;
+	PurpleStatusPrimitive pstat;
+	PurpleStatusType *type;
+
+	gc = purple_account_get_connection(acct);
+	fata = purple_connection_get_protocol_data(gc);
+	api = fb_data_get_api(fata);
+
+	type = purple_status_get_status_type(status);
+	pstat = purple_status_type_get_primitive(type);
+	invis = fb_api_is_invisible(api);
+
+	if ((pstat == PURPLE_STATUS_INVISIBLE) && !invis) {
+		fb_api_connect(api, TRUE);
+	} else if ((pstat != PURPLE_STATUS_OFFLINE) && invis) {
+		fb_api_connect(api, FALSE);
+	}
 }
 
 static gint
@@ -1027,7 +1063,7 @@ facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
 static void
 facebook_protocol_server_iface_init(PurpleProtocolServerIface *iface)
 {
-
+	iface->set_status = fb_server_set_status;
 }
 
 static void
