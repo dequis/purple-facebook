@@ -40,7 +40,7 @@
 #define FB_API_KEY     "256002347743983"
 #define FB_API_SECRET  "374e60f8b9bb6b8cbb30f78030438895"
 
-#define FB_API_CONTACTS_COUNT  "200"
+#define FB_API_CONTACTS_COUNT  200
 
 #define FB_API_URL_AUTH     FB_API_BHOST "/method/auth.login"
 #define FB_API_URL_GQL      FB_API_GHOST "/graphql"
