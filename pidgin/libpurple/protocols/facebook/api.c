@@ -1447,10 +1447,12 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApiUser user;
 	FbHttpParams *params;
 	FbJsonValues *values;
+	gboolean complete;
 	gchar *writeid = NULL;
 	GError *err = NULL;
 	gpointer mptr;
 	GSList *users = NULL;
+	guint count = 0;
 	JsonNode *root;
 
 	if (!fb_api_http_chk(api, con, res, &root)) {
@@ -1473,6 +1475,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		fb_api_user_reset(&user, FALSE);
 		str = fb_json_values_next_str(values, NULL);
 		user.uid = FB_ID_FROM_STR(str);
+		count++;
 
 		g_free(writeid);
 		writeid = fb_json_values_next_str_dup(values, NULL);
@@ -1496,10 +1499,12 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		users = g_slist_prepend(users, mptr);
 	}
 
-	if (G_UNLIKELY(err == NULL)) {
-		g_signal_emit_by_name(api, "contacts", users, writeid == NULL);
+	complete = (writeid == NULL) || (count < FB_API_CONTACTS_COUNT);
 
-		if (writeid != NULL) {
+	if (G_UNLIKELY(err == NULL)) {
+		g_signal_emit_by_name(api, "contacts", users, complete);
+
+		if (!complete) {
 			fb_api_contacts_after(api, writeid);
 		}
 	} else {
@@ -1539,7 +1544,7 @@ fb_api_contacts(FbApi *api)
 	fb_json_bldr_add_str(bldr, NULL, "user");
 	fb_json_bldr_arr_end(bldr);
 
-	fb_json_bldr_add_str(bldr, "1", FB_API_CONTACTS_COUNT);
+	fb_json_bldr_add_str(bldr, "1", G_STRINGIFY(FB_API_CONTACTS_COUNT));
 	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_CONTACTS);
 }
 
@@ -1576,7 +1581,7 @@ fb_api_contacts_after(FbApi *api, const gchar *writeid)
 	fb_json_bldr_arr_end(bldr);
 
 	fb_json_bldr_add_str(bldr, "1", writeid);
-	fb_json_bldr_add_str(bldr, "2", FB_API_CONTACTS_COUNT);
+	fb_json_bldr_add_str(bldr, "2", G_STRINGIFY(FB_API_CONTACTS_COUNT));
 	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_CONTACTS_AFTER);
 }
 
