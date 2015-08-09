@@ -25,8 +25,8 @@
 
 struct _FbThriftPrivate
 {
-	FbThriftFlags flags;
 	GByteArray *bytes;
+	gboolean internal;
 	guint offset;
 	guint pos;
 	guint lastbool;
@@ -40,7 +40,7 @@ fb_thrift_dispose(GObject *obj)
 {
 	FbThriftPrivate *priv = FB_THRIFT(obj)->priv;
 
-	if (priv->flags & FB_THRIFT_FLAG_INTERNAL) {
+	if (priv->internal) {
 		g_byte_array_free(priv->bytes, TRUE);
 	}
 }
@@ -65,7 +65,7 @@ fb_thrift_init(FbThrift *thft)
 }
 
 FbThrift *
-fb_thrift_new(GByteArray *bytes, guint offset, gboolean compact)
+fb_thrift_new(GByteArray *bytes, guint offset)
 {
 	FbThrift *thft;
 	FbThriftPrivate *priv;
@@ -74,18 +74,14 @@ fb_thrift_new(GByteArray *bytes, guint offset, gboolean compact)
 	priv = thft->priv;
 
 	if (bytes != NULL) {
-		priv->bytes  = bytes;
+		priv->bytes = bytes;
 		priv->offset = offset;
+		priv->pos = offset;
 	} else {
-		priv->bytes  = g_byte_array_new();
-		priv->flags |= FB_THRIFT_FLAG_INTERNAL;
+		priv->bytes = g_byte_array_new();
+		priv->internal = TRUE;
 	}
 
-	if (compact) {
-		priv->flags |= FB_THRIFT_FLAG_COMPACT;
-	}
-
-	priv->pos = priv->offset;
 	return thft;
 }
 
@@ -150,7 +146,7 @@ fb_thrift_read(FbThrift *thft, gpointer data, guint size)
 }
 
 gboolean
-fb_thrift_read_bool(FbThrift *thft, gboolean *bln)
+fb_thrift_read_bool(FbThrift *thft, gboolean *value)
 {
 	FbThriftPrivate *priv;
 	guint8 byte;
@@ -158,36 +154,21 @@ fb_thrift_read_bool(FbThrift *thft, gboolean *bln)
 	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
 	priv = thft->priv;
 
-	if (bln != NULL) {
-		*bln = FALSE;
-	}
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		if (!fb_thrift_read_byte(thft, &byte)) {
-			return FALSE;
-		}
-
-		if (bln != NULL) {
-			*bln = byte != 0;
-		}
-
-		return TRUE;
-	}
-
 	if ((priv->lastbool & 0x03) != 0x01) {
 		if (!fb_thrift_read_byte(thft, &byte)) {
 			return FALSE;
 		}
 
-		if (bln != NULL) {
-			*bln = (byte & 0x0F) == 0x01;
+		if (value != NULL) {
+			*value = (byte & 0x0F) == 0x01;
 		}
 
+		priv->lastbool = 0;
 		return TRUE;
 	}
 
-	if (bln != NULL) {
-		*bln = ((priv->lastbool & 0x04) >> 2) != 0;
+	if (value != NULL) {
+		*value = ((priv->lastbool & 0x04) >> 2) != 0;
 	}
 
 	priv->lastbool = 0;
@@ -195,250 +176,145 @@ fb_thrift_read_bool(FbThrift *thft, gboolean *bln)
 }
 
 gboolean
-fb_thrift_read_byte(FbThrift *thft, guint8 *byte)
+fb_thrift_read_byte(FbThrift *thft, guint8 *value)
 {
-	if (byte != NULL) {
-		*byte = 0;
-	}
-
-	return fb_thrift_read(thft, byte, sizeof *byte);
+	return fb_thrift_read(thft, value, sizeof *value);
 }
 
 gboolean
-fb_thrift_read_dbl(FbThrift *thft, gdouble *dbl)
+fb_thrift_read_dbl(FbThrift *thft, gdouble *value)
 {
 	gint64 i64;
 
 	/* Almost always 8, but check anyways */
-	static const gsize size = MIN(sizeof dbl, sizeof i64);
-
-	if (dbl != NULL) {
-		*dbl = 0;
-	}
+	static const gsize size = MIN(sizeof value, sizeof i64);
 
 	if (!fb_thrift_read_i64(thft, &i64)) {
 		return FALSE;
 	}
 
-	if (dbl != NULL) {
-		memcpy(&dbl, &i64, size);
+	if (value != NULL) {
+		memcpy(value, &i64, size);
 	}
 
 	return TRUE;
 }
 
 gboolean
-fb_thrift_read_i16(FbThrift *thft, gint16 *i16)
+fb_thrift_read_i16(FbThrift *thft, gint16 *value)
 {
-	FbThriftPrivate *priv;
 	gint64 i64;
 
-	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
-	priv = thft->priv;
-
-	if (i16 != NULL) {
-		*i16 = 0;
-	}
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		if (!fb_thrift_read(thft, i16, sizeof *i16)) {
-			return FALSE;
-		}
-
-		if (i16 != NULL) {
-			*i16 = GINT16_FROM_BE(*i16);
-		}
-
-		return TRUE;
-	}
-
 	if (!fb_thrift_read_i64(thft, &i64)) {
 		return FALSE;
 	}
 
-	if (i16 != NULL) {
-		*i16 = i64;
+	if (value != NULL) {
+		*value = i64;
 	}
 
 	return TRUE;
 }
 
 gboolean
-fb_thrift_read_vi16(FbThrift *thft, guint16 *u16)
+fb_thrift_read_vi16(FbThrift *thft, guint16 *value)
 {
 	guint64 u64;
-
-	if (u16 != NULL) {
-		*u16 = 0;
-	}
 
 	if (!fb_thrift_read_vi64(thft, &u64)) {
 		return FALSE;
 	}
 
-	if (u16 != NULL) {
-		*u16 = u64;
+	if (value != NULL) {
+		*value = u64;
 	}
 
 	return TRUE;
 }
 
 gboolean
-fb_thrift_read_i32(FbThrift *thft, gint32 *i32)
+fb_thrift_read_i32(FbThrift *thft, gint32 *value)
 {
-	FbThriftPrivate *priv;
 	gint64 i64;
 
-	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
-	priv = thft->priv;
-
-	if (i32 != NULL) {
-		*i32 = 0;
-	}
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		if (!fb_thrift_read(thft, i32, sizeof *i32)) {
-			return FALSE;
-		}
-
-		if (i32 != NULL) {
-			*i32 = GINT32_FROM_BE(*i32);
-		}
-
-		return TRUE;
-	}
-
 	if (!fb_thrift_read_i64(thft, &i64)) {
 		return FALSE;
 	}
 
-	if (i32 != NULL) {
-		*i32 = i64;
+	if (value != NULL) {
+		*value = i64;
 	}
 
 	return TRUE;
 }
 
 gboolean
-fb_thrift_read_vi32(FbThrift *thft, guint32 *u32)
+fb_thrift_read_vi32(FbThrift *thft, guint32 *value)
 {
 	guint64 u64;
-
-	if (u32 != NULL) {
-		*u32 = 0;
-	}
 
 	if (!fb_thrift_read_vi64(thft, &u64)) {
 		return FALSE;
 	}
 
-	if (u32 != NULL) {
-		*u32 = u64;
+	if (value != NULL) {
+		*value = u64;
 	}
 
 	return TRUE;
 }
 
 gboolean
-fb_thrift_read_i64(FbThrift *thft, gint64 *i64)
+fb_thrift_read_i64(FbThrift *thft, gint64 *value)
 {
-	FbThriftPrivate *priv;
 	guint64 u64;
-
-	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
-	priv = thft->priv;
-
-	if (i64 != NULL) {
-		*i64 = 0;
-	}
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		if (!fb_thrift_read(thft, i64, sizeof *i64)) {
-			return FALSE;
-		}
-
-		if (i64 != NULL) {
-			*i64 = GINT64_FROM_BE(*i64);
-		}
-
-		return TRUE;
-	}
 
 	if (!fb_thrift_read_vi64(thft, &u64)) {
 		return FALSE;
 	}
 
-	if (i64 != NULL) {
+	if (value != NULL) {
 		/* Convert from zigzag to integer */
-		*i64 = (u64 >> 0x01) ^ -(u64 & 0x01);
+		*value = (u64 >> 0x01) ^ -(u64 & 0x01);
 	}
 
 	return TRUE;
 }
 
 gboolean
-fb_thrift_read_vi64(FbThrift *thft, guint64 *u64)
+fb_thrift_read_vi64(FbThrift *thft, guint64 *value)
 {
-	FbThriftPrivate *priv;
-	guint i;
+	guint i = 0;
 	guint8 byte;
-
-	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
-	priv = thft->priv;
-
-	if (u64 != NULL) {
-		*u64 = 0;
-		 i = 0;
-	}
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		return FALSE;
-	}
+	guint64 u64 = 0;
 
 	do {
 		if (!fb_thrift_read_byte(thft, &byte)) {
-			if (u64 != NULL) {
-				*u64 = 0;
-			}
-
 			return FALSE;
 		}
 
-		if (u64 != NULL) {
-			*u64 |= ((guint64) (byte & 0x7F)) << i;
-			 i += 7;
-		}
+		u64 |= ((guint64) (byte & 0x7F)) << i;
+		i += 7;
 	} while ((byte & 0x80) == 0x80);
+
+	if (value != NULL) {
+		*value = u64;
+	}
 
 	return TRUE;
 }
 
 gboolean
-fb_thrift_read_str(FbThrift *thft, gchar **str)
+fb_thrift_read_str(FbThrift *thft, gchar **value)
 {
-	FbThriftPrivate *priv;
-	gboolean res;
 	guint8 *data;
 	guint32 size;
 
-	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
-	priv = thft->priv;
-
-	if (str != NULL) {
-		*str = NULL;
-	}
-
-	if (priv->flags & FB_THRIFT_FLAG_COMPACT) {
-		res = fb_thrift_read_vi32(thft, &size);
-	} else {
-		res = fb_thrift_read_i32(thft, (gint32*) &size);
-	}
-
-	if (!res) {
+	if (!fb_thrift_read_vi32(thft, &size)) {
 		return FALSE;
 	}
 
-	if (str != NULL) {
+	if (value != NULL) {
 		data = g_new(guint8, size + 1);
 		data[size] = 0;
 	} else {
@@ -450,8 +326,8 @@ fb_thrift_read_str(FbThrift *thft, gchar **str)
 		return FALSE;
 	}
 
-	if (str != NULL) {
-		*str = (gchar*) data;
+	if (value != NULL) {
+		*value = (gchar*) data;
 	}
 
 	return TRUE;
@@ -468,36 +344,17 @@ fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id)
 	g_return_val_if_fail(type != NULL, FALSE);
 	priv = thft->priv;
 
-	if (id != NULL) {
-		*id = 0;
-	}
-
 	if (!fb_thrift_read_byte(thft, &byte)) {
-		*type = 0;
 		return FALSE;
 	}
 
 	if (byte == FB_THRIFT_TYPE_STOP) {
-		*type = byte;
+		*type = FB_THRIFT_TYPE_STOP;
 		return FALSE;
 	}
 
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		*type = byte;
-
-		if (!fb_thrift_read_i16(thft, &i16)) {
-			return FALSE;
-		}
-
-		if (id != NULL) {
-			*id = i16;
-		}
-
-		return TRUE;
-	}
-
 	*type = fb_thrift_ct2t(byte & 0x0F);
-	i16   = (byte & 0xF0) >> 4;
+	i16 = (byte & 0xF0) >> 4;
 
 	if (*type == FB_THRIFT_TYPE_BOOL) {
 		priv->lastbool = 0x01;
@@ -554,37 +411,20 @@ fb_thrift_read_isstop(FbThrift *thft)
 gboolean
 fb_thrift_read_list(FbThrift *thft, FbThriftType *type, guint *size)
 {
-	FbThriftPrivate *priv;
-	gint32 i32;
 	guint8 byte;
 	guint32 u32;
 
-	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
 	g_return_val_if_fail(type != NULL, FALSE);
 	g_return_val_if_fail(size != NULL, FALSE);
-	priv = thft->priv;
-
-	*type = 0;
-	*size = 0;
 
 	if (!fb_thrift_read_byte(thft, &byte)) {
 		return FALSE;
 	}
 
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		if (!fb_thrift_read_i32(thft, &i32)) {
-			return FALSE;
-		}
-
-		*type = byte;
-		*size = i32;
-		return TRUE;
-	}
-
 	*type = fb_thrift_ct2t(byte & 0x0F);
 	*size = (byte & 0xF0) >> 4;
 
-	if (*size == 15) {
+	if (*size == 0x0F) {
 		if (!fb_thrift_read_vi32(thft, &u32)) {
 			return FALSE;
 		}
@@ -599,48 +439,18 @@ gboolean
 fb_thrift_read_map(FbThrift *thft, FbThriftType *ktype, FbThriftType *vtype,
                    guint *size)
 {
-	FbThriftPrivate *priv;
 	gint32 i32;
 	guint8 byte;
 
-	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
 	g_return_val_if_fail(ktype != NULL, FALSE);
 	g_return_val_if_fail(vtype != NULL, FALSE);
 	g_return_val_if_fail(size != NULL, FALSE);
-	priv = thft->priv;
-
-	*ktype = 0;
-	*vtype = 0;
-	*size = 0;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		if (!fb_thrift_read_byte(thft, &byte)) {
-			return FALSE;
-		}
-
-		*ktype = byte;
-
-		if (!fb_thrift_read_byte(thft, &byte)) {
-			return FALSE;
-		}
-
-		*vtype = byte;
-
-		if (!fb_thrift_read_i32(thft, &i32)) {
-			return FALSE;
-		}
-
-		*size = i32;
-		return TRUE;
-	}
 
 	if (!fb_thrift_read_i32(thft, &i32)) {
 		return FALSE;
 	}
 
-	*size = i32;
-
-	if (*size != 0) {
+	if (i32 != 0) {
 		if (!fb_thrift_read_byte(thft, &byte)) {
 			return FALSE;
 		}
@@ -652,6 +462,7 @@ fb_thrift_read_map(FbThrift *thft, FbThriftType *ktype, FbThriftType *vtype,
 		*vtype = 0;
 	}
 
+	*size = i32;
 	return TRUE;
 }
 
@@ -674,7 +485,7 @@ fb_thrift_write(FbThrift *thft, gconstpointer data, guint size)
 }
 
 void
-fb_thrift_write_bool(FbThrift *thft, gboolean bln)
+fb_thrift_write_bool(FbThrift *thft, gboolean value)
 {
 	FbThriftPrivate *priv;
 	guint pos;
@@ -682,13 +493,8 @@ fb_thrift_write_bool(FbThrift *thft, gboolean bln)
 	g_return_if_fail(FB_IS_THRIFT(thft));
 	priv = thft->priv;
 
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		fb_thrift_write_byte(thft, bln != 0);
-		return;
-	}
-
 	if ((priv->lastbool & 0x03) != 0x02) {
-		fb_thrift_write_byte(thft, bln ? 0x01 : 0x02);
+		fb_thrift_write_byte(thft, value ? 0x01 : 0x02);
 		return;
 	}
 
@@ -697,114 +503,73 @@ fb_thrift_write_bool(FbThrift *thft, gboolean bln)
 
 	if ((pos >= priv->offset) && (pos < priv->bytes->len)) {
 		priv->bytes->data[pos] &= ~0x0F;
-		priv->bytes->data[pos] |= bln ? 0x01 : 0x02;
+		priv->bytes->data[pos] |= value ? 0x01 : 0x02;
 	}
 }
 
 void
-fb_thrift_write_byte(FbThrift *thft, guint8 byte)
+fb_thrift_write_byte(FbThrift *thft, guint8 value)
 {
-	fb_thrift_write(thft, &byte, sizeof byte);
+	fb_thrift_write(thft, &value, sizeof value);
 }
 
 void
-fb_thrift_write_dbl(FbThrift *thft, gdouble dbl)
+fb_thrift_write_dbl(FbThrift *thft, gdouble value)
 {
 	gint64 i64;
 
 	/* Almost always 8, but check anyways */
-	static const gsize size = MIN(sizeof dbl, sizeof i64);
+	static const gsize size = MIN(sizeof value, sizeof i64);
 
-	memcpy(&i64, &dbl, size);
+	memcpy(&i64, &value, size);
 	fb_thrift_write_i64(thft, i64);
 }
 
 void
-fb_thrift_write_i16(FbThrift *thft, gint16 i16)
+fb_thrift_write_i16(FbThrift *thft, gint16 value)
 {
-	FbThriftPrivate *priv;
-
-	g_return_if_fail(FB_IS_THRIFT(thft));
-	priv = thft->priv;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		i16 = GINT16_TO_BE(i16);
-		fb_thrift_write(thft, &i16, sizeof i16);
-		return;
-	}
-
-	fb_thrift_write_i32(thft, i16);
+	fb_thrift_write_i64(thft, value);
 }
 
 void
-fb_thrift_write_vi16(FbThrift *thft, guint16 u16)
+fb_thrift_write_vi16(FbThrift *thft, guint16 value)
 {
-	fb_thrift_write_vi64(thft, u16);
+	fb_thrift_write_vi64(thft, value);
 }
 
 void
-fb_thrift_write_i32(FbThrift *thft, gint32 i32)
+fb_thrift_write_i32(FbThrift *thft, gint32 value)
 {
-	FbThriftPrivate *priv;
-
-	g_return_if_fail(FB_IS_THRIFT(thft));
-	priv = thft->priv;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		i32 = GINT32_TO_BE(i32);
-		fb_thrift_write(thft, &i32, sizeof i32);
-		return;
-	}
-
-	i32 = (i32 << 1) ^ (i32 >> 31);
-	fb_thrift_write_vi64(thft, i32);
+	value = (value << 1) ^ (value >> 31);
+	fb_thrift_write_vi64(thft, value);
 }
 
 void
-fb_thrift_write_vi32(FbThrift *thft, guint32 u32)
+fb_thrift_write_vi32(FbThrift *thft, guint32 value)
 {
-	fb_thrift_write_vi64(thft, u32);
+	fb_thrift_write_vi64(thft, value);
 }
 
 void
-fb_thrift_write_i64(FbThrift *thft, gint64 i64)
+fb_thrift_write_i64(FbThrift *thft, gint64 value)
 {
-	FbThriftPrivate *priv;
-
-	g_return_if_fail(FB_IS_THRIFT(thft));
-	priv = thft->priv;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		i64 = GINT64_TO_BE(i64);
-		fb_thrift_write(thft, &i64, sizeof i64);
-		return;
-	}
-
-	i64 = (i64 << 1) ^ (i64 >> 63);
-	fb_thrift_write_vi64(thft, i64);
+	value = (value << 1) ^ (value >> 63);
+	fb_thrift_write_vi64(thft, value);
 }
 
 void
-fb_thrift_write_vi64(FbThrift *thft, guint64 u64)
+fb_thrift_write_vi64(FbThrift *thft, guint64 value)
 {
-	FbThriftPrivate *priv;
 	gboolean last;
 	guint8 byte;
 
-	g_return_if_fail(FB_IS_THRIFT(thft));
-	priv = thft->priv;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		return;
-	}
-
 	do {
-		last = (u64 & ~0x7F) == 0;
-		byte = u64 & 0x7F;
+		last = (value & ~0x7F) == 0;
+		byte = value & 0x7F;
 
 		if (!last) {
 			byte |= 0x80;
-			u64 >>= 7;
+			value >>= 7;
 		}
 
 		fb_thrift_write_byte(thft, byte);
@@ -812,53 +577,38 @@ fb_thrift_write_vi64(FbThrift *thft, guint64 u64)
 }
 
 void
-fb_thrift_write_str(FbThrift *thft, const gchar *str)
+fb_thrift_write_str(FbThrift *thft, const gchar *value)
 {
-	FbThriftPrivate *priv;
 	guint32 size;
 
-	g_return_if_fail(FB_IS_THRIFT(thft));
-	g_return_if_fail(str != NULL);
+	g_return_if_fail(value != NULL);
 
-	priv = thft->priv;
-	size = strlen(str);
-
-	if (priv->flags & FB_THRIFT_FLAG_COMPACT) {
-		fb_thrift_write_vi32(thft, size);
-	} else {
-		fb_thrift_write_i32(thft, size);
-	}
-
-	fb_thrift_write(thft, str, size);
+	size = strlen(value);
+	fb_thrift_write_vi32(thft, size);
+	fb_thrift_write(thft, value, size);
 }
 
 void
 fb_thrift_write_field(FbThrift *thft, FbThriftType type, gint16 id)
 {
 	FbThriftPrivate *priv;
-	gint16 iddf;
+	gint16 diff;
 
 	g_return_if_fail(FB_IS_THRIFT(thft));
 	priv = thft->priv;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		fb_thrift_write_byte(thft, type);
-		fb_thrift_write_i16(thft, id);
-		return;
-	}
 
 	if (type == FB_THRIFT_TYPE_BOOL) {
 		priv->lastbool = (priv->pos << 3) | 0x02;
 	}
 
 	type = fb_thrift_t2ct(type);
-	iddf = id - priv->lastid;
+	diff = id - priv->lastid;
 
-	if ((id <= priv->lastid) || (iddf > 15)) {
+	if ((id <= priv->lastid) || (diff > 0x0F)) {
 		fb_thrift_write_byte(thft, type);
 		fb_thrift_write_i16(thft, id);
 	} else {
-		fb_thrift_write_byte(thft, (iddf << 4) | type);
+		fb_thrift_write_byte(thft, (diff << 4) | type);
 	}
 
 	priv->lastid = id;
@@ -873,17 +623,6 @@ fb_thrift_write_stop(FbThrift *thft)
 void
 fb_thrift_write_list(FbThrift *thft, FbThriftType type, guint size)
 {
-	FbThriftPrivate *priv;
-
-	g_return_if_fail(FB_IS_THRIFT(thft));
-	priv = thft->priv;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		fb_thrift_write_byte(thft, type);
-		fb_thrift_write_i32(thft, size);
-		return;
-	}
-
 	type = fb_thrift_t2ct(type);
 
 	if (size <= 14) {
@@ -899,18 +638,6 @@ void
 fb_thrift_write_map(FbThrift *thft, FbThriftType ktype, FbThriftType vtype,
                     guint size)
 {
-	FbThriftPrivate *priv;
-
-	g_return_if_fail(FB_IS_THRIFT(thft));
-	priv = thft->priv;
-
-	if (!(priv->flags & FB_THRIFT_FLAG_COMPACT)) {
-		fb_thrift_write_byte(thft, ktype);
-		fb_thrift_write_byte(thft, vtype);
-		fb_thrift_write_i32(thft, size);
-		return;
-	}
-
 	if (size == 0) {
 		fb_thrift_write_byte(thft, 0);
 		return;
@@ -951,10 +678,7 @@ fb_thrift_t2ct(FbThriftType type)
 		[FB_THRIFT_TYPE_LIST]   = 9
 	};
 
-	if (G_UNLIKELY(type >= G_N_ELEMENTS(types))) {
-		return 0;
-	}
-
+	g_return_val_if_fail(type < G_N_ELEMENTS(types), 0);
 	return types[type];
 }
 
@@ -977,9 +701,6 @@ fb_thrift_ct2t(guint8 type)
 		[12] = FB_THRIFT_TYPE_STRUCT
 	};
 
-	if (G_UNLIKELY(type >= G_N_ELEMENTS(types))) {
-		return 0;
-	}
-
+	g_return_val_if_fail(type < G_N_ELEMENTS(types), 0);
 	return types[type];
 }

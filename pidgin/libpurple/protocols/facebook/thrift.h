@@ -33,17 +33,10 @@
 #define FB_IS_THRIFT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_THRIFT))
 #define FB_THRIFT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_THRIFT, FbThriftClass))
 
-typedef enum _FbThriftFlags FbThriftFlags;
 typedef enum _FbThriftType FbThriftType;
 typedef struct _FbThrift FbThrift;
 typedef struct _FbThriftClass FbThriftClass;
 typedef struct _FbThriftPrivate FbThriftPrivate;
-
-enum _FbThriftFlags
-{
-	FB_THRIFT_FLAG_COMPACT  = 1 << 0,
-	FB_THRIFT_FLAG_INTERNAL = 1 << 1
-};
 
 enum _FbThriftType
 {
@@ -82,7 +75,7 @@ GType
 fb_thrift_get_type(void);
 
 FbThrift *
-fb_thrift_new(GByteArray *bytes, guint offset, gboolean compact);
+fb_thrift_new(GByteArray *bytes, guint offset);
 
 const GByteArray *
 fb_thrift_get_bytes(FbThrift *thft);
@@ -100,34 +93,34 @@ gboolean
 fb_thrift_read(FbThrift *thft, gpointer data, guint size);
 
 gboolean
-fb_thrift_read_bool(FbThrift *thft, gboolean *bln);
+fb_thrift_read_bool(FbThrift *thft, gboolean *value);
 
 gboolean
-fb_thrift_read_byte(FbThrift *thft, guint8 *byte);
+fb_thrift_read_byte(FbThrift *thft, guint8 *value);
 
 gboolean
-fb_thrift_read_dbl(FbThrift *thft, gdouble *dbl);
+fb_thrift_read_dbl(FbThrift *thft, gdouble *value);
 
 gboolean
-fb_thrift_read_i16(FbThrift *thft, gint16 *i16);
+fb_thrift_read_i16(FbThrift *thft, gint16 *value);
 
 gboolean
-fb_thrift_read_vi16(FbThrift *thft, guint16 *u16);
+fb_thrift_read_vi16(FbThrift *thft, guint16 *value);
 
 gboolean
-fb_thrift_read_i32(FbThrift *thft, gint32 *i32);
+fb_thrift_read_i32(FbThrift *thft, gint32 *value);
 
 gboolean
-fb_thrift_read_vi32(FbThrift *thft, guint32 *u32);
+fb_thrift_read_vi32(FbThrift *thft, guint32 *value);
 
 gboolean
-fb_thrift_read_i64(FbThrift *thft, gint64 *i64);
+fb_thrift_read_i64(FbThrift *thft, gint64 *value);
 
 gboolean
-fb_thrift_read_vi64(FbThrift *thft, guint64 *u64);
+fb_thrift_read_vi64(FbThrift *thft, guint64 *value);
 
 gboolean
-fb_thrift_read_str(FbThrift *thft, gchar **str);
+fb_thrift_read_str(FbThrift *thft, gchar **value);
 
 gboolean
 fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id);
@@ -152,34 +145,34 @@ void
 fb_thrift_write(FbThrift *thft, gconstpointer data, guint size);
 
 void
-fb_thrift_write_bool(FbThrift *thft, gboolean bln);
+fb_thrift_write_bool(FbThrift *thft, gboolean value);
 
 void
-fb_thrift_write_byte(FbThrift *thft, guint8 byte);
+fb_thrift_write_byte(FbThrift *thft, guint8 value);
 
 void
-fb_thrift_write_dbl(FbThrift *thft, gdouble dbl);
+fb_thrift_write_dbl(FbThrift *thft, gdouble value);
 
 void
-fb_thrift_write_i16(FbThrift *thft, gint16 i16);
+fb_thrift_write_i16(FbThrift *thft, gint16 value);
 
 void
-fb_thrift_write_vi16(FbThrift *thft, guint16 u16);
+fb_thrift_write_vi16(FbThrift *thft, guint16 value);
 
 void
-fb_thrift_write_i32(FbThrift *thft, gint32 i32);
+fb_thrift_write_i32(FbThrift *thft, gint32 value);
 
 void
-fb_thrift_write_vi32(FbThrift *thft, guint32 u32);
+fb_thrift_write_vi32(FbThrift *thft, guint32 value);
 
 void
-fb_thrift_write_i64(FbThrift *thft, gint64 i64);
+fb_thrift_write_i64(FbThrift *thft, gint64 value);
 
 void
-fb_thrift_write_vi64(FbThrift *thft, guint64 u64);
+fb_thrift_write_vi64(FbThrift *thft, guint64 value);
 
 void
-fb_thrift_write_str(FbThrift *thft, const gchar *str);
+fb_thrift_write_str(FbThrift *thft, const gchar *value);
 
 void
 fb_thrift_write_field(FbThrift *thft, FbThriftType type, gint16 id);
