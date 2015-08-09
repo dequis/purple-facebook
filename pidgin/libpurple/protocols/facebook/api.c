@@ -2374,31 +2374,15 @@ fb_api_typing(FbApi *api, FbId uid, gboolean state)
 }
 
 FbApiMessage *
-fb_api_message_new(FbId uid, FbId tid, const gchar *text, gboolean isself)
-{
-	FbApiMessage *msg;
-
-	msg = g_new(FbApiMessage, 1);
-	msg->uid = uid;
-	msg->tid = tid;
-	msg->text = g_strdup(text);
-	msg->isself = isself;
-
-	return msg;
-}
-
-FbApiMessage *
 fb_api_message_dup(FbApiMessage *msg, gboolean deep)
 {
 	FbApiMessage *ret;
 
 	g_return_val_if_fail(msg != NULL, NULL);
-	ret = fb_api_message_new(msg->uid, msg->tid, NULL, msg->isself);
+	ret = g_memdup(msg, sizeof *msg);
 
 	if (deep) {
 		ret->text = g_strdup(msg->text);
-	} else {
-		ret->text = msg->text;
 	}
 
 	return ret;
@@ -2419,31 +2403,17 @@ fb_api_message_reset(FbApiMessage *msg, gboolean deep)
 void
 fb_api_message_free(FbApiMessage *msg)
 {
-	if (G_UNLIKELY(msg == NULL)) {
-		return;
+	if (G_LIKELY(msg != NULL)) {
+		fb_api_message_reset(msg, TRUE);
+		g_free(msg);
 	}
-
-	g_free(msg->text);
-	g_free(msg);
-}
-
-FbApiPresence *
-fb_api_presence_new(FbId uid, gboolean active)
-{
-	FbApiPresence *pres;
-
-	pres = g_new(FbApiPresence, 1);
-	pres->uid = uid;
-	pres->active = active;
-
-	return pres;
 }
 
 FbApiPresence *
 fb_api_presence_dup(FbApiPresence *pres)
 {
 	g_return_val_if_fail(pres != NULL, NULL);
-	return fb_api_presence_new(pres->uid, pres->active);
+	return g_memdup(pres, sizeof *pres);
 }
 
 void
@@ -2456,24 +2426,9 @@ fb_api_presence_reset(FbApiPresence *pres)
 void
 fb_api_presence_free(FbApiPresence *pres)
 {
-	if (G_UNLIKELY(pres == NULL)) {
-		return;
+	if (G_LIKELY(pres != NULL)) {
+		g_free(pres);
 	}
-
-	g_free(pres);
-}
-
-FbApiThread *
-fb_api_thread_new(FbId tid, const gchar *topic, GSList *users)
-{
-	FbApiThread *thrd;
-
-	thrd = g_new(FbApiThread, 1);
-	thrd->tid = tid;
-	thrd->topic = g_strdup(topic);
-	thrd->users = users;
-
-	return thrd;
 }
 
 FbApiThread *
@@ -2482,16 +2437,13 @@ fb_api_thread_dup(FbApiThread *thrd, gboolean deep)
 	FbApiThread *ret;
 
 	g_return_val_if_fail(thrd != NULL, NULL);
-	ret = fb_api_thread_new(thrd->tid, NULL, NULL);
+	ret = g_memdup(thrd, sizeof *thrd);
 
 	if (deep) {
 		ret->topic = g_strdup(thrd->topic);
 		ret->users = g_slist_copy_deep(thrd->users,
 		                               (GCopyFunc) fb_api_user_dup,
 		                               GINT_TO_POINTER(deep));
-	} else {
-		ret->topic = thrd->topic;
-		ret->users = thrd->users;
 	}
 
 	return ret;
@@ -2513,32 +2465,17 @@ fb_api_thread_reset(FbApiThread *thrd, gboolean deep)
 void
 fb_api_thread_free(FbApiThread *thrd)
 {
-	if (G_UNLIKELY(thrd == NULL)) {
-		return;
+	if (G_LIKELY(thrd != NULL)) {
+		fb_api_thread_reset(thrd, TRUE);
+		g_free(thrd);
 	}
-
-	g_slist_free_full(thrd->users, (GDestroyNotify) fb_api_user_free);
-	g_free(thrd->topic);
-	g_free(thrd);
-}
-
-FbApiTyping *
-fb_api_typing_new(FbId uid, gboolean state)
-{
-	FbApiTyping *typg;
-
-	typg = g_new(FbApiTyping, 1);
-	typg->uid = uid;
-	typg->state = state;
-
-	return typg;
 }
 
 FbApiTyping *
 fb_api_typing_dup(FbApiTyping *typg)
 {
 	g_return_val_if_fail(typg != NULL, NULL);
-	return fb_api_typing_new(typg->uid, typg->state);
+	return g_memdup(typg, sizeof *typg);
 }
 
 void
@@ -2551,23 +2488,9 @@ fb_api_typing_reset(FbApiTyping *typg)
 void
 fb_api_typing_free(FbApiTyping *typg)
 {
-	if (G_UNLIKELY(typg == NULL)) {
-		return;
+	if (G_LIKELY(typg != NULL)) {
+		g_free(typg);
 	}
-
-	g_free(typg);
-}
-
-FbApiUser *
-fb_api_user_new(FbId uid, const gchar *name, const gchar *icon,
-                const gchar *csum)
-{
-	FbApiUser *user;
-
-	user = g_new(FbApiUser, 1);
-	user->uid = uid;
-
-	return user;
 }
 
 FbApiUser *
@@ -2576,16 +2499,12 @@ fb_api_user_dup(FbApiUser *user, gboolean deep)
 	FbApiUser *ret;
 
 	g_return_val_if_fail(user != NULL, NULL);
-	ret = fb_api_user_new(user->uid, NULL, NULL, NULL);
+	ret = g_memdup(user, sizeof *user);
 
 	if (deep) {
 		ret->name = g_strdup(user->name);
 		ret->icon = g_strdup(user->icon);
 		ret->csum = g_strdup(user->csum);
-	} else {
-		ret->name = user->name;
-		ret->icon = user->icon;
-		ret->csum = user->csum;
 	}
 
 	return ret;
@@ -2608,12 +2527,8 @@ fb_api_user_reset(FbApiUser *user, gboolean deep)
 void
 fb_api_user_free(FbApiUser *user)
 {
-	if (G_UNLIKELY(user == NULL)) {
-		return;
+	if (G_LIKELY(user != NULL)) {
+		fb_api_user_reset(user, TRUE);
+		g_free(user);
 	}
-
-	g_free(user->name);
-	g_free(user->icon);
-	g_free(user->csum);
-	g_free(user);
 }
