@@ -164,8 +164,8 @@ fb_api_new(PurpleConnection *gc);
 void
 fb_api_rehash(FbApi *api);
 
-void
-fb_api_free(FbApi *api);
+gboolean
+fb_api_is_invisible(FbApi *api);
 
 void
 fb_api_error(FbApi *api, FbApiError err, const gchar *fmt, ...)
@@ -181,7 +181,7 @@ void
 fb_api_contacts(FbApi *api);
 
 void
-fb_api_connect(FbApi *api);
+fb_api_connect(FbApi *api, gboolean invisible);
 
 void
 fb_api_disconnect(FbApi *api);
