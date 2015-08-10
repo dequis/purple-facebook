@@ -64,8 +64,11 @@ struct _FbJsonValues
 	JsonNode *root;
 	GQueue *queue;
 	GList *next;
+
+	gboolean isarray;
 	JsonArray *array;
 	guint index;
+
 	GError *error;
 };
 
@@ -132,7 +135,7 @@ gchar *
 fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error);
 
 FbJsonValues *
-fb_json_values_new(JsonNode *root, const gchar *arrexpr);
+fb_json_values_new(JsonNode *root);
 
 void
 fb_json_values_free(FbJsonValues *values);
@@ -143,6 +146,10 @@ fb_json_values_add(FbJsonValues *values, FbJsonType type, gboolean required,
 
 JsonNode *
 fb_json_values_get_root(FbJsonValues *values);
+
+void
+fb_json_values_set_array(FbJsonValues *values, gboolean required,
+                         const gchar *expr);
 
 gboolean
 fb_json_values_update(FbJsonValues *values, GError **error);

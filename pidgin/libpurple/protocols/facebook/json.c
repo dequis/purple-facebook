@@ -349,7 +349,7 @@ fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error)
 }
 
 FbJsonValues *
-fb_json_values_new(JsonNode *root, const gchar *arrexpr)
+fb_json_values_new(JsonNode *root)
 {
 	FbJsonValues *ret;
 
@@ -358,10 +358,6 @@ fb_json_values_new(JsonNode *root, const gchar *arrexpr)
 	ret = g_new0(FbJsonValues, 1);
 	ret->root = root;
 	ret->queue = g_queue_new();
-
-	if (arrexpr != NULL) {
-		ret->array = fb_json_node_get_arr(root, arrexpr, &ret->error);
-	}
 
 	return ret;
 }
@@ -436,6 +432,21 @@ fb_json_values_get_root(FbJsonValues *values)
 	return json_array_get_element(values->array, index);
 }
 
+void
+fb_json_values_set_array(FbJsonValues *values, gboolean required,
+                         const gchar *expr)
+{
+	g_return_if_fail(values != NULL);
+
+	values->array = fb_json_node_get_arr(values->root, expr,
+	                                     &values->error);
+	values->isarray = TRUE;
+
+	if ((values->error != NULL) && !required) {
+		g_clear_error(&values->error);
+	}
+}
+
 gboolean
 fb_json_values_update(FbJsonValues *values, GError **error)
 {
@@ -454,8 +465,10 @@ fb_json_values_update(FbJsonValues *values, GError **error)
 		return FALSE;
 	}
 
-	if (values->array != NULL) {
-		if (json_array_get_length(values->array) <= values->index) {
+	if (values->isarray) {
+		if ((values->array == NULL) ||
+		    (json_array_get_length(values->array) <= values->index))
+		{
 			return FALSE;
 		}
 
