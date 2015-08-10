@@ -1749,6 +1749,7 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApi *api = data;
 	FbApiMessage msg;
 	FbHttpParams *params;
+	FbId tid;
 	FbJsonValues *values;
 	GError *err = NULL;
 	gpointer mptr;
@@ -1782,9 +1783,9 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	fb_api_message_reset(&msg, FALSE);
 	str = fb_json_values_next_str(values, "0");
-	msg.tid = FB_ID_FROM_STR(str);
-
+	tid = FB_ID_FROM_STR(str);
 	fb_json_values_free(values);
+
 	values = fb_json_values_new(node);
 	fb_json_values_add(values, FB_JSON_TYPE_BOOL, TRUE, "$.unread");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
@@ -1798,10 +1799,12 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			continue;
 		}
 
-		fb_api_message_reset(&msg, FALSE);
-		str = fb_json_values_next_str(values, NULL);
-		msg.uid = FB_ID_FROM_STR(str);
+		str = fb_json_values_next_str(values, "0");
 		body = fb_json_values_next_str(values, NULL);
+
+		fb_api_message_reset(&msg, FALSE);
+		msg.uid = FB_ID_FROM_STR(str);
+		msg.tid = tid;
 
 		if (body != NULL) {
 			msg.text = g_strdup(body);
