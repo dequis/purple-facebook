@@ -982,8 +982,6 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 
 			xode = fb_json_node_get_nth(node, 0);
 			msg->text = fb_api_message_parse_xma(api, xode, &err);
-
-			json_node_free(xode);
 			json_node_free(node);
 
 			if (G_UNLIKELY(err != NULL)) {
