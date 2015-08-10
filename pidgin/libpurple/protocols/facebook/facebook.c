@@ -224,7 +224,7 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 }
 
 static void
-fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
+fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 {
 	FbApiMessage *msg;
 	FbData *fata = data;
@@ -274,7 +274,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 
 			id = fb_id_hash(&msg->tid);
 			purple_serv_got_joined_chat(gc, id, tid);
-			fb_api_thread_info(api, msg->tid);
+			fb_api_thread(api, msg->tid);
 		} else {
 			id = purple_chat_conversation_get_id(chat);
 		}
@@ -289,7 +289,7 @@ fb_cb_api_message(FbApi *api, GSList *msgs, gpointer data)
 }
 
 static void
-fb_cb_api_presence(FbApi *api, GSList *press, gpointer data)
+fb_cb_api_presences(FbApi *api, GSList *press, gpointer data)
 {
 	const gchar *statid;
 	FbApiPresence *pres;
@@ -319,24 +319,7 @@ fb_cb_api_presence(FbApi *api, GSList *press, gpointer data)
 }
 
 static void
-fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
-{
-	FbData *fata = data;
-	gchar sid[FB_ID_STRMAX];
-	GHashTable *table;
-	PurpleConnection *gc;
-
-	gc = fb_data_get_connection(fata);
-	FB_ID_TO_STR(tid, sid);
-
-	table = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
-	g_hash_table_insert(table, "name", g_strdup(sid));
-	purple_serv_join_chat(gc, table);
-	g_hash_table_destroy(table);
-}
-
-static void
-fb_cb_api_thread_info(FbApi *api, FbApiThread *thrd, gpointer data)
+fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 {
 	FbApiUser *user;
 	FbData *fata = data;
@@ -369,7 +352,24 @@ fb_cb_api_thread_info(FbApi *api, FbApiThread *thrd, gpointer data)
 }
 
 static void
-fb_cb_api_thread_list(FbApi *api, GSList *thrds, gpointer data)
+fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
+{
+	FbData *fata = data;
+	gchar sid[FB_ID_STRMAX];
+	GHashTable *table;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	FB_ID_TO_STR(tid, sid);
+
+	table = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+	g_hash_table_insert(table, "name", g_strdup(sid));
+	purple_serv_join_chat(gc, table);
+	g_hash_table_destroy(table);
+}
+
+static void
+fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 {
 	FbApiUser *user;
 	FbData *fata = data;
@@ -535,24 +535,24 @@ fb_login(PurpleAccount *acct)
 	                 G_CALLBACK(fb_cb_api_error),
 	                 fata);
 	g_signal_connect(api,
-	                 "message",
-	                 G_CALLBACK(fb_cb_api_message),
+	                 "messages",
+	                 G_CALLBACK(fb_cb_api_messages),
 	                 fata);
 	g_signal_connect(api,
-	                 "presence",
-	                 G_CALLBACK(fb_cb_api_presence),
+	                 "presences",
+	                 G_CALLBACK(fb_cb_api_presences),
+	                 fata);
+	g_signal_connect(api,
+	                 "thread",
+	                 G_CALLBACK(fb_cb_api_thread),
 	                 fata);
 	g_signal_connect(api,
 	                 "thread-create",
 	                 G_CALLBACK(fb_cb_api_thread_create),
 	                 fata);
 	g_signal_connect(api,
-	                 "thread-info",
-	                 G_CALLBACK(fb_cb_api_thread_info),
-	                 fata);
-	g_signal_connect(api,
-	                 "thread-list",
-	                 G_CALLBACK(fb_cb_api_thread_list),
+	                 "threads",
+	                 G_CALLBACK(fb_cb_api_threads),
 	                 fata);
 	g_signal_connect(api,
 	                 "typing",
@@ -785,7 +785,7 @@ fb_chat_join(PurpleConnection *gc, GHashTable *data)
 
 	fata = purple_connection_get_protocol_data(gc);
 	api = fb_data_get_api(fata);
-	fb_api_thread_info(api, tid);
+	fb_api_thread(api, tid);
 }
 
 static gchar *
@@ -920,7 +920,7 @@ fb_roomlist_get_list(PurpleConnection *gc)
 	purple_roomlist_set_fields(list, flds);
 
 	purple_roomlist_set_in_progress(list, TRUE);
-	fb_api_thread_list(api);
+	fb_api_threads(api);
 	return list;
 }
 

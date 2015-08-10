@@ -36,7 +36,6 @@
 #define FB_API_BHOST   "https://b-api.facebook.com"
 #define FB_API_GHOST   "https://graph.facebook.com"
 #define FB_API_WHOST   "https://www.facebook.com"
-#define FB_API_AGENT   "Facebook App / " PACKAGE " / " VERSION
 #define FB_API_KEY     "256002347743983"
 #define FB_API_SECRET  "374e60f8b9bb6b8cbb30f78030438895"
 
@@ -47,14 +46,14 @@
 #define FB_API_URL_MESSAGES FB_API_WHOST "/messages"
 #define FB_API_URL_PARTS    FB_API_GHOST "/participants"
 #define FB_API_URL_STICKER  FB_API_WHOST "/stickers/asset/"
-#define FB_API_URL_THRDS    FB_API_GHOST "/me/threads"
+#define FB_API_URL_THREADS  FB_API_GHOST "/me/threads"
 #define FB_API_URL_TOPIC    FB_API_AHOST "/method/messaging.setthreadname"
 
-#define FB_API_QRYID_CONTACTS        "10153856456271729"
-#define FB_API_QRYID_CONTACTS_AFTER  "10153856456281729"
-#define FB_API_QRYID_THREAD_INFO     "10153919752036729"
-#define FB_API_QRYID_THREAD_LIST     "10153919752026729"
-#define FB_API_QRYID_XMA             "10153919431161729"
+#define FB_API_QUERY_CONTACTS       10153856456271729
+#define FB_API_QUERY_CONTACTS_AFTER 10153856456281729
+#define FB_API_QUERY_THREAD         10153919752036729
+#define FB_API_QUERY_THREADS        10153919752026729
+#define FB_API_QUERY_XMA            10153919431161729
 
 #define FB_TYPE_API             (fb_api_get_type())
 #define FB_API(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_API, FbApi))
@@ -88,7 +87,6 @@ typedef struct _FbApiPresence FbApiPresence;
 typedef struct _FbApiThread FbApiThread;
 typedef struct _FbApiTyping FbApiTyping;
 typedef struct _FbApiUser FbApiUser;
-typedef struct _FbApiHttpInfo FbApiHttpInfo;
 
 
 enum _FbApiError
@@ -143,14 +141,6 @@ struct _FbApiUser
 	gchar *csum;
 };
 
-struct _FbApiHttpInfo
-{
-	PurpleHttpCallback callback;
-	const gchar *klass;
-	const gchar *name;
-	const gchar *method;
-};
-
 
 GType
 fb_api_get_type(void);
@@ -200,22 +190,22 @@ void
 fb_api_unread(FbApi *api);
 
 void
+fb_api_thread(FbApi *api, FbId tid);
+
+void
 fb_api_thread_create(FbApi *api, GSList *uids);
 
 void
-fb_api_thread_info(FbApi *api, FbId tid);
-
-void
 fb_api_thread_invite(FbApi *api, FbId tid, FbId uid);
-
-void
-fb_api_thread_list(FbApi *api);
 
 void
 fb_api_thread_remove(FbApi *api, FbId tid, FbId uid);
 
 void
 fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic);
+
+void
+fb_api_threads(FbApi *api);
 
 void
 fb_api_typing(FbApi *api, FbId uid, gboolean state);
