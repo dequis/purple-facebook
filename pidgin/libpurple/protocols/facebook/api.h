@@ -79,9 +79,11 @@
 #define FB_API_ERROR fb_api_error_quark()
 
 typedef enum _FbApiError FbApiError;
+typedef enum _FbApiEventType FbApiEventType;
 typedef struct _FbApi FbApi;
 typedef struct _FbApiClass FbApiClass;
 typedef struct _FbApiPrivate FbApiPrivate;
+typedef struct _FbApiEvent FbApiEvent;
 typedef struct _FbApiMessage FbApiMessage;
 typedef struct _FbApiPresence FbApiPresence;
 typedef struct _FbApiThread FbApiThread;
@@ -95,6 +97,12 @@ enum _FbApiError
 	FB_API_ERROR_AUTH
 };
 
+enum _FbApiEventType
+{
+	FB_API_EVENT_TYPE_THREAD_USER_ADDED,
+	FB_API_EVENT_TYPE_THREAD_USER_REMOVED
+};
+
 struct _FbApi
 {
 	GObject parent;
@@ -104,6 +112,13 @@ struct _FbApi
 struct _FbApiClass
 {
 	GObjectClass parent_class;
+};
+
+struct _FbApiEvent
+{
+	FbApiEventType type;
+	FbId uid;
+	FbId tid;
 };
 
 struct _FbApiMessage
@@ -209,6 +224,15 @@ fb_api_threads(FbApi *api);
 
 void
 fb_api_typing(FbApi *api, FbId uid, gboolean state);
+
+FbApiEvent *
+fb_api_event_dup(FbApiEvent *event);
+
+void
+fb_api_event_reset(FbApiEvent *event);
+
+void
+fb_api_event_free(FbApiEvent *event);
 
 FbApiMessage *
 fb_api_message_dup(FbApiMessage *msg, gboolean deep);

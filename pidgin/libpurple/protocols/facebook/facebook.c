@@ -224,6 +224,46 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 }
 
 static void
+fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
+{
+	FbData *fata = data;
+	FbApiEvent *event;
+	gchar uid[FB_ID_STRMAX];
+	gchar tid[FB_ID_STRMAX];
+	GSList *l;
+	PurpleAccount *acct;
+	PurpleChatConversation *chat;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
+
+	for (l = events; l != NULL; l = l->next) {
+		event = l->data;
+
+		FB_ID_TO_STR(event->tid, tid);
+		chat = purple_conversations_find_chat_with_account(tid, acct);
+
+		if (chat == NULL) {
+			continue;
+		}
+
+		FB_ID_TO_STR(event->uid, uid);
+
+		switch (event->type) {
+		case FB_API_EVENT_TYPE_THREAD_USER_ADDED:
+			purple_chat_conversation_add_user(chat, uid, NULL, 0,
+			                                  TRUE);
+			break;
+
+		case FB_API_EVENT_TYPE_THREAD_USER_REMOVED:
+			purple_chat_conversation_remove_user(chat, uid, NULL);
+			break;
+		}
+	}
+}
+
+static void
 fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 {
 	FbApiMessage *msg;
@@ -535,6 +575,10 @@ fb_login(PurpleAccount *acct)
 	                 G_CALLBACK(fb_cb_api_error),
 	                 fata);
 	g_signal_connect(api,
+	                 "events",
+	                 G_CALLBACK(fb_cb_api_events),
+	                 fata);
+	g_signal_connect(api,
 	                 "messages",
 	                 G_CALLBACK(fb_cb_api_messages),
 	                 fata);
@@ -829,7 +873,6 @@ fb_chat_invite(PurpleConnection *gc, gint id, const gchar *msg,
 	tid = FB_ID_FROM_STR(name);
 	uid = FB_ID_FROM_STR(who);
 
-	purple_chat_conversation_add_user(chat, who, NULL, 0, TRUE);
 	fb_api_thread_invite(api, tid, uid);
 }
 
@@ -983,7 +1026,6 @@ fb_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args,
 	name = purple_buddy_get_name(bdy);
 	uid = FB_ID_FROM_STR(name);
 
-	purple_chat_conversation_remove_user(chat, name, NULL);
 	fb_api_thread_remove(api, tid, uid);
 	return PURPLE_CMD_RET_OK;
 }
