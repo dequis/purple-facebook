@@ -240,7 +240,7 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__OBJECT,
 	             G_TYPE_NONE,
 	             1, G_TYPE_ERROR);
-	g_signal_new("message",
+	g_signal_new("messages",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
@@ -248,7 +248,15 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
-	g_signal_new("presence",
+	g_signal_new("presences",
+	             G_TYPE_FROM_CLASS(klass),
+	             G_SIGNAL_ACTION,
+	             0,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
+	             G_TYPE_NONE,
+	             1, G_TYPE_POINTER);
+	g_signal_new("thread",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
@@ -264,15 +272,7 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__INT64,
 	             G_TYPE_NONE,
 	             1, FB_TYPE_ID);
-	g_signal_new("thread-info",
-	             G_TYPE_FROM_CLASS(klass),
-	             G_SIGNAL_ACTION,
-	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
-	             G_TYPE_NONE,
-	             1, G_TYPE_POINTER);
-	g_signal_new("thread-list",
+	g_signal_new("threads",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
@@ -464,8 +464,9 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 }
 
 static PurpleHttpConnection *
-fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
-                FbHttpParams *params, const gchar *url)
+fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
+                const gchar *method, FbHttpParams *params,
+		PurpleHttpCallback callback)
 {
 	FbApiPrivate *priv = api->priv;
 	gchar *data;
@@ -479,10 +480,9 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 
 	fb_http_params_set_str(params, "api_key", FB_API_KEY);
 	fb_http_params_set_str(params, "device_id", priv->did);
-	fb_http_params_set_str(params, "fb_api_caller_class", info->klass);
-	fb_http_params_set_str(params, "fb_api_req_friendly_name", info->name);
+	fb_http_params_set_str(params, "fb_api_req_friendly_name", name);
 	fb_http_params_set_str(params, "format", "json");
-	fb_http_params_set_str(params, "method", info->method);
+	fb_http_params_set_str(params, "method", method);
 
 	val = fb_util_locale_str();
 	fb_http_params_set_str(params, "locale", val);
@@ -521,7 +521,7 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 
 	data = fb_http_params_close(params, NULL);
 	purple_http_request_set_contents(req, data, -1);
-	ret = purple_http_request(priv->gc, req, info->callback, api);
+	ret = purple_http_request(priv->gc, req, callback, api);
 	purple_http_request_unref(req);
 
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", ret);
@@ -533,18 +533,40 @@ fb_api_http_req(FbApi *api, const FbApiHttpInfo *info,
 }
 
 static void
-fb_api_http_graph(FbApi *api, const FbApiHttpInfo *info, JsonBuilder *builder,
-                  const gchar *qid)
+fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
+                  PurpleHttpCallback callback)
 {
+	const gchar *name;
 	FbHttpParams *prms;
 	gchar *json;
+
+	switch (query) {
+	case FB_API_QUERY_CONTACTS:
+		name = "FetchContactsFullQuery";
+		break;
+	case FB_API_QUERY_CONTACTS_AFTER:
+		name = "FetchContactsFullWithAfterQuery";
+		break;
+	case FB_API_QUERY_THREAD:
+		name = "ThreadQuery";
+		break;
+	case FB_API_QUERY_THREADS:
+		name = "ThreadListQuery";
+		break;
+	case FB_API_QUERY_XMA:
+		name = "XMAQuery";
+		break;
+	default:
+		g_return_if_reached();
+		return;
+	}
 
 	prms = fb_http_params_new();
 	json = fb_json_bldr_close(builder, JSON_NODE_OBJECT, NULL);
 
-	fb_http_params_set_str(prms, "query_id", qid);
+	fb_http_params_set_strf(prms, "query_id", "%" G_GINT64_FORMAT, query);
 	fb_http_params_set_str(prms, "query_params", json);
-	fb_api_http_req(api, info, prms, FB_API_URL_GQL);
+	fb_api_http_req(api, FB_API_URL_GQL, name, "get", prms, callback);
 
 	g_free(json);
 }
@@ -701,11 +723,12 @@ fb_api_connect_queue(FbApi *api)
 		fb_json_bldr_add_str(bldr, "buzz_on_deltas_enabled", "false");
 
 		fb_json_bldr_obj_begin(bldr, "graphql_query_hashes");
-		fb_json_bldr_add_str(bldr, "xma_query_id", FB_API_QRYID_XMA);
+		fb_json_bldr_add_str(bldr, "xma_query_id",
+		                     G_STRINGIFY(FB_API_QUERY_XMA));
 		fb_json_bldr_obj_end(bldr);
 
 		fb_json_bldr_obj_begin(bldr, "graphql_query_params");
-		fb_json_bldr_obj_begin(bldr, FB_API_QRYID_XMA);
+		fb_json_bldr_obj_begin(bldr, G_STRINGIFY(FB_API_QUERY_XMA));
 		fb_json_bldr_add_str(bldr, "xma_id", "<ID>");
 		fb_json_bldr_add_str(bldr, "small_preview_size", "9001");
 		fb_json_bldr_add_str(bldr, "large_preview_size", "9001");
@@ -775,13 +798,6 @@ fb_api_cb_mqtt_connect(FbMqtt *mqtt, gpointer data)
 	gchar *json;
 	JsonBuilder *bldr;
 
-	static const FbApiHttpInfo info = {
-		fb_api_cb_seqid,
-		"com.facebook.orca.e.y",
-		"ThreadListQuery",
-		"get"
-	};
-
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_bool(bldr, "foreground", TRUE);
 	fb_json_bldr_add_int(bldr, "keepalive_timeout", FB_MQTT_KA);
@@ -812,7 +828,8 @@ fb_api_cb_mqtt_connect(FbMqtt *mqtt, gpointer data)
 		/* See fb_api_thread_list() for key mapping */
 		bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 		fb_json_bldr_add_str(bldr, "1", "0");
-		fb_api_http_graph(api, &info, bldr, FB_API_QRYID_THREAD_LIST);
+		fb_api_http_query(api, FB_API_QUERY_THREADS, bldr,
+		                  fb_api_cb_seqid);
 	} else {
 		fb_api_connect_queue(api);
 	}
@@ -1146,7 +1163,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 
 	if (G_LIKELY(err == NULL)) {
 		msgs = g_slist_reverse(msgs);
-		g_signal_emit_by_name(api, "message", msgs);
+		g_signal_emit_by_name(api, "messages", msgs);
 	} else {
 		fb_api_error_emit(api, err);
 	}
@@ -1238,7 +1255,7 @@ fb_api_cb_publish_p(FbApi *api, GByteArray *pload)
 	g_object_unref(thft);
 
 	press = g_slist_reverse(press);
-	g_signal_emit_by_name(api, "presence", press);
+	g_signal_emit_by_name(api, "presences", press);
 	g_slist_free_full(press, (GDestroyNotify) fb_api_presence_free);
 }
 
@@ -1424,17 +1441,11 @@ fb_api_auth(FbApi *api, const gchar *user, const gchar *pass)
 {
 	FbHttpParams *prms;
 
-	static const FbApiHttpInfo info = {
-		fb_api_cb_auth,
-		"com.facebook.auth.protocol.d",
-		"authenticate",
-		"auth.login"
-	};
-
 	prms = fb_http_params_new();
 	fb_http_params_set_str(prms, "email", user);
 	fb_http_params_set_str(prms, "password", pass);
-	fb_api_http_req(api, &info, prms, FB_API_URL_AUTH);
+	fb_api_http_req(api, FB_API_URL_AUTH, "authenticate", "auth.login",
+	                prms, fb_api_cb_auth);
 }
 
 static void
@@ -1522,13 +1533,6 @@ fb_api_contacts(FbApi *api)
 {
 	JsonBuilder *bldr;
 
-	static const FbApiHttpInfo info = {
-		fb_api_cb_contacts,
-		"com.facebook.contacts.service.c",
-		"FetchContactsFullQuery",
-		"get"
-	};
-
 	/* Object key mapping:
 	 *   0: profile_types
 	 *   1: limit
@@ -1545,20 +1549,14 @@ fb_api_contacts(FbApi *api)
 	fb_json_bldr_arr_end(bldr);
 
 	fb_json_bldr_add_str(bldr, "1", G_STRINGIFY(FB_API_CONTACTS_COUNT));
-	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_CONTACTS);
+	fb_api_http_query(api, FB_API_QUERY_CONTACTS, bldr,
+	                  fb_api_cb_contacts);
 }
 
 static void
 fb_api_contacts_after(FbApi *api, const gchar *writeid)
 {
 	JsonBuilder *bldr;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_contacts,
-		"com.facebook.contacts.service.c",
-		"FetchContactsFullWithAfterQuery",
-		"get"
-	};
 
 	/* Object key mapping:
 	 *   0: profile_types
@@ -1582,7 +1580,8 @@ fb_api_contacts_after(FbApi *api, const gchar *writeid)
 
 	fb_json_bldr_add_str(bldr, "1", writeid);
 	fb_json_bldr_add_str(bldr, "2", G_STRINGIFY(FB_API_CONTACTS_COUNT));
-	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_CONTACTS_AFTER);
+	fb_api_http_query(api, FB_API_QUERY_CONTACTS_AFTER, bldr,
+	                  fb_api_cb_contacts);
 }
 
 void
@@ -1848,7 +1847,7 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	if (G_UNLIKELY(err == NULL)) {
 		msgs = g_slist_reverse(msgs);
-		g_signal_emit_by_name(api, "message", msgs);
+		g_signal_emit_by_name(api, "messages", msgs);
 	} else {
 		fb_api_error_emit(api, err);
 	}
@@ -1869,13 +1868,6 @@ fb_api_cb_unread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	gint64 count;
 	JsonBuilder *bldr;
 	JsonNode *root;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_unread_msgs,
-		"com.facebook.orca.e.m",
-		"ThreadQuery",
-		"get"
-	};
 
 	if (!fb_api_http_chk(api, con, res, &root)) {
 		return;
@@ -1911,7 +1903,8 @@ fb_api_cb_unread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		fb_json_bldr_add_str(bldr, "11", "true");
 		fb_json_bldr_add_int(bldr, "12", count);
 		fb_json_bldr_add_str(bldr, "13", "false");
-		fb_api_http_graph(api, &info, bldr, FB_API_QRYID_THREAD_INFO);
+		fb_api_http_query(api, FB_API_QUERY_THREAD, bldr,
+		                  fb_api_cb_unread_msgs);
 	}
 
 	if (G_UNLIKELY(err != NULL)) {
@@ -1928,13 +1921,6 @@ fb_api_unread(FbApi *api)
 	FbApiPrivate *priv;
 	JsonBuilder *bldr;
 
-	static const FbApiHttpInfo info = {
-		fb_api_cb_unread,
-		"com.facebook.orca.e.y",
-		"ThreadListQuery",
-		"get"
-	};
-
 	g_return_if_fail(FB_IS_API(api));
 	priv = api->priv;
 
@@ -1948,82 +1934,8 @@ fb_api_unread(FbApi *api)
 	fb_json_bldr_add_int(bldr, "1", priv->unread);
 	fb_json_bldr_add_str(bldr, "12", "true");
 	fb_json_bldr_add_str(bldr, "13", "false");
-	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_THREAD_LIST);
-}
-
-static void
-fb_api_cb_thread_create(PurpleHttpConnection *con, PurpleHttpResponse *res,
-                        gpointer data)
-{
-	const gchar *str;
-	FbApi *api = data;
-	FbId tid;
-	FbJsonValues *values;
-	GError *err = NULL;
-	JsonNode *root;
-
-	if (!fb_api_http_chk(api, con, res, &root)) {
-		return;
-	}
-
-	values = fb_json_values_new(root, NULL);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.thread_fbid");
-	fb_json_values_update(values, &err);
-
-	FB_API_ERROR_EMIT(api, err,
-		fb_json_values_free(values);
-		json_node_free(root);
-		return;
-	);
-
-	str = fb_json_values_next_str(values, "0");
-	tid = FB_ID_FROM_STR(str);
-	g_signal_emit_by_name(api, "thread-create", tid);
-
-	fb_json_values_free(values);
-	json_node_free(root);
-}
-
-void
-fb_api_thread_create(FbApi *api, GSList *uids)
-{
-	FbApiPrivate *priv;
-	FbHttpParams *prms;
-	FbId *uid;
-	gchar *json;
-	GSList *l;
-	JsonBuilder *bldr;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_thread_create,
-		"ccom.facebook.orca.send.service.l",
-		"createThread",
-		"POST"
-	};
-
-	g_return_if_fail(FB_IS_API(api));
-	g_warn_if_fail(g_slist_length(uids) > 1);
-	priv = api->priv;
-
-	bldr = fb_json_bldr_new(JSON_NODE_ARRAY);
-	fb_json_bldr_obj_begin(bldr, NULL);
-	fb_json_bldr_add_str(bldr, "type", "id");
-	fb_json_bldr_add_strf(bldr, "id", "%" FB_ID_FORMAT, priv->uid);
-	fb_json_bldr_obj_end(bldr);
-
-	for (l = uids; l != NULL; l = l->next) {
-		uid = l->data;
-		fb_json_bldr_obj_begin(bldr, NULL);
-		fb_json_bldr_add_str(bldr, "type", "id");
-		fb_json_bldr_add_strf(bldr, "id", "%" FB_ID_FORMAT, *uid);
-		fb_json_bldr_obj_end(bldr);
-	}
-
-	json = fb_json_bldr_close(bldr, JSON_NODE_ARRAY, NULL);
-	prms = fb_http_params_new();
-	fb_http_params_set_str(prms, "to", json);
-	fb_api_http_req(api, &info, prms, FB_API_URL_THRDS);
-	g_free(json);
+	fb_api_http_query(api, FB_API_QUERY_THREADS, bldr,
+	                  fb_api_cb_unread);
 }
 
 static gboolean
@@ -2099,7 +2011,7 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
 }
 
 static void
-fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_thread(PurpleHttpConnection *con, PurpleHttpResponse *res,
                       gpointer data)
 {
 	FbApi *api = data;
@@ -2131,7 +2043,7 @@ fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			fb_api_error_emit(api, err);
 		}
 	} else {
-		g_signal_emit_by_name(api, "thread-info", &thrd);
+		g_signal_emit_by_name(api, "thread", &thrd);
 	}
 
 	fb_api_thread_reset(&thrd, TRUE);
@@ -2139,16 +2051,9 @@ fb_api_cb_thread_info(PurpleHttpConnection *con, PurpleHttpResponse *res,
 }
 
 void
-fb_api_thread_info(FbApi *api, FbId tid)
+fb_api_thread(FbApi *api, FbId tid)
 {
 	JsonBuilder *bldr;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_thread_info,
-		"com.facebook.orca.e.m",
-		"ThreadQuery",
-		"get"
-	};
 
 	/* Object key mapping:
 	 *   0: thread_ids
@@ -2178,7 +2083,76 @@ fb_api_thread_info(FbApi *api, FbId tid)
 	fb_json_bldr_add_str(bldr, "10", "false");
 	fb_json_bldr_add_str(bldr, "11", "false");
 	fb_json_bldr_add_str(bldr, "13", "false");
-	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_THREAD_INFO);
+	fb_api_http_query(api, FB_API_QUERY_THREAD, bldr, fb_api_cb_thread);
+}
+
+static void
+fb_api_cb_thread_create(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                        gpointer data)
+{
+	const gchar *str;
+	FbApi *api = data;
+	FbId tid;
+	FbJsonValues *values;
+	GError *err = NULL;
+	JsonNode *root;
+
+	if (!fb_api_http_chk(api, con, res, &root)) {
+		return;
+	}
+
+	values = fb_json_values_new(root, NULL);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.thread_fbid");
+	fb_json_values_update(values, &err);
+
+	FB_API_ERROR_EMIT(api, err,
+		fb_json_values_free(values);
+		json_node_free(root);
+		return;
+	);
+
+	str = fb_json_values_next_str(values, "0");
+	tid = FB_ID_FROM_STR(str);
+	g_signal_emit_by_name(api, "thread-create", tid);
+
+	fb_json_values_free(values);
+	json_node_free(root);
+}
+
+void
+fb_api_thread_create(FbApi *api, GSList *uids)
+{
+	FbApiPrivate *priv;
+	FbHttpParams *prms;
+	FbId *uid;
+	gchar *json;
+	GSList *l;
+	JsonBuilder *bldr;
+
+	g_return_if_fail(FB_IS_API(api));
+	g_warn_if_fail(g_slist_length(uids) > 1);
+	priv = api->priv;
+
+	bldr = fb_json_bldr_new(JSON_NODE_ARRAY);
+	fb_json_bldr_obj_begin(bldr, NULL);
+	fb_json_bldr_add_str(bldr, "type", "id");
+	fb_json_bldr_add_strf(bldr, "id", "%" FB_ID_FORMAT, priv->uid);
+	fb_json_bldr_obj_end(bldr);
+
+	for (l = uids; l != NULL; l = l->next) {
+		uid = l->data;
+		fb_json_bldr_obj_begin(bldr, NULL);
+		fb_json_bldr_add_str(bldr, "type", "id");
+		fb_json_bldr_add_strf(bldr, "id", "%" FB_ID_FORMAT, *uid);
+		fb_json_bldr_obj_end(bldr);
+	}
+
+	json = fb_json_bldr_close(bldr, JSON_NODE_ARRAY, NULL);
+	prms = fb_http_params_new();
+	fb_http_params_set_str(prms, "to", json);
+	fb_api_http_req(api, FB_API_URL_THREADS, "createThread", "POST",
+	                prms, fb_api_cb_thread_create);
+	g_free(json);
 }
 
 void
@@ -2187,13 +2161,6 @@ fb_api_thread_invite(FbApi *api, FbId tid, FbId uid)
 	FbHttpParams *prms;
 	gchar *json;
 	JsonBuilder *bldr;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_http_bool,
-		"com.facebook.orca.protocol.a",
-		"addMembers",
-		"POST"
-	};
 
 	bldr = fb_json_bldr_new(JSON_NODE_ARRAY);
 	fb_json_bldr_obj_begin(bldr, NULL);
@@ -2205,13 +2172,57 @@ fb_api_thread_invite(FbApi *api, FbId tid, FbId uid)
 	prms = fb_http_params_new();
 	fb_http_params_set_str(prms, "to", json);
 	fb_http_params_set_strf(prms, "id", "t_id.%" FB_ID_FORMAT, tid);
-	fb_api_http_req(api, &info, prms, FB_API_URL_PARTS);
+	fb_api_http_req(api, FB_API_URL_PARTS, "addMembers", "POST",
+	                prms, fb_api_cb_http_bool);
 	g_free(json);
 }
 
+void
+fb_api_thread_remove(FbApi *api, FbId tid, FbId uid)
+{
+	FbApiPrivate *priv;
+	FbHttpParams *prms;
+	gchar *json;
+	JsonBuilder *bldr;
+
+	g_return_if_fail(FB_IS_API(api));
+	priv = api->priv;
+
+	prms = fb_http_params_new();
+	fb_http_params_set_strf(prms, "id", "t_id.%" FB_ID_FORMAT, tid);
+
+	if (uid == 0) {
+		uid = priv->uid;
+	}
+
+	if (uid != priv->uid) {
+		bldr = fb_json_bldr_new(JSON_NODE_ARRAY);
+		fb_json_bldr_add_strf(bldr, NULL, "%" FB_ID_FORMAT, uid);
+		json = fb_json_bldr_close(bldr, JSON_NODE_ARRAY, NULL);
+		fb_http_params_set_str(prms, "to", json);
+		g_free(json);
+	}
+
+	fb_api_http_req(api, FB_API_URL_PARTS, "removeMembers", "DELETE",
+	                prms, fb_api_cb_http_bool);
+}
+
+void
+fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic)
+{
+	FbHttpParams *prms;
+
+	prms = fb_http_params_new();
+	fb_http_params_set_str(prms, "name", topic);
+	fb_http_params_set_strf(prms, "tid", "t_id.%" FB_ID_FORMAT, tid);
+	fb_api_http_req(api, FB_API_URL_TOPIC, "setThreadName",
+	                "messaging.setthreadname", prms,
+			fb_api_cb_http_bool);
+}
+
 static void
-fb_api_cb_thread_list(PurpleHttpConnection *con, PurpleHttpResponse *res,
-                      gpointer data)
+fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                  gpointer data)
 {
 	FbApi *api = data;
 	FbApiThread thrd;
@@ -2252,7 +2263,7 @@ fb_api_cb_thread_list(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	if (G_LIKELY(err == NULL)) {
 		thrds = g_slist_reverse(thrds);
-		g_signal_emit_by_name(api, "thread-list", thrds);
+		g_signal_emit_by_name(api, "threads", thrds);
 	} else {
 		fb_api_error_emit(api, err);
 	}
@@ -2264,16 +2275,9 @@ fb_api_cb_thread_list(PurpleHttpConnection *con, PurpleHttpResponse *res,
 }
 
 void
-fb_api_thread_list(FbApi *api)
+fb_api_threads(FbApi *api)
 {
 	JsonBuilder *bldr;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_thread_list,
-		"com.facebook.orca.e.y",
-		"ThreadListQuery",
-		"get"
-	};
 
 	/* Object key mapping:
 	 *   0: folder_tag
@@ -2301,61 +2305,7 @@ fb_api_thread_list(FbApi *api)
 	fb_json_bldr_add_str(bldr, "2", "true");
 	fb_json_bldr_add_str(bldr, "12", "false");
 	fb_json_bldr_add_str(bldr, "13", "false");
-	fb_api_http_graph(api, &info, bldr, FB_API_QRYID_THREAD_LIST);
-}
-
-void
-fb_api_thread_remove(FbApi *api, FbId tid, FbId uid)
-{
-	FbApiPrivate *priv;
-	FbHttpParams *prms;
-	gchar *json;
-	JsonBuilder *bldr;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_http_bool,
-		"com.facebook.orca.protocol.a",
-		"removeMembers",
-		"DELETE"
-	};
-
-	g_return_if_fail(FB_IS_API(api));
-	priv = api->priv;
-
-	prms = fb_http_params_new();
-	fb_http_params_set_strf(prms, "id", "t_id.%" FB_ID_FORMAT, tid);
-
-	if (uid == 0) {
-		uid = priv->uid;
-	}
-
-	if (uid != priv->uid) {
-		bldr = fb_json_bldr_new(JSON_NODE_ARRAY);
-		fb_json_bldr_add_strf(bldr, NULL, "%" FB_ID_FORMAT, uid);
-		json = fb_json_bldr_close(bldr, JSON_NODE_ARRAY, NULL);
-		fb_http_params_set_str(prms, "to", json);
-		g_free(json);
-	}
-
-	fb_api_http_req(api, &info, prms, FB_API_URL_PARTS);
-}
-
-void
-fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic)
-{
-	FbHttpParams *prms;
-
-	static const FbApiHttpInfo info = {
-		fb_api_cb_http_bool,
-		"com.facebook.orca.protocol.a",
-		"setThreadName",
-		"messaging.setthreadname"
-	};
-
-	prms = fb_http_params_new();
-	fb_http_params_set_str(prms, "name", topic);
-	fb_http_params_set_strf(prms, "tid", "t_id.%" FB_ID_FORMAT, tid);
-	fb_api_http_req(api, &info, prms, FB_API_URL_TOPIC);
+	fb_api_http_query(api, FB_API_QUERY_THREADS, bldr, fb_api_cb_threads);
 }
 
 void
