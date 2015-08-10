@@ -910,6 +910,7 @@ static gchar *
 fb_api_message_parse_xma(FbApi *api, JsonNode *root, GError **error)
 {
 	const gchar *str;
+	const gchar *url;
 	FbHttpParams *params;
 	FbJsonValues *values;
 	gchar *ret;
@@ -929,17 +930,15 @@ fb_api_message_parse_xma(FbApi *api, JsonNode *root, GError **error)
 	}
 
 	str = fb_json_values_next_str(values, NULL);
+	url = fb_json_values_next_str(values, NULL);
 
-	if (!purple_strequal(str, "ExternalUrl")) {
-		fb_util_debug_warning("Unknown XMA type %s", str);
-		fb_json_values_free(values);
-		return NULL;
+	if (purple_strequal(str, "ExternalUrl")) {
+		params = fb_http_params_new_parse(url, TRUE);
+		ret = fb_http_params_dup_str(params, "u", NULL);
+		fb_http_params_free(params);
+	} else {
+		ret = g_strdup(url);
 	}
-
-	str = fb_json_values_next_str(values, NULL);
-	params = fb_http_params_new_parse(str, TRUE);
-	ret = fb_http_params_dup_str(params, "u", NULL);
-	fb_http_params_free(params);
 
 	fb_json_values_free(values);
 	return ret;
