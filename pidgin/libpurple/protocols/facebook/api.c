@@ -224,6 +224,14 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__VOID,
 	             G_TYPE_NONE,
 	             0);
+	g_signal_new("contact",
+	             G_TYPE_FROM_CLASS(klass),
+	             G_SIGNAL_ACTION,
+	             0,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
+	             G_TYPE_NONE,
+	             1, G_TYPE_POINTER);
 	g_signal_new("contacts",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -351,6 +359,8 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 		fb_api_error(api, FB_API_ERROR_GENERAL, _("Empty JSON data"));
 		return FALSE;
 	}
+
+	g_print("JSON: %.*s\n", (gint) size, (gchar*) data);
 
 	root = fb_json_node_new(data, size, &err);
 	FB_API_ERROR_EMIT(api, err, return FALSE);
@@ -549,6 +559,9 @@ fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
 	gchar *json;
 
 	switch (query) {
+	case FB_API_QUERY_CONTACT:
+		name = "FetchContactQuery";
+		break;
 	case FB_API_QUERY_CONTACTS:
 		name = "FetchContactsFullQuery";
 		break;
@@ -1549,15 +1562,129 @@ fb_api_auth(FbApi *api, const gchar *user, const gchar *pass)
 	                prms, fb_api_cb_auth);
 }
 
+static gboolean
+fb_api_contact_parse(FbApi *api, FbApiUser *user, JsonNode *root,
+                     GError **error)
+{
+	const gchar *str;
+	FbApiPrivate *priv = api->priv;
+	FbHttpParams *params;
+	FbJsonValues *values;
+	GError *err = NULL;
+
+	values = fb_json_values_new(root);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.represented_profile.id");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.id");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.represented_profile.friendship_status");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.structured_name.text");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.hugePictureUrl.uri");
+	fb_json_values_update(values, &err);
+
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
+		fb_json_values_free(values);
+		return FALSE;
+	}
+
+	str = fb_json_values_next_str(values, NULL);
+
+	if (str == NULL) {
+		str = fb_json_values_next_str(values, "0");
+	} else {
+		fb_json_values_next_str(values, NULL);
+	}
+
+	user->uid = FB_ID_FROM_STR(str);
+	str = fb_json_values_next_str(values, NULL);
+
+	if ((str != NULL) &&
+	    !purple_strequal(str, "ARE_FRIENDS") &&
+	    (user->uid != priv->uid))
+	{
+		return FALSE;
+	}
+
+	user->name = fb_json_values_next_str_dup(values, NULL);
+	user->icon = fb_json_values_next_str_dup(values, NULL);
+
+	params = fb_http_params_new_parse(user->icon, TRUE);
+	user->csum = fb_http_params_dup_str(params, "oh", &err);
+	fb_http_params_free(params);
+
+	fb_json_values_free(values);
+	return TRUE;
+}
+
+static void
+fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                  gpointer data)
+{
+	FbApi *api = data;
+	FbApiUser user;
+	GError *err = NULL;
+	JsonNode *node;
+	JsonNode *root;
+
+	if (!fb_api_http_chk(api, con, res, &root)) {
+		return;
+	}
+
+	node = fb_json_node_get_nth(root, 0);
+
+	if (node == NULL) {
+		fb_api_error(api, FB_API_ERROR_GENERAL,
+		             _("Failed to obtain contact information"));
+		json_node_free(root);
+		return;
+	}
+
+	fb_api_user_reset(&user, FALSE);
+
+	if (!fb_api_contact_parse(api, &user, node, &err)) {
+		if (G_LIKELY(err == NULL)) {
+			fb_api_error(api, FB_API_ERROR_GENERAL,
+			             _("Failed to parse contact information"));
+		} else {
+			fb_api_error_emit(api, err);
+		}
+	} else {
+		g_signal_emit_by_name(api, "contact", &user);
+	}
+
+	fb_api_user_reset(&user, TRUE);
+	json_node_free(root);
+}
+
+void
+fb_api_contact(FbApi *api, FbId uid)
+{
+	JsonBuilder *bldr;
+
+	/* Object key mapping:
+	 *   0: contact_id
+	 *   1: big_img_size
+	 *   2: huge_img_size
+	 *   3: small_img_size
+	 *   4: low_res_cover_size
+	 *   6: media_type
+	 */
+
+	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
+	fb_json_bldr_add_strf(bldr, "0", "%" FB_ID_FORMAT, uid);
+	fb_api_http_query(api, FB_API_QUERY_CONTACT, bldr, fb_api_cb_contact);
+}
+
 static void
 fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
                    gpointer data)
 {
-	const gchar *str;
 	FbApi *api = data;
-	FbApiPrivate *priv = api->priv;
 	FbApiUser user;
-	FbHttpParams *params;
 	FbJsonValues *values;
 	gboolean complete;
 	gchar *writeid = NULL;
@@ -1565,6 +1692,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	gpointer mptr;
 	GSList *users = NULL;
 	guint count = 0;
+	JsonNode *node;
 	JsonNode *root;
 
 	if (!fb_api_http_chk(api, con, res, &root)) {
@@ -1573,44 +1701,26 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
-	                   "$.represented_profile.id");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.graph_api_write_id");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
-	                   "$.represented_profile.friendship_status");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
-	                   "$.structured_name.text");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
-	                   "$.hugePictureUrl.uri");
 	fb_json_values_set_array(values, FALSE, "$.viewer.messenger_contacts"
 	                                         ".nodes");
 
 	while (fb_json_values_update(values, &err)) {
-		fb_api_user_reset(&user, FALSE);
-		str = fb_json_values_next_str(values, NULL);
-		user.uid = FB_ID_FROM_STR(str);
+		g_free(writeid);
 		count++;
 
-		g_free(writeid);
 		writeid = fb_json_values_next_str_dup(values, NULL);
-		str = fb_json_values_next_str(values, NULL);
+		node = fb_json_values_get_root(values);
+		fb_api_user_reset(&user, FALSE);
 
-		if (!purple_strequal(str, "ARE_FRIENDS") &&
-		    (user.uid != priv->uid))
-		{
-			continue;
+		if (fb_api_contact_parse(api, &user, node, &err)) {
+			mptr = fb_api_user_dup(&user, FALSE);
+			users = g_slist_prepend(users, mptr);
 		}
 
-		user.name = fb_json_values_next_str_dup(values, NULL);
-		user.icon = fb_json_values_next_str_dup(values, NULL);
-
-		params = fb_http_params_new_parse(user.icon, TRUE);
-		str = fb_http_params_get_str(params, "oh", &err);
-		user.csum = g_strdup(str);
-		fb_http_params_free(params);
-
-		mptr = fb_api_user_dup(&user, FALSE);
-		users = g_slist_prepend(users, mptr);
+		if (G_UNLIKELY(err != NULL)) {
+			break;
+		}
 	}
 
 	complete = (writeid == NULL) || (count < FB_API_CONTACTS_COUNT);

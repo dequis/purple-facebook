@@ -32,6 +32,7 @@ struct _FbDataPrivate
 	FbApi *api;
 	PurpleConnection *gc;
 	PurpleRoomlist *roomlist;
+	GQueue *msgs;
 	GHashTable *icons;
 	GHashTable *icona;
 };
@@ -57,6 +58,7 @@ fb_data_dispose(GObject *obj)
 		g_object_unref(priv->api);
 	}
 
+	g_queue_free_full(priv->msgs, (GDestroyNotify) fb_api_message_free);
 	g_hash_table_destroy(priv->icons);
 	g_hash_table_destroy(priv->icona);
 }
@@ -78,6 +80,7 @@ fb_data_init(FbData *fata)
 	priv = G_TYPE_INSTANCE_GET_PRIVATE(fata, FB_TYPE_DATA, FbDataPrivate);
 	fata->priv = priv;
 
+	priv->msgs = g_queue_new();
 	priv->icons = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                    (GDestroyNotify) fb_data_icon_free,
 					    NULL);
@@ -244,6 +247,45 @@ fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list)
 	priv = fata->priv;
 
 	priv->roomlist = list;
+}
+
+void
+fb_data_add_message(FbData *fata, FbApiMessage *msg)
+{
+	FbDataPrivate *priv;
+
+	g_return_if_fail(FB_IS_DATA(fata));
+	priv = fata->priv;
+
+	g_queue_push_tail(priv->msgs, msg);
+}
+
+GSList *
+fb_data_take_messages(FbData *fata, FbId uid)
+{
+	FbApiMessage *msg;
+	FbDataPrivate *priv;
+	GList *l;
+	GList *prev;
+	GSList *msgs = NULL;
+
+	g_return_val_if_fail(FB_IS_DATA(fata), NULL);
+	priv = fata->priv;
+	l = priv->msgs->tail;
+
+	while (l != NULL) {
+		msg = l->data;
+		prev = l->prev;
+
+		if (msg->uid == uid) {
+			msgs = g_slist_prepend(msgs, msg);
+			g_queue_delete_link(priv->msgs, l);
+		}
+
+		l = prev;
+	}
+
+	return msgs;
 }
 
 FbDataIcon *
