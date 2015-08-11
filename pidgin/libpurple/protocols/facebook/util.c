@@ -430,7 +430,6 @@ fb_util_serv_got_im(PurpleConnection *gc, const gchar *who, const gchar *text,
 
 	if (conv == NULL) {
 		conv = purple_im_conversation_new(acct, who);
-		purple_conversations_add(PURPLE_CONVERSATION(conv));
 	}
 
 	name = purple_account_get_username(acct);
