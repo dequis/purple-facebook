@@ -105,6 +105,12 @@ static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
 	return array;
 }
 
+static inline void g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
+{
+	g_queue_foreach(queue, (GFunc)free_func, NULL);
+	g_queue_free(queue);
+}
+
 static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
 	gpointer data, GError **error)
 {

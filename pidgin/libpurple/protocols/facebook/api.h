@@ -49,6 +49,7 @@
 #define FB_API_URL_THREADS  FB_API_GHOST "/me/threads"
 #define FB_API_URL_TOPIC    FB_API_AHOST "/method/messaging.setthreadname"
 
+#define FB_API_QUERY_CONTACT        10153746900701729
 #define FB_API_QUERY_CONTACTS       10153856456271729
 #define FB_API_QUERY_CONTACTS_AFTER 10153856456281729
 #define FB_API_QUERY_THREAD         10153919752036729
@@ -181,6 +182,9 @@ fb_api_error_emit(FbApi *api, GError *error);
 
 void
 fb_api_auth(FbApi *api, const gchar *user, const gchar *pass);
+
+void
+fb_api_contact(FbApi *api, FbId uid);
 
 void
 fb_api_contacts(FbApi *api);

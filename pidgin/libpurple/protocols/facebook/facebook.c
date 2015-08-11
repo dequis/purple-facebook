@@ -57,6 +57,45 @@ static GSList *fb_cmds = NULL;
 static PurpleProtocol *fb_protocol = NULL;
 
 static void
+fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data);
+
+static void
+fb_buddy_add_nonfriend(PurpleAccount *acct, FbApiUser *user)
+{
+	gchar uid[FB_ID_STRMAX];
+	PurpleBlistNode *n;
+	PurpleBlistNode *node;
+	PurpleBuddy *bdy;
+	PurpleGroup *grp;
+
+	grp = purple_blist_find_group(_("Facebook Non-Friends"));
+
+	if (G_UNLIKELY(grp == NULL)) {
+		grp = purple_group_new(_("Facebook Non-Friends"));
+		node = NULL;
+
+		for (n = purple_blist_get_root(); n != NULL; n = n->next) {
+			node = n;
+		}
+
+		/* Append to the end of the buddy list */
+		purple_blist_add_group(grp, node);
+
+		node = PURPLE_BLIST_NODE(grp);
+		purple_blist_node_set_transient(node, TRUE);
+		purple_blist_node_set_bool(node, "collapsed", TRUE);
+	}
+
+	FB_ID_TO_STR(user->uid, uid);
+	bdy = purple_buddy_new(acct, uid, NULL);
+	node = PURPLE_BLIST_NODE(bdy);
+
+	purple_blist_node_set_transient(node, TRUE);
+	purple_buddy_set_server_alias(bdy, user->name);
+	purple_blist_add_buddy(bdy, NULL, grp, NULL);
+}
+
+static void
 fb_cb_api_auth(FbApi *api, gpointer data)
 {
 	FbData *fata = data;
@@ -121,6 +160,31 @@ fb_cb_data_icon(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	idata = g_memdup(str, size);
 	purple_buddy_icons_set_for_user(acct, name, idata, size, csum);
 	fb_http_params_free(params);
+}
+
+static void
+fb_cb_api_contact(FbApi *api, FbApiUser *user, gpointer data)
+{
+	FbData *fata = data;
+	gchar uid[FB_ID_STRMAX];
+	GSList *msgs;
+	PurpleAccount *acct;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
+	FB_ID_TO_STR(user->uid, uid);
+
+	if (purple_blist_find_buddy(acct, uid) == NULL) {
+		fb_buddy_add_nonfriend(acct, user);
+	}
+
+	msgs = fb_data_take_messages(fata, user->uid);
+
+	if (msgs != NULL) {
+		fb_cb_api_messages(api, msgs, fata);
+		g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+	}
 }
 
 static void
@@ -230,6 +294,8 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 	FbApiEvent *event;
 	gchar uid[FB_ID_STRMAX];
 	gchar tid[FB_ID_STRMAX];
+	GHashTable *fetch;
+	GHashTableIter iter;
 	GSList *l;
 	PurpleAccount *acct;
 	PurpleChatConversation *chat;
@@ -237,6 +303,7 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 
 	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
+	fetch = g_hash_table_new(fb_id_hash, fb_id_equal);
 
 	for (l = events; l != NULL; l = l->next) {
 		event = l->data;
@@ -252,6 +319,11 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 
 		switch (event->type) {
 		case FB_API_EVENT_TYPE_THREAD_USER_ADDED:
+			if (purple_blist_find_buddy(acct, uid) == NULL) {
+				g_hash_table_insert(fetch, &event->uid, event);
+				break;
+			}
+
 			purple_chat_conversation_add_user(chat, uid, NULL, 0,
 			                                  TRUE);
 			break;
@@ -261,6 +333,14 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 			break;
 		}
 	}
+
+	g_hash_table_iter_init(&iter, fetch);
+
+	while (g_hash_table_iter_next(&iter, NULL, (gpointer) &event)) {
+		fb_api_thread(api, event->tid);
+	}
+
+	g_hash_table_destroy(fetch);
 }
 
 static void
@@ -289,6 +369,14 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 		msg = l->data;
 		html = purple_markup_escape_text(msg->text, -1);
 		FB_ID_TO_STR(msg->uid, uid);
+
+		if (purple_blist_find_buddy(acct, uid) == NULL) {
+			msg = fb_api_message_dup(msg, FALSE);
+			msg->text = html;
+			fb_data_add_message(fata, msg);
+			fb_api_contact(api, msg->uid);
+			continue;
+		}
 
 		flags = (msg->isself) ? PURPLE_MESSAGE_SEND
 		                      : PURPLE_MESSAGE_RECV;
@@ -387,7 +475,16 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 	for (l = thrd->users; l != NULL; l = l->next) {
 		user = l->data;
 		FB_ID_TO_STR(user->uid, uid);
-		purple_chat_conversation_add_user(chat, uid, NULL, 0, FALSE);
+
+		if (purple_chat_conversation_has_user(chat, uid)) {
+			continue;
+		}
+
+		if (purple_blist_find_buddy(acct, uid) == NULL) {
+			fb_buddy_add_nonfriend(acct, user);
+		}
+
+		purple_chat_conversation_add_user(chat, uid, NULL, 0, TRUE);
 	}
 }
 
@@ -565,6 +662,10 @@ fb_login(PurpleAccount *acct)
 	g_signal_connect(api,
 	                 "connect",
 	                 G_CALLBACK(fb_cb_api_connect),
+	                 fata);
+	g_signal_connect(api,
+	                 "contact",
+	                 G_CALLBACK(fb_cb_api_contact),
 	                 fata);
 	g_signal_connect(api,
 	                 "contacts",

@@ -28,6 +28,7 @@
 #include "connection.h"
 #include "roomlist.h"
 
+#include "api.h"
 #include "http.h"
 
 #define FB_DATA_ICON_MAX 4
@@ -88,6 +89,12 @@ fb_data_get_roomlist(FbData *fata);
 
 void
 fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list);
+
+void
+fb_data_add_message(FbData *fata, FbApiMessage *msg);
+
+GSList *
+fb_data_take_messages(FbData *fata, FbId uid);
 
 FbDataIcon *
 fb_data_icon_add(FbData *fata, PurpleBuddy *buddy, const gchar *url,
