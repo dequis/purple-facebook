@@ -434,6 +434,7 @@ fb_util_serv_got_im(PurpleConnection *gc, const gchar *who, const gchar *text,
 
 	name = purple_account_get_username(acct);
 	msg = purple_message_new_outgoing(name, text, flags);
+	purple_message_set_time(msg, timestamp);
 	purple_conversation_write_message(PURPLE_CONVERSATION(conv), msg);
 }
 
@@ -457,6 +458,7 @@ fb_util_serv_got_chat_in(PurpleConnection *gc, gint id, const gchar *who,
 
 	name = purple_account_get_username(acct);
 	msg = purple_message_new_outgoing(name, text, flags);
+	purple_message_set_time(msg, timestamp);
 	purple_conversation_write_message(PURPLE_CONVERSATION(conv), msg);
 }
 
