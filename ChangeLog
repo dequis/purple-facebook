@@ -1,3 +1,22 @@
+purple-facebook-3d30d24fdbef (2015-08-11):
+  - Add and alias non-friend buddies
+  - Added support for all XMA messages
+  - Depend on autoconf-2.64
+  - Fixed account information not being set correctly
+  - Fixed all JSON arrays being required
+  - Fixed issues and leaks with API error handling
+  - Fixed several issues with room lists
+  - Fixed the printing of invalid JSON type names
+  - Handle group chat events (additions/removals)
+  - Implemented self messages
+  - Implemented the invisible presence state
+  - Implemented the retrieval of unread messages
+  - Lots of code refactoring
+  - Removed an extra and unneeded contacts fetch request
+  - Removed some debugging messages
+  - Updated GraphQL queries
+  - Updated the MQTT version to MQTToT
+
 purple-facebook-9e3520d6ec49 (2015-08-05):
   - Cleaned up the libpurple includes
   - Fixed non-friends being added as buddies
