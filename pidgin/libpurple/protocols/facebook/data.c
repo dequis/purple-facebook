@@ -35,6 +35,7 @@ struct _FbDataPrivate
 	GQueue *msgs;
 	GHashTable *icons;
 	GHashTable *icona;
+	guint syncev;
 };
 
 static const gchar *fb_props_strs[] = {
@@ -53,6 +54,10 @@ static void
 fb_data_dispose(GObject *obj)
 {
 	FbDataPrivate *priv = FB_DATA(obj)->priv;
+
+	if (priv->syncev > 0) {
+		purple_timeout_remove(priv->syncev);
+	}
 
 	if (G_LIKELY(priv->api != NULL)) {
 		g_object_unref(priv->api);
@@ -203,6 +208,39 @@ fb_data_save(FbData *fata)
 	dup = g_strdup_printf("%" FB_ID_FORMAT, uint);
 	purple_account_set_string(acct, "uid", dup);
 	g_free(dup);
+}
+
+void
+fb_data_add_sync_timeout(FbData *fata, guint minutes, GSourceFunc func,
+                         gpointer data)
+{
+	FbDataPrivate *priv;
+
+	g_return_if_fail(FB_IS_DATA(fata));
+	priv = fata->priv;
+
+	if (priv->syncev > 0) {
+		purple_timeout_remove(priv->syncev);
+	}
+
+	minutes *= 60;
+	priv->syncev = purple_timeout_add_seconds(minutes, func, data);
+}
+
+void
+fb_data_clear_sync_timeout(FbData *fata, gboolean remove)
+{
+	FbDataPrivate *priv;
+
+	g_return_if_fail(FB_IS_DATA(fata));
+	priv = fata->priv;
+	g_return_if_fail(priv->syncev > 0);
+
+	if (remove) {
+		purple_timeout_remove(priv->syncev);
+	}
+
+	priv->syncev = 0;
 }
 
 FbApi *
