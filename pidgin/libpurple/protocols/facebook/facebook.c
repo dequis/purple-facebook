@@ -59,14 +59,16 @@ static PurpleProtocol *fb_protocol = NULL;
 static void
 fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data);
 
-static void
-fb_buddy_add_nonfriend(PurpleAccount *acct, FbApiUser *user)
+static PurpleGroup *
+fb_get_group(gboolean friend)
 {
-	gchar uid[FB_ID_STRMAX];
 	PurpleBlistNode *n;
 	PurpleBlistNode *node;
-	PurpleBuddy *bdy;
 	PurpleGroup *grp;
+
+	if (friend) {
+		return purple_blist_get_default_group();
+	}
 
 	grp = purple_blist_find_group(_("Facebook Non-Friends"));
 
@@ -86,8 +88,20 @@ fb_buddy_add_nonfriend(PurpleAccount *acct, FbApiUser *user)
 		purple_blist_node_set_bool(node, "collapsed", TRUE);
 	}
 
+	return grp;
+}
+
+static void
+fb_buddy_add_nonfriend(PurpleAccount *acct, FbApiUser *user)
+{
+	gchar uid[FB_ID_STRMAX];
+	PurpleBlistNode *node;
+	PurpleBuddy *bdy;
+	PurpleGroup *grp;
+
 	FB_ID_TO_STR(user->uid, uid);
 	bdy = purple_buddy_new(acct, uid, NULL);
+	grp = fb_get_group(FALSE);
 	node = PURPLE_BLIST_NODE(bdy);
 
 	purple_blist_node_set_transient(node, TRUE);
@@ -187,6 +201,18 @@ fb_cb_api_contact(FbApi *api, FbApiUser *user, gpointer data)
 	}
 }
 
+static gboolean
+fb_cb_sync_contacts(gpointer data)
+{
+	FbApi *api;
+	FbData *fata = data;
+
+	api = fb_data_get_api(fata);
+	fb_data_clear_sync_timeout(fata, FALSE);
+	fb_api_contacts(api);
+	return FALSE;
+}
+
 static void
 fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 {
@@ -196,6 +222,9 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 	FbData *fata = data;
 	FbId muid;
 	gchar uid[FB_ID_STRMAX];
+	gint sync;
+	gpointer bata;
+	GSList *buddies;
 	GSList *l;
 	GValue val = G_VALUE_INIT;
 	PurpleAccount *acct;
@@ -203,13 +232,15 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 	PurpleConnection *gc;
 	PurpleConnectionState state;
 	PurpleGroup *grp;
+	PurpleGroup *grpn;
 	PurpleStatus *status;
 	PurpleStatusPrimitive pstat;
 	PurpleStatusType *type;
 
 	gc = fb_data_get_connection(fata);
 	acct = purple_connection_get_account(gc);
-	grp = purple_blist_get_default_group();
+	grp = fb_get_group(TRUE);
+	grpn = fb_get_group(FALSE);
 	alias = purple_account_get_private_alias(acct);
 	state = purple_connection_get_state(gc);
 
@@ -233,11 +264,17 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 
 		bdy = purple_blist_find_buddy(acct, uid);
 
+		if (purple_buddy_get_group(bdy) == grpn) {
+			purple_blist_remove_buddy(bdy);
+			bdy = NULL;
+		}
+
 		if (bdy == NULL) {
 			bdy = purple_buddy_new(acct, uid, NULL);
 			purple_blist_add_buddy(bdy, NULL, grp, NULL);
 		}
 
+		purple_buddy_set_protocol_data(bdy, GINT_TO_POINTER(TRUE));
 		purple_buddy_set_server_alias(bdy, user->name);
 		csum = purple_buddy_icons_get_checksum_for_user(bdy);
 
@@ -249,7 +286,25 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 
 	fb_data_icon_queue(fata);
 
-	if (complete && (state != PURPLE_CONNECTION_CONNECTED)) {
+	if (!complete) {
+		return;
+	}
+
+	buddies = purple_blist_find_buddies(acct, NULL);
+
+	while (buddies != NULL) {
+		bdy = buddies->data;
+		bata = purple_buddy_get_protocol_data(bdy);
+		buddies = g_slist_delete_link(buddies, buddies);
+
+		if (GPOINTER_TO_INT(bata)) {
+			purple_buddy_set_protocol_data(bdy, NULL);
+		} else if (purple_buddy_get_group(bdy) != grpn) {
+			purple_blist_remove_buddy(bdy);
+		}
+	}
+
+	if (state != PURPLE_CONNECTION_CONNECTED) {
 		status = purple_account_get_active_status(acct);
 		type = purple_status_get_status_type(status);
 		pstat = purple_status_type_get_primitive(type);
@@ -257,6 +312,15 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 		purple_connection_update_progress(gc, _("Connecting"), 3, 4);
 		fb_api_connect(api, pstat == PURPLE_STATUS_INVISIBLE);
 	}
+
+	sync = purple_account_get_int(acct, "sync-interval", 30);
+
+	if (sync < 5) {
+		purple_account_set_int(acct, "sync-interval", 5);
+		sync = 5;
+	}
+
+	fb_data_add_sync_timeout(fata, sync, fb_cb_sync_contacts, fata);
 }
 
 static void
@@ -1170,6 +1234,10 @@ facebook_protocol_init(PurpleProtocol *protocol)
 	protocol->id      = "prpl-facebook";
 	protocol->name    = "Facebook";
 	protocol->options = OPT_PROTO_CHAT_TOPIC;
+
+	opt = purple_account_option_int_new(_("Buddy list sync interval"),
+	                                    "sync-interval", 30);
+	opts = g_list_prepend(opts, opt);
 
 	opt = purple_account_option_bool_new(_("Mark messages as read"),
 	                                     "mark-read", TRUE);

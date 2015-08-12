@@ -78,6 +78,13 @@ fb_data_load(FbData *fata);
 void
 fb_data_save(FbData *fata);
 
+void
+fb_data_add_sync_timeout(FbData *fata, guint minutes, GSourceFunc func,
+                         gpointer data);
+
+void
+fb_data_clear_sync_timeout(FbData *fata, gboolean remove);
+
 FbApi *
 fb_data_get_api(FbData *fata);
 
