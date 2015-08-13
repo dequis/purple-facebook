@@ -35,7 +35,8 @@ struct _FbDataPrivate
 	GQueue *msgs;
 	GHashTable *icons;
 	GHashTable *icona;
-	guint syncev;
+	GHashTable *unread;
+	GHashTable *evs;
 };
 
 static const gchar *fb_props_strs[] = {
@@ -54,9 +55,13 @@ static void
 fb_data_dispose(GObject *obj)
 {
 	FbDataPrivate *priv = FB_DATA(obj)->priv;
+	GHashTableIter iter;
+	gpointer ptr;
 
-	if (priv->syncev > 0) {
-		purple_timeout_remove(priv->syncev);
+	g_hash_table_iter_init(&iter, priv->evs);
+
+	while (g_hash_table_iter_next(&iter, NULL, &ptr)) {
+		purple_timeout_remove(GPOINTER_TO_UINT(ptr));
 	}
 
 	if (G_LIKELY(priv->api != NULL)) {
@@ -64,8 +69,11 @@ fb_data_dispose(GObject *obj)
 	}
 
 	g_queue_free_full(priv->msgs, (GDestroyNotify) fb_api_message_free);
+
 	g_hash_table_destroy(priv->icons);
 	g_hash_table_destroy(priv->icona);
+	g_hash_table_destroy(priv->unread);
+	g_hash_table_destroy(priv->evs);
 }
 
 static void
@@ -92,6 +100,10 @@ fb_data_init(FbData *fata)
 	priv->icona = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                    (GDestroyNotify) fb_data_icon_free,
 					    NULL);
+	priv->unread = g_hash_table_new_full(fb_id_hash, fb_id_equal, g_free,
+	                                     NULL);
+	priv->evs = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+	                                  NULL);
 }
 
 FbData *
@@ -211,36 +223,41 @@ fb_data_save(FbData *fata)
 }
 
 void
-fb_data_add_sync_timeout(FbData *fata, guint minutes, GSourceFunc func,
-                         gpointer data)
+fb_data_add_timeout(FbData *fata, const gchar *name, guint interval,
+                    GSourceFunc func, gpointer data)
 {
 	FbDataPrivate *priv;
+	gchar *key;
+	guint id;
 
 	g_return_if_fail(FB_IS_DATA(fata));
 	priv = fata->priv;
 
-	if (priv->syncev > 0) {
-		purple_timeout_remove(priv->syncev);
-	}
+	fb_data_clear_timeout(fata, name, TRUE);
 
-	minutes *= 60;
-	priv->syncev = purple_timeout_add_seconds(minutes, func, data);
+	key = g_strdup(name);
+	id = purple_timeout_add_seconds(interval, func, data);
+	g_hash_table_replace(priv->evs, key, GUINT_TO_POINTER(id));
 }
 
 void
-fb_data_clear_sync_timeout(FbData *fata, gboolean remove)
+fb_data_clear_timeout(FbData *fata, const gchar *name, gboolean remove)
 {
 	FbDataPrivate *priv;
+	gpointer ptr;
+	guint id;
 
 	g_return_if_fail(FB_IS_DATA(fata));
 	priv = fata->priv;
-	g_return_if_fail(priv->syncev > 0);
 
-	if (remove) {
-		purple_timeout_remove(priv->syncev);
+	ptr = g_hash_table_lookup(priv->evs, name);
+	id = GPOINTER_TO_UINT(ptr);
+
+	if ((id > 0) && remove) {
+		purple_timeout_remove(id);
 	}
 
-	priv->syncev = 0;
+	g_hash_table_remove(priv->evs, name);
 }
 
 FbApi *
@@ -276,6 +293,20 @@ fb_data_get_roomlist(FbData *fata)
 	return priv->roomlist;
 }
 
+gboolean
+fb_data_get_unread(FbData *fata, FbId id)
+{
+	FbDataPrivate *priv;
+	gpointer *ptr;
+
+	g_return_val_if_fail(FB_IS_DATA(fata), FALSE);
+	g_return_val_if_fail(id != 0, FALSE);
+	priv = fata->priv;
+
+	ptr = g_hash_table_lookup(priv->unread, &id);
+	return GPOINTER_TO_INT(ptr);
+}
+
 void
 fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list)
 {
@@ -285,6 +316,25 @@ fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list)
 	priv = fata->priv;
 
 	priv->roomlist = list;
+}
+
+void
+fb_data_set_unread(FbData *fata, FbId id, gboolean unread)
+{
+	FbDataPrivate *priv;
+	gpointer key;
+
+	g_return_if_fail(FB_IS_DATA(fata));
+	g_return_if_fail(id != 0);
+	priv = fata->priv;
+
+	if (!unread) {
+		g_hash_table_remove(priv->unread, &id);
+		return;
+	}
+
+	key = g_memdup(&id, sizeof id);
+	g_hash_table_replace(priv->unread, key, GINT_TO_POINTER(unread));
 }
 
 void
