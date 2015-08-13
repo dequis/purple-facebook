@@ -42,6 +42,7 @@
 #include "request.h"
 #include "roomlist.h"
 #include "server.h"
+#include "signals.h"
 #include "sslconn.h"
 #include "status.h"
 #include "util.h"
@@ -208,7 +209,7 @@ fb_cb_sync_contacts(gpointer data)
 	FbData *fata = data;
 
 	api = fb_data_get_api(fata);
-	fb_data_clear_sync_timeout(fata, FALSE);
+	fb_data_clear_timeout(fata, "sync-contacts", FALSE);
 	fb_api_contacts(api);
 	return FALSE;
 }
@@ -320,7 +321,9 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 		sync = 5;
 	}
 
-	fb_data_add_sync_timeout(fata, sync, fb_cb_sync_contacts, fata);
+	sync *= 60 * 1000;
+	fb_data_add_timeout(fata, "sync-contacts", sync, fb_cb_sync_contacts,
+	                    fata);
 }
 
 static void
@@ -447,7 +450,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 
 		if (msg->tid == 0) {
 			if (mark && !msg->isself) {
-				fb_api_read(api, msg->uid, FALSE);
+				fb_data_set_unread(fata, msg->uid, TRUE);
 			}
 
 			fb_util_serv_got_im(gc, uid, html, flags, time(NULL));
@@ -472,7 +475,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 		}
 
 		if (mark && !msg->isself) {
-			fb_api_read(api, msg->tid, TRUE);
+			fb_data_set_unread(fata, msg->tid, TRUE);
 		}
 
 		fb_util_serv_got_chat_in(gc, id, uid, html, flags, time(NULL));
@@ -634,6 +637,53 @@ fb_cb_api_typing(FbApi *api, FbApiTyping *typg, gpointer data)
 	}
 }
 
+static gboolean
+fb_cb_conv_read(gpointer data)
+{
+	const gchar *name;
+	FbApi *api;
+	FbData *fata;
+	FbId id;
+	PurpleConnection *gc;
+	PurpleConversation *conv = data;
+
+	gc = purple_conversation_get_connection(conv);
+	fata = purple_connection_get_protocol_data(gc);
+	name = purple_conversation_get_name(conv);
+	id = FB_ID_FROM_STR(name);
+
+	fb_data_clear_timeout(fata, "conv-read", FALSE);
+
+	if (!purple_conversation_has_focus(conv) ||
+	    !fb_data_get_unread(fata, id))
+	{
+		return FALSE;
+	}
+
+	api = fb_data_get_api(fata);
+	fb_data_set_unread(fata, id, FALSE);
+	fb_api_read(api, id, PURPLE_IS_CHAT_CONVERSATION(conv));
+	return FALSE;
+}
+
+static void
+fb_cb_conv_updated(PurpleConversation *conv, PurpleConversationUpdateType type,
+                   gpointer data)
+{
+	FbData *fata = data;
+	PurpleAccount *acct;
+
+	acct = purple_conversation_get_account(conv);
+
+	if ((type == PURPLE_CONVERSATION_UPDATE_UNSEEN) &&
+	    purple_account_get_bool(acct, "mark-read", TRUE))
+	{
+		/* Use event loop for purple_conversation_has_focus() */
+		fb_data_add_timeout(fata, "conv-read", 1, fb_cb_conv_read,
+		                    conv);
+	}
+}
+
 static void
 fb_blist_chat_create(GSList *buddies, gpointer data)
 {
@@ -703,6 +753,7 @@ fb_login(PurpleAccount *acct)
 	const gchar *user;
 	FbApi *api;
 	FbData *fata;
+	gpointer convh;
 	PurpleConnection *gc;
 
 	gc = purple_account_get_connection(acct);
@@ -717,6 +768,7 @@ fb_login(PurpleAccount *acct)
 
 	fata = fb_data_new(gc);
 	api = fb_data_get_api(fata);
+	convh = purple_conversations_get_handle();
 	purple_connection_set_protocol_data(gc, fata);
 
 	g_signal_connect(api,
@@ -768,6 +820,12 @@ fb_login(PurpleAccount *acct)
 	                 G_CALLBACK(fb_cb_api_typing),
 	                 fata);
 
+	purple_signal_connect(convh,
+	                      "conversation-updated",
+	                      gc,
+	                      G_CALLBACK(fb_cb_conv_updated),
+	                      fata);
+
 	if (!fb_data_load(fata)) {
 		user = purple_account_get_username(acct);
 		pass = purple_connection_get_password(gc);
@@ -793,7 +851,9 @@ fb_close(PurpleConnection *gc)
 	fb_data_save(fata);
 	fb_api_disconnect(api);
 	g_object_unref(fata);
+
 	purple_connection_set_protocol_data(gc, NULL);
+	purple_signals_disconnect_by_handle(gc);
 }
 
 static GList *

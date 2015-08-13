@@ -30,6 +30,7 @@
 
 #include "api.h"
 #include "http.h"
+#include "id.h"
 
 #define FB_DATA_ICON_MAX 4
 
@@ -79,11 +80,11 @@ void
 fb_data_save(FbData *fata);
 
 void
-fb_data_add_sync_timeout(FbData *fata, guint minutes, GSourceFunc func,
-                         gpointer data);
+fb_data_add_timeout(FbData *fata, const gchar *name, guint interval,
+                    GSourceFunc func, gpointer data);
 
 void
-fb_data_clear_sync_timeout(FbData *fata, gboolean remove);
+fb_data_clear_timeout(FbData *fata, const gchar *name, gboolean remove);
 
 FbApi *
 fb_data_get_api(FbData *fata);
@@ -94,8 +95,14 @@ fb_data_get_connection(FbData *fata);
 PurpleRoomlist *
 fb_data_get_roomlist(FbData *fata);
 
+gboolean
+fb_data_get_unread(FbData *fata, FbId id);
+
 void
 fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list);
+
+void
+fb_data_set_unread(FbData *fata, FbId id, gboolean unread);
 
 void
 fb_data_add_message(FbData *fata, FbApiMessage *msg);
