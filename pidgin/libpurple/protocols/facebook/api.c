@@ -465,7 +465,7 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 		              (gint) size, data);
 	}
 
-	if ((root == NULL) && fb_http_error_chk(res, &err)) {
+	if (fb_http_error_chk(res, &err) && (root == NULL)) {
 		return TRUE;
 	}
 
