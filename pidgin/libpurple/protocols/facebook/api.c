@@ -167,36 +167,76 @@ fb_api_class_init(FbApiClass *klass)
 	gklass->dispose = fb_api_dispose;
 	g_type_class_add_private(klass, sizeof (FbApiPrivate));
 
+	/**
+	 * FbApi:cid:
+	 *
+	 * The client identifier for MQTT. This value should be saved
+	 * and loaded for persistence.
+	 */
 	props[PROP_CID] = g_param_spec_string(
 		"cid",
 		"Client ID",
 		"Client identifier for MQTT",
 		NULL,
 		G_PARAM_READWRITE);
+
+	/**
+	 * FbApi:did:
+	 *
+	 * The device identifier for the MQTT message queue. This value
+	 * should be saved and loaded for persistence.
+	 */
 	props[PROP_DID] = g_param_spec_string(
 		"did",
 		"Device ID",
-		"Device identifier",
+		"Device identifier for the MQTT message queue",
 		NULL,
 		G_PARAM_READWRITE);
+
+	/**
+	 * FbApi:mid:
+	 *
+	 * The MQTT identifier. This value should be saved and loaded
+	 * for persistence.
+	 */
 	props[PROP_MID] = g_param_spec_uint64(
 		"mid",
 		"MQTT ID",
-		"MQTT identifier for the MQTT queuer",
+		"MQTT identifier",
 		0, G_MAXUINT64, 0,
 		G_PARAM_READWRITE);
+
+	/**
+	 * FbApi:stoken:
+	 *
+	 * The synchronization token for the MQTT message queue. This
+	 * value should be saved and loaded for persistence.
+	 */
 	props[PROP_STOKEN] = g_param_spec_string(
 		"stoken",
 		"Sync Token",
-		"Synchronization token for the MQTT queue",
+		"Synchronization token for the MQTT message queue",
 		NULL,
 		G_PARAM_READWRITE);
+
+	/**
+	 * FbApi:token:
+	 *
+	 * The access token for authentication. This value should be
+	 * saved and loaded for persistence.
+	 */
 	props[PROP_TOKEN] = g_param_spec_string(
 		"token",
 		"Access Token",
-		"Access token from authenticating",
+		"Access token for authentication",
 		NULL,
 		G_PARAM_READWRITE);
+
+	/**
+	 * FbApi:uid:
+	 *
+	 * The #FbId of the user of the #FbApi.
+	 */
 	props[PROP_UID] = g_param_spec_int64(
 		"uid",
 		"User ID",
@@ -205,6 +245,13 @@ fb_api_class_init(FbApiClass *klass)
 		G_PARAM_READWRITE);
 	g_object_class_install_properties(gklass, PROP_N, props);
 
+	/**
+	 * FbApi::auth:
+	 * @api: The #FbApi.
+	 *
+	 * Emitted upon the successful completion of the authentication
+	 * process. This is emitted as a result of #fb_api_auth().
+	 */
 	g_signal_new("auth",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -213,6 +260,14 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__VOID,
 	             G_TYPE_NONE,
 	             0);
+
+	/**
+	 * FbApi::connect:
+	 * @api: The #FbApi.
+	 *
+	 * Emitted upon the successful completion of the connection
+	 * process. This is emitted as a result of #fb_api_connect().
+	 */
 	g_signal_new("connect",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -221,6 +276,15 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__VOID,
 	             G_TYPE_NONE,
 	             0);
+
+	/**
+	 * FbApi::contact:
+	 * @api: The #FbApi.
+	 * @user: The #FbApiUser.
+	 *
+	 * Emitted upon the successful reply of a contact request. This
+	 * is emitted as a result of #fb_api_contact().
+	 */
 	g_signal_new("contact",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -229,6 +293,19 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
+
+	/**
+	 * FbApi::contacts:
+	 * @api: The #FbApi.
+	 * @users: The #GSList of #FbApiUser's.
+	 * @complete: #TRUE if the list is fetched, otherwise #FALSE.
+	 *
+	 * Emitted upon the successful reply of a contacts request.
+	 * This is emitted as a result of #fb_api_contacts(). This can
+	 * be emitted multiple times before the entire contacts list
+	 * has been fetched. Use @complete for detecting the completion
+	 * status of the list fetch.
+	 */
 	g_signal_new("contacts",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -237,6 +314,15 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER_BOOLEAN,
 	             G_TYPE_NONE,
 	             2, G_TYPE_POINTER, G_TYPE_BOOLEAN);
+
+	/**
+	 * FbApi::error:
+	 * @api: The #FbApi.
+	 * @error: The #GError.
+	 *
+	 * Emitted whenever an error is hit within the #FbApi. This
+	 * should disconnect #FbApi with #fb_api_disconnect().
+	 */
 	g_signal_new("error",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -245,6 +331,14 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__OBJECT,
 	             G_TYPE_NONE,
 	             1, G_TYPE_ERROR);
+
+	/**
+	 * FbApi::events:
+	 * @api: The #FbApi.
+	 * @events: The #GSList of #FbApiEvent's.
+	 *
+	 * Emitted upon incoming events from the stream.
+	 */
 	g_signal_new("events",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -253,6 +347,14 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
+
+	/**
+	 * FbApi::messages:
+	 * @api: The #FbApi.
+	 * @msgs: The #GSList of #FbApiMessage's.
+	 *
+	 * Emitted upon incoming messages from the stream.
+	 */
 	g_signal_new("messages",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -261,6 +363,14 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
+
+	/**
+	 * FbApi::presences:
+	 * @api: The #FbApi.
+	 * @press: The #GSList of #FbApiPresence's.
+	 *
+	 * Emitted upon incoming presences from the stream.
+	 */
 	g_signal_new("presences",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -269,6 +379,15 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
+
+	/**
+	 * FbApi::thread:
+	 * @api: The #FbApi.
+	 * @thrd: The #FbApiThread.
+	 *
+	 * Emitted upon the successful reply of a thread request. This
+	 * is emitted as a result of #fb_api_thread().
+	 */
 	g_signal_new("thread",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -277,6 +396,16 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
+
+	/**
+	 * FbApi::thread-create:
+	 * @api: The #FbApi.
+	 * @tid: The thread #FbId.
+	 *
+	 * Emitted upon the successful reply of a thread creation
+	 * request. This is emitted as a result of
+	 * #fb_api_thread_create().
+	 */
 	g_signal_new("thread-create",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -285,6 +414,15 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__INT64,
 	             G_TYPE_NONE,
 	             1, FB_TYPE_ID);
+
+	/**
+	 * FbApi::threads:
+	 * @api: The #FbApi.
+	 * @thrds: The #GSList of #FbApiThread's.
+	 *
+	 * Emitted upon the successful reply of a threads request. This
+	 * is emitted as a result of #fb_api_threads().
+	 */
 	g_signal_new("threads",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -293,6 +431,14 @@ fb_api_class_init(FbApiClass *klass)
 	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
+
+	/**
+	 * FbApi::typing:
+	 * @api: The #FbApi.
+	 * @typg: The #FbApiTyping.
+	 *
+	 * Emitted upon an incoming typing state from the stream.
+	 */
 	g_signal_new("typing",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -1822,7 +1968,7 @@ fb_api_disconnect(FbApi *api)
 }
 
 void
-fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *msg)
+fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *text)
 {
 	const gchar *tpfx;
 	FbApiPrivate *priv;
@@ -1832,7 +1978,7 @@ fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *msg)
 	JsonBuilder *bldr;
 
 	g_return_if_fail(FB_IS_API(api));
-	g_return_if_fail(msg != NULL);
+	g_return_if_fail(text != NULL);
 	priv = api->priv;
 
 	msgid = FB_API_MSGID(g_get_real_time() / 1000, g_random_int());
@@ -1843,7 +1989,7 @@ fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *msg)
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_int(bldr, "msgid", msgid);
-	fb_json_bldr_add_str(bldr, "body", msg);
+	fb_json_bldr_add_str(bldr, "body", text);
 	fb_json_bldr_add_strf(bldr, "sender_fbid", "%" FB_ID_FORMAT, priv->uid);
 	fb_json_bldr_add_strf(bldr, "to", "%s%" FB_ID_FORMAT, tpfx, id);
 
@@ -1853,7 +1999,7 @@ fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *msg)
 }
 
 void
-fb_api_publish(FbApi *api, const gchar *topic, const gchar *fmt, ...)
+fb_api_publish(FbApi *api, const gchar *topic, const gchar *format, ...)
 {
 	FbApiPrivate *priv;
 	GByteArray *bytes;
@@ -1863,11 +2009,11 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *fmt, ...)
 
 	g_return_if_fail(FB_IS_API(api));
 	g_return_if_fail(topic != NULL);
-	g_return_if_fail(fmt != NULL);
+	g_return_if_fail(format != NULL);
 	priv = api->priv;
 
-	va_start(ap, fmt);
-	msg = g_strdup_vprintf(fmt, ap);
+	va_start(ap, format);
+	msg = g_strdup_vprintf(format, ap);
 	va_end(ap);
 
 	bytes = g_byte_array_new_take((guint8*) msg, strlen(msg));

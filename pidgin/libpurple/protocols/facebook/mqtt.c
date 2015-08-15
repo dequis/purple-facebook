@@ -84,6 +84,13 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	gklass->dispose = fb_mqtt_dispose;
 	g_type_class_add_private(klass, sizeof (FbMqttPrivate));
 
+	/**
+	 * FbMqtt::connect:
+	 * @mqtt: The #FbMqtt.
+	 *
+	 * Emitted upon the successful completion of the connection
+	 * process. This is emitted as a result of #fb_mqtt_connect().
+	 */
 	g_signal_new("connect",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -92,6 +99,15 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	             fb_marshal_VOID__VOID,
 	             G_TYPE_NONE,
 	             0);
+
+	/**
+	 * FbMqtt::error:
+	 * @mqtt: The #FbMqtt.
+	 * @error: The #GError.
+	 *
+	 * Emitted whenever an error is hit within the #FbMqtt. The
+	 * connection is automatically closed after this is emitted.
+	 */
 	g_signal_new("error",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -100,6 +116,15 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	             fb_marshal_VOID__OBJECT,
 	             G_TYPE_NONE,
 	             1, G_TYPE_ERROR);
+
+	/**
+	 * FbMqtt::open:
+	 * @mqtt: The #FbMqtt.
+	 *
+	 * Emitted upon the successful opening of the remote socket.
+	 * This is emitted as a result of #fb_mqtt_open(). This should
+	 * call #fb_mqtt_connect().
+	 */
 	g_signal_new("open",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -108,6 +133,15 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	             fb_marshal_VOID__VOID,
 	             G_TYPE_NONE,
 	             0);
+
+	/**
+	 * FbMqtt::publish:
+	 * @mqtt: The #FbMqtt.
+	 * @topic: The topic.
+	 * @pload: The payload.
+	 *
+	 * Emitted upon an incoming message from the steam.
+	 */
 	g_signal_new("publish",
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
@@ -882,33 +916,33 @@ fb_mqtt_message_read_r(FbMqttMessage *msg, GByteArray *bytes)
 }
 
 gboolean
-fb_mqtt_message_read_byte(FbMqttMessage *msg, guint8 *byte)
+fb_mqtt_message_read_byte(FbMqttMessage *msg, guint8 *value)
 {
-	return fb_mqtt_message_read(msg, byte, sizeof *byte);
+	return fb_mqtt_message_read(msg, value, sizeof *value);
 }
 
 gboolean
-fb_mqtt_message_read_mid(FbMqttMessage *msg, guint16 *mid)
+fb_mqtt_message_read_mid(FbMqttMessage *msg, guint16 *value)
 {
-	return fb_mqtt_message_read_u16(msg, mid);
+	return fb_mqtt_message_read_u16(msg, value);
 }
 
 gboolean
-fb_mqtt_message_read_u16(FbMqttMessage *msg, guint16 *u16)
+fb_mqtt_message_read_u16(FbMqttMessage *msg, guint16 *value)
 {
-	if (!fb_mqtt_message_read(msg, u16, sizeof *u16)) {
+	if (!fb_mqtt_message_read(msg, value, sizeof *value)) {
 		return FALSE;
 	}
 
-	if (u16 != NULL) {
-		*u16 = g_ntohs(*u16);
+	if (value != NULL) {
+		*value = g_ntohs(*value);
 	}
 
 	return TRUE;
 }
 
 gboolean
-fb_mqtt_message_read_str(FbMqttMessage *msg, gchar **str)
+fb_mqtt_message_read_str(FbMqttMessage *msg, gchar **value)
 {
 	guint8 *data;
 	guint16 size;
@@ -917,7 +951,7 @@ fb_mqtt_message_read_str(FbMqttMessage *msg, gchar **str)
 		return FALSE;
 	}
 
-	if (str != NULL) {
+	if (value != NULL) {
 		data = g_new(guint8, size + 1);
 		data[size] = 0;
 	} else {
@@ -929,8 +963,8 @@ fb_mqtt_message_read_str(FbMqttMessage *msg, gchar **str)
 		return FALSE;
 	}
 
-	if (str != NULL) {
-		*str = (gchar*) data;
+	if (value != NULL) {
+		*value = (gchar*) data;
 	}
 
 	return TRUE;
@@ -949,33 +983,33 @@ fb_mqtt_message_write(FbMqttMessage *msg, gconstpointer data, guint size)
 }
 
 void
-fb_mqtt_message_write_byte(FbMqttMessage *msg, guint8 byte)
+fb_mqtt_message_write_byte(FbMqttMessage *msg, guint8 value)
 {
-	fb_mqtt_message_write(msg, &byte, sizeof byte);
+	fb_mqtt_message_write(msg, &value, sizeof value);
 }
 
 void
-fb_mqtt_message_write_mid(FbMqttMessage *msg, guint16 *mid)
+fb_mqtt_message_write_mid(FbMqttMessage *msg, guint16 *value)
 {
-	g_return_if_fail(mid != NULL);
-	fb_mqtt_message_write_u16(msg, ++(*mid));
+	g_return_if_fail(value != NULL);
+	fb_mqtt_message_write_u16(msg, ++(*value));
 }
 
 void
-fb_mqtt_message_write_u16(FbMqttMessage *msg, guint16 u16)
+fb_mqtt_message_write_u16(FbMqttMessage *msg, guint16 value)
 {
-	u16 = g_htons(u16);
-	fb_mqtt_message_write(msg, &u16, sizeof u16);
+	value = g_htons(value);
+	fb_mqtt_message_write(msg, &value, sizeof value);
 }
 
 void
-fb_mqtt_message_write_str(FbMqttMessage *msg, const gchar *str)
+fb_mqtt_message_write_str(FbMqttMessage *msg, const gchar *value)
 {
 	gint16 size;
 
-	g_return_if_fail(str != NULL);
+	g_return_if_fail(value != NULL);
 
-	size = strlen(str);
+	size = strlen(value);
 	fb_mqtt_message_write_u16(msg, size);
-	fb_mqtt_message_write(msg, str, size);
+	fb_mqtt_message_write(msg, value, size);
 }
