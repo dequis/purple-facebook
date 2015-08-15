@@ -143,14 +143,11 @@ fb_api_dispose(GObject *obj)
 {
 	FbApiPrivate *priv = FB_API(obj)->priv;
 
-	if (G_LIKELY(priv->gc != NULL)) {
-		purple_http_conn_cancel_all(priv->gc);
-	}
-
 	if (G_UNLIKELY(priv->mqtt != NULL)) {
 		g_object_unref(priv->mqtt);
 	}
 
+	purple_http_conn_cancel_all(priv->gc);
 	g_hash_table_destroy(priv->msgids);
 
 	g_free(priv->cid);
@@ -1429,6 +1426,7 @@ fb_api_new(PurpleConnection *gc)
 	FbApi *api;
 	FbApiPrivate *priv;
 
+	g_return_val_if_fail(PURPLE_IS_CONNECTION(gc), NULL);
 	api = g_object_new(FB_TYPE_API, NULL);
 	priv = api->priv;
 
@@ -1514,6 +1512,7 @@ fb_api_error_emit(FbApi *api, GError *error)
 	g_return_if_fail(error != NULL);
 
 	g_signal_emit_by_name(api, "error", error);
+	fb_api_disconnect(api);
 	g_error_free(error);
 }
 
@@ -1818,6 +1817,7 @@ fb_api_disconnect(FbApi *api)
 	g_return_if_fail(FB_IS_API(api));
 	priv = api->priv;
 
+	purple_http_conn_cancel_all(priv->gc);
 	fb_mqtt_disconnect(priv->mqtt);
 }
 
