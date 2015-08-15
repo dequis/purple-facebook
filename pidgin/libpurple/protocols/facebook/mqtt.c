@@ -884,10 +884,6 @@ fb_mqtt_message_read_r(FbMqttMessage *msg, GByteArray *bytes)
 gboolean
 fb_mqtt_message_read_byte(FbMqttMessage *msg, guint8 *byte)
 {
-	if (byte != NULL) {
-		*byte = 0;
-	}
-
 	return fb_mqtt_message_read(msg, byte, sizeof *byte);
 }
 
@@ -901,10 +897,6 @@ gboolean
 fb_mqtt_message_read_u16(FbMqttMessage *msg, guint16 *u16)
 {
 	if (!fb_mqtt_message_read(msg, u16, sizeof *u16)) {
-		if (u16 != NULL) {
-			*u16 = 0;
-		}
-
 		return FALSE;
 	}
 
@@ -920,10 +912,6 @@ fb_mqtt_message_read_str(FbMqttMessage *msg, gchar **str)
 {
 	guint8 *data;
 	guint16 size;
-
-	if (str != NULL) {
-		*str = NULL;
-	}
 
 	if (!fb_mqtt_message_read_u16(msg, &size)) {
 		return FALSE;
