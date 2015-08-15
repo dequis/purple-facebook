@@ -1039,9 +1039,20 @@ fb_chat_join(PurpleConnection *gc, GHashTable *data)
 	FbId tid;
 	gint id;
 	PurpleChatConversation *chat;
+	PurpleRequestCommonParameters *cpar;
 
 	name = g_hash_table_lookup(data, "name");
 	g_return_if_fail(name != NULL);
+
+	if (!FB_ID_IS_STR(name)) {
+		cpar = purple_request_cpar_from_connection(gc);
+		purple_notify_error(gc,
+		                    _("Join a Chat"),
+		                    _("Failed to Join Chat"),
+		                    _("Invalid Facebook identifier."),
+				    cpar);
+		return;
+	}
 
 	tid = FB_ID_FROM_STR(name);
 	id = fb_id_hash(&tid);
