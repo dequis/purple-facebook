@@ -22,6 +22,15 @@
 #ifndef _FACEBOOK_H_
 #define _FACEBOOK_H_
 
+/**
+ * SECTION:facebook
+ * @section_id: facebook-plugin
+ * @short_description: <filename>facebook.h</filename>
+ * @title: Facebook Plugin
+ *
+ * The Facebook Messenger #PurpleProtocol.
+ */
+
 #include <glib.h>
 
 #define FACEBOOK_TYPE_PROTOCOL             (facebook_protocol_get_type())
@@ -34,19 +43,34 @@
 typedef struct _FacebookProtocol FacebookProtocol;
 typedef struct _FacebookProtocolClass FacebookProtocolClass;
 
+/**
+ * FacebookProtocol:
+ *
+ * Represents the Facebook #PurpleProtocol.
+ */
 struct _FacebookProtocol
 {
+	/*< private >*/
 	PurpleProtocol parent;
 };
 
+/**
+ * FacebookProtocolClass:
+ *
+ * The base class for all #FacebookProtocol's.
+ */
 struct _FacebookProtocolClass
 {
+	/*< private >*/
 	PurpleProtocolClass parent_class;
 };
 
 /**
- * Returns the GType for the FacebookProtocol object.
+ * facebook_protocol_get_type:
+ *
+ * Returns: The #GType for a #FacebookProtocol.
  */
-G_MODULE_EXPORT GType facebook_protocol_get_type(void);
+G_MODULE_EXPORT GType
+facebook_protocol_get_type(void);
 
 #endif /* _FACEBOOK_H_ */
