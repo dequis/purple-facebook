@@ -1,3 +1,12 @@
+purple-facebook-dd1528f03f59 (2015-08-15):
+  - Added GTK-Doc for the internal APIs
+  - Fixed HTTP error checks being skipped
+  - Fixed timestamps not being set for self messages
+  - Inform the user of invalid group chat names
+  - Minor code refactoring
+  - Only mark conversations as read if they been focused
+  - Periodically refetch the contact list for updates
+
 purple-facebook-3d30d24fdbef (2015-08-11):
   - Add and alias non-friend buddies
   - Added support for all XMA messages

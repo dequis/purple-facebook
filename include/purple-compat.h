@@ -32,20 +32,23 @@ struct _PurpleMessage
     const gchar *name;
     const gchar *text;
     PurpleMessageFlags flags;
+    guint64 timestamp;
 };
 
 #undef purple_notify_error
 
 #define PurpleChatConversation  PurpleConvChat
-#define PurpleProtocolChatEntry  struct proto_chat_entry
+#define PurpleConversationUpdateType PurpleConvUpdateType
 #define PurpleIMConversation  PurpleConvIm
 #define PurpleIMTypingState  PurpleTypingState
 #define PurpleProtocol  void
+#define PurpleProtocolChatEntry  struct proto_chat_entry
 #define PurpleRequestCommonParameters  void
 
 #define PURPLE_CMD_FLAG_PROTOCOL_ONLY  PURPLE_CMD_FLAG_PRPL_ONLY
 #define PURPLE_CMD_P_PROTOCOL  PURPLE_CMD_P_PRPL
 #define PURPLE_CONNECTION_CONNECTED  PURPLE_CONNECTED
+#define PURPLE_CONVERSATION_UPDATE_UNSEEN PURPLE_CONV_UPDATE_UNSEEN
 #define PURPLE_IM_NOT_TYPING  PURPLE_NOT_TYPING
 #define PURPLE_IM_TYPING  PURPLE_TYPING
 
@@ -102,7 +105,8 @@ struct _PurpleMessage
     )
 
 #define purple_conversation_write_message(c, m) \
-    purple_conversation_write(c, (m)->name, (m)->text, (m)->flags, 0);
+    purple_conversation_write(c, (m)->name, (m)->text, (m)->flags, \
+                              (m)->timestamp);
 
 #define purple_im_conversation_new(a, n) \
     purple_conversation_get_im_data( \
@@ -112,11 +116,18 @@ struct _PurpleMessage
 #define purple_message_new_outgoing(n, t, f) \
     ((PurpleMessage *) &((PurpleMessage) {n, t, f}))
 
+#define purple_message_set_time(m, t) \
+    G_STMT_START { \
+        (m)->timestamp = t; \
+    } G_STMT_END
+
 #define purple_notify_error(h, t, p, s, c) \
-    purple_notify_message(h, PURPLE_NOTIFY_MSG_ERROR, t, p, s, NULL, NULL)
+    purple_notify_message(h, PURPLE_NOTIFY_MSG_ERROR, t, p, s, NULL, NULL); \
+    (void)(c);
 
 #define purple_request_fields(h, t, p, s, f, ot, oc, ct, cc, c, d) \
-    purple_request_fields(h, t, p, s, f, ot, oc, ct, cc, NULL, NULL, NULL, d)
+    purple_request_fields(h, t, p, s, f, ot, oc, ct, cc, NULL, NULL, NULL, d); \
+    (void)(c);
 
 #define purple_serv_got_joined_chat(c, i, n) \
     purple_conversation_get_chat_data( \
