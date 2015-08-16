@@ -40,6 +40,13 @@
 #define FACEBOOK_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FACEBOOK_TYPE_PROTOCOL))
 #define FACEBOOK_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), FACEBOOK_TYPE_PROTOCOL, FacebookProtocolClass))
 
+/**
+ * FB_PROTOCOL_ID:
+ *
+ * The Facebook protocol identifier.
+ */
+#define FB_PROTOCOL_ID  "prpl-facebook"
+
 typedef struct _FacebookProtocol FacebookProtocol;
 typedef struct _FacebookProtocolClass FacebookProtocolClass;
 
