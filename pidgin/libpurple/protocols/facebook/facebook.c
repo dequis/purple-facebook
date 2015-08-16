@@ -644,6 +644,7 @@ fb_cb_conv_read(gpointer data)
 	FbApi *api;
 	FbData *fata;
 	FbId id;
+	gchar *tname;
 	PurpleConnection *gc;
 	PurpleConversation *conv = data;
 
@@ -652,7 +653,9 @@ fb_cb_conv_read(gpointer data)
 	name = purple_conversation_get_name(conv);
 	id = FB_ID_FROM_STR(name);
 
-	fb_data_clear_timeout(fata, "conv-read", FALSE);
+	tname = g_strconcat("conv-read-", name, NULL);
+	fb_data_clear_timeout(fata, tname, FALSE);
+	g_free(tname);
 
 	if (!purple_conversation_has_focus(conv) ||
 	    !fb_data_get_unread(fata, id))
@@ -670,7 +673,9 @@ static void
 fb_cb_conv_updated(PurpleConversation *conv, PurpleConversationUpdateType type,
                    gpointer data)
 {
+	const gchar *name;
 	FbData *fata = data;
+	gchar *tname;
 	PurpleAccount *acct;
 
 	acct = purple_conversation_get_account(conv);
@@ -679,9 +684,24 @@ fb_cb_conv_updated(PurpleConversation *conv, PurpleConversationUpdateType type,
 	    purple_account_get_bool(acct, "mark-read", TRUE))
 	{
 		/* Use event loop for purple_conversation_has_focus() */
-		fb_data_add_timeout(fata, "conv-read", 1, fb_cb_conv_read,
-		                    conv);
+		name = purple_conversation_get_name(conv);
+		tname = g_strconcat("conv-read-", name, NULL);
+		fb_data_add_timeout(fata, tname, 1, fb_cb_conv_read, conv);
+		g_free(tname);
 	}
+}
+
+static void
+fb_cb_conv_deleting(PurpleConversation *conv, gpointer data)
+{
+	const gchar *name;
+	FbData *fata = data;
+	gchar *tname;
+
+	name = purple_conversation_get_name(conv);
+	tname = g_strconcat("conv-read-", name, NULL);
+	fb_data_clear_timeout(fata, tname, TRUE);
+	g_free(tname);
 }
 
 static void
@@ -824,6 +844,11 @@ fb_login(PurpleAccount *acct)
 	                      "conversation-updated",
 	                      gc,
 	                      G_CALLBACK(fb_cb_conv_updated),
+	                      fata);
+	purple_signal_connect(convh,
+	                      "deleting-conversation",
+	                      gc,
+	                      G_CALLBACK(fb_cb_conv_deleting),
 	                      fata);
 
 	if (!fb_data_load(fata)) {
