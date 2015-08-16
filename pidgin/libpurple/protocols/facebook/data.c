@@ -236,7 +236,7 @@ fb_data_add_timeout(FbData *fata, const gchar *name, guint interval,
 	fb_data_clear_timeout(fata, name, TRUE);
 
 	key = g_strdup(name);
-	id = purple_timeout_add_seconds(interval, func, data);
+	id = purple_timeout_add(interval, func, data);
 	g_hash_table_replace(priv->evs, key, GUINT_TO_POINTER(id));
 }
 
