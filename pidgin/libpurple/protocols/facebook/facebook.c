@@ -674,13 +674,16 @@ fb_cb_conv_updated(PurpleConversation *conv, PurpleConversationUpdateType type,
                    gpointer data)
 {
 	const gchar *name;
+	const gchar *pid;
 	FbData *fata = data;
 	gchar *tname;
 	PurpleAccount *acct;
 
 	acct = purple_conversation_get_account(conv);
+	pid = purple_account_get_protocol_id(acct);
 
 	if ((type == PURPLE_CONVERSATION_UPDATE_UNSEEN) &&
+	    purple_strequal(pid, FB_PROTOCOL_ID) &&
 	    purple_account_get_bool(acct, "mark-read", TRUE))
 	{
 		/* Use event loop for purple_conversation_has_focus() */
@@ -695,8 +698,17 @@ static void
 fb_cb_conv_deleting(PurpleConversation *conv, gpointer data)
 {
 	const gchar *name;
+	const gchar *pid;
 	FbData *fata = data;
 	gchar *tname;
+	PurpleAccount *acct;
+
+	acct = purple_conversation_get_account(conv);
+	pid = purple_account_get_protocol_id(acct);
+
+	if (!purple_strequal(pid, FB_PROTOCOL_ID)) {
+		return;
+	}
 
 	name = purple_conversation_get_name(conv);
 	tname = g_strconcat("conv-read-", name, NULL);
@@ -1327,7 +1339,7 @@ facebook_protocol_init(PurpleProtocol *protocol)
 	GList *opts = NULL;
 	PurpleAccountOption *opt;
 
-	protocol->id      = "prpl-facebook";
+	protocol->id      = FB_PROTOCOL_ID;
 	protocol->name    = "Facebook";
 	protocol->options = OPT_PROTO_CHAT_TOPIC;
 
@@ -1463,7 +1475,7 @@ static PurplePluginInfo *
 plugin_query(GError **error)
 {
 	return purple_plugin_info_new(
-		"id",          "prpl-facebook",
+		"id",          FB_PROTOCOL_ID,
 		"name",        "Facebook Protocol",
 		"version",     DISPLAY_VERSION,
 		"category",    N_("Protocol"),
