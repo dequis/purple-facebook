@@ -68,7 +68,6 @@ static inline GSList * g_slist_copy_deep(GSList *list, GCopyFunc func,
 {
 	GSList *ret = NULL;
 	GSList *l;
-	gpointer *ptr;
 
 	if (G_UNLIKELY(func == NULL))
 		return g_slist_copy(list);
