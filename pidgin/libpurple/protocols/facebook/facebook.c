@@ -789,7 +789,6 @@ fb_login(PurpleAccount *acct)
 	PurpleConnection *gc;
 
 	gc = purple_account_get_connection(acct);
-	//purple_connection_set_flags(gc, );
 
 	if (!purple_ssl_is_supported()) {
 		purple_connection_error(gc,
@@ -1405,12 +1404,6 @@ facebook_protocol_chat_iface_init(PurpleProtocolChatIface *iface)
 }
 
 static void
-facebook_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *iface)
-{
-
-}
-
-static void
 facebook_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *iface)
 {
 	iface->get_list = fb_roomlist_get_list;
@@ -1428,8 +1421,6 @@ PURPLE_DEFINE_TYPE_EXTENDED(
 	                                  facebook_protocol_im_iface_init)
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
 	                                  facebook_protocol_chat_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
-	                                  facebook_protocol_privacy_iface_init)
 	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
 	                                  facebook_protocol_roomlist_iface_init)
 );
