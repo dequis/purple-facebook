@@ -41,12 +41,12 @@
 #include "http.h"
 #include "id.h"
 
-#define FB_TYPE_DATA             (fb_data_get_type())
-#define FB_DATA(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA, FbData))
-#define FB_DATA_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_DATA, FbDataClass))
-#define FB_IS_DATA(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_DATA))
+#define FB_TYPE_DATA  (fb_data_get_type())
+#define FB_DATA(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA, FbData))
+#define FB_DATA_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_DATA, FbDataClass))
+#define FB_IS_DATA(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_DATA))
 #define FB_IS_DATA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_DATA))
-#define FB_DATA_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_DATA, FbDataClass))
+#define FB_DATA_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_DATA, FbDataClass))
 
 /**
  * FB_DATA_ICON_MAX:

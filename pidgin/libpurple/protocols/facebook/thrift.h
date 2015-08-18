@@ -34,12 +34,12 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#define FB_TYPE_THRIFT             (fb_thrift_get_type())
-#define FB_THRIFT(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_THRIFT, FbThrift))
-#define FB_THRIFT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_THRIFT, FbThriftClass))
-#define FB_IS_THRIFT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_THRIFT))
+#define FB_TYPE_THRIFT  (fb_thrift_get_type())
+#define FB_THRIFT(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_THRIFT, FbThrift))
+#define FB_THRIFT_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_THRIFT, FbThriftClass))
+#define FB_IS_THRIFT(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_THRIFT))
 #define FB_IS_THRIFT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_THRIFT))
-#define FB_THRIFT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_THRIFT, FbThriftClass))
+#define FB_THRIFT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_THRIFT, FbThriftClass))
 
 typedef struct _FbThrift FbThrift;
 typedef struct _FbThriftClass FbThriftClass;
@@ -67,20 +67,20 @@ typedef struct _FbThriftPrivate FbThriftPrivate;
  */
 typedef enum
 {
-	FB_THRIFT_TYPE_STOP   = 0,
-	FB_THRIFT_TYPE_VOID   = 1,
-	FB_THRIFT_TYPE_BOOL   = 2,
-	FB_THRIFT_TYPE_BYTE   = 3,
+	FB_THRIFT_TYPE_STOP = 0,
+	FB_THRIFT_TYPE_VOID = 1,
+	FB_THRIFT_TYPE_BOOL = 2,
+	FB_THRIFT_TYPE_BYTE = 3,
 	FB_THRIFT_TYPE_DOUBLE = 4,
-	FB_THRIFT_TYPE_I16    = 6,
-	FB_THRIFT_TYPE_I32    = 8,
-	FB_THRIFT_TYPE_I64    = 10,
+	FB_THRIFT_TYPE_I16 = 6,
+	FB_THRIFT_TYPE_I32 = 8,
+	FB_THRIFT_TYPE_I64 = 10,
 	FB_THRIFT_TYPE_STRING = 11,
 	FB_THRIFT_TYPE_STRUCT = 12,
-	FB_THRIFT_TYPE_MAP    = 13,
-	FB_THRIFT_TYPE_SET    = 14,
-	FB_THRIFT_TYPE_LIST   = 15,
-	FB_THRIFT_TYPE_ENUM   = 16,
+	FB_THRIFT_TYPE_MAP = 13,
+	FB_THRIFT_TYPE_SET = 14,
+	FB_THRIFT_TYPE_LIST = 15,
+	FB_THRIFT_TYPE_ENUM = 16,
 
 	FB_THRIFT_TYPE_UNKNOWN
 } FbThriftType;
