@@ -1758,6 +1758,7 @@ fb_api_contact_parse(FbApi *api, FbApiUser *user, JsonNode *root,
 	    !purple_strequal(str, "ARE_FRIENDS") &&
 	    (user->uid != priv->uid))
 	{
+		fb_json_values_free(values);
 		return FALSE;
 	}
 
