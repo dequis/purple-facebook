@@ -142,42 +142,6 @@ fb_cb_api_connect(FbApi *api, gpointer data)
 }
 
 static void
-fb_cb_data_icon(PurpleHttpConnection *con, PurpleHttpResponse *res,
-                gpointer data)
-{
-	const gchar *csum;
-	const gchar *name;
-	const gchar *str;
-	FbDataIcon *icon = data;
-	FbHttpParams *params;
-	GError *err = NULL;
-	gsize size;
-	guchar *idata;
-	PurpleAccount *acct;
-	PurpleHttpRequest *req;
-
-	acct = purple_buddy_get_account(icon->buddy);
-	name = purple_buddy_get_name(icon->buddy);
-
-	if (!fb_http_error_chk(res, &err)) {
-		fb_util_debug_warning("Failed to retrieve icon for %s: %s",
-		                      name, err->message);
-		g_error_free(err);
-		return;
-	}
-
-	req = purple_http_conn_get_request(con);
-	str = purple_http_request_get_url(req);
-	params = fb_http_params_new_parse(str, TRUE);
-	csum = fb_http_params_get_str(params, "oh", &err);
-	str = purple_http_response_get_data(res, &size);
-
-	idata = g_memdup(str, size);
-	purple_buddy_icons_set_for_user(acct, name, idata, size, csum);
-	fb_http_params_free(params);
-}
-
-static void
 fb_cb_api_contact(FbApi *api, FbApiUser *user, gpointer data)
 {
 	FbData *fata = data;
@@ -212,6 +176,37 @@ fb_cb_sync_contacts(gpointer data)
 	fb_data_clear_timeout(fata, "sync-contacts", FALSE);
 	fb_api_contacts(api);
 	return FALSE;
+}
+
+static void
+fb_cb_icon(FbDataImage *img, GError *error)
+{
+	const gchar *csum;
+	const gchar *name;
+	const gchar *str;
+	FbHttpParams *params;
+	gsize size;
+	guint8 *image;
+	PurpleAccount *acct;
+	PurpleBuddy *bdy;
+
+	bdy = fb_data_image_get_data(img);
+	acct = purple_buddy_get_account(bdy);
+	name = purple_buddy_get_name(bdy);
+
+	if (G_UNLIKELY(error != NULL)) {
+		fb_util_debug_warning("Failed to retrieve icon for %s: %s",
+		                      name, error->message);
+		return;
+	}
+
+	str = fb_data_image_get_url(img);
+	params = fb_http_params_new_parse(str, TRUE);
+	csum = fb_http_params_get_str(params, "oh", NULL);
+
+	image = fb_data_image_dup_image(img, &size);
+	purple_buddy_icons_set_for_user(acct, name, image, size, csum);
+	fb_http_params_free(params);
 }
 
 static void
@@ -280,12 +275,11 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 		csum = purple_buddy_icons_get_checksum_for_user(bdy);
 
 		if (!purple_strequal(csum, user->csum)) {
-			fb_data_icon_add(fata, bdy, user->icon,
-			                 fb_cb_data_icon);
+			fb_data_image_add(fata, user->icon, fb_cb_icon, bdy);
 		}
 	}
 
-	fb_data_icon_queue(fata);
+	fb_data_image_queue(fata);
 
 	if (!complete) {
 		return;
@@ -417,6 +411,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 	FbData *fata = data;
 	gboolean mark;
 	gboolean open;
+	gboolean self;
 	gchar *html;
 	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
@@ -445,11 +440,11 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 			continue;
 		}
 
-		flags = (msg->isself) ? PURPLE_MESSAGE_SEND
-		                      : PURPLE_MESSAGE_RECV;
+		self = (msg->flags & FB_API_MESSAGE_FLAG_SELF) != 0;
+		flags = self ? PURPLE_MESSAGE_SEND : PURPLE_MESSAGE_RECV;
 
 		if (msg->tid == 0) {
-			if (mark && !msg->isself) {
+			if (mark && !self) {
 				fb_data_set_unread(fata, msg->uid, TRUE);
 			}
 
@@ -474,7 +469,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 			id = purple_chat_conversation_get_id(chat);
 		}
 
-		if (mark && !msg->isself) {
+		if (mark && !self) {
 			fb_data_set_unread(fata, msg->tid, TRUE);
 		}
 
