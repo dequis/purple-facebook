@@ -294,3 +294,67 @@ fb_http_params_set_strf(FbHttpParams *params, const gchar *name,
 
 	fb_http_params_set(params, name, val);
 }
+
+gboolean
+fb_http_urlcmp(const gchar *url1, const gchar *url2, gboolean protocol)
+{
+	const gchar *str1;
+	const gchar *str2;
+	gboolean ret = TRUE;
+	gint int1;
+	gint int2;
+	guint i;
+	PurpleHttpURL *purl1;
+	PurpleHttpURL *purl2;
+
+	static const const gchar * (*funcs[]) (const PurpleHttpURL *url) = {
+		/* Always first so it can be skipped */
+		purple_http_url_get_protocol,
+
+		purple_http_url_get_fragment,
+		purple_http_url_get_host,
+		purple_http_url_get_password,
+		purple_http_url_get_path,
+		purple_http_url_get_username
+	};
+
+	if ((url1 == NULL) || (url2 == NULL)) {
+		return url1 == url2;
+	}
+
+	purl1 = purple_http_url_parse(url1);
+
+	if (purl1 == NULL) {
+		return g_ascii_strcasecmp(url1, url2) == 0;
+	}
+
+	purl2 = purple_http_url_parse(url2);
+
+	if (purl2 == NULL) {
+		purple_http_url_free(purl1);
+		return g_ascii_strcasecmp(url1, url2) == 0;
+	}
+
+	for (i = protocol ? 0 : 1; i < G_N_ELEMENTS(funcs); i++) {
+		str1 = funcs[i](purl1);
+		str2 = funcs[i](purl2);
+
+		if (!purple_strequal(str1, str2)) {
+			ret = FALSE;
+			break;
+		}
+	}
+
+	if (ret && protocol) {
+		int1 = purple_http_url_get_port(purl1);
+		int2 = purple_http_url_get_port(purl2);
+
+		if (int1 != int2) {
+			ret = FALSE;
+		}
+	}
+
+	purple_http_url_free(purl1);
+	purple_http_url_free(purl2);
+	return ret;
+}
