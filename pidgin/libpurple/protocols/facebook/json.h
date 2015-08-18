@@ -22,6 +22,13 @@
 #ifndef _FACEBOOK_JSON_H_
 #define _FACEBOOK_JSON_H_
 
+#define FB_TYPE_JSON_VALUES  (fb_json_values_get_type())
+#define FB_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_JSON_VALUES, FbJsonValues))
+#define FB_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
+#define FB_IS_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_JSON_VALUES))
+#define FB_IS_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_JSON_VALUES))
+#define FB_JSON_VALUES_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
+
 /**
  * SECTION:json
  * @section_id: facebook-json
@@ -41,8 +48,9 @@
  */
 #define FB_JSON_ERROR fb_json_error_quark()
 
-typedef struct _FbJsonValue FbJsonValue;
 typedef struct _FbJsonValues FbJsonValues;
+typedef struct _FbJsonValuesClass FbJsonValuesClass;
+typedef struct _FbJsonValuesPrivate FbJsonValuesPrivate;
 
 /**
  * FbJsonError:
@@ -85,46 +93,35 @@ typedef enum
 } FbJsonType;
 
 /**
- * FbJsonValue:
- * @expr: The #JsonPath expression.
- * @type: The #FbJsonType.
- * @required: TRUE if the node is required, otherwise FALSE.
- * @value: The #GValue.
- *
- * Represents a JSON node value.
- */
-struct _FbJsonValue
-{
-	const gchar *expr;
-	FbJsonType type;
-	gboolean required;
-	GValue value;
-};
-
-/**
  * FbJsonValues:
- * @root: The root #JsonNode.
- * @queue: The queue of #FbJsonValue's.
- * @next: The next #FbJsonValue.
- * @isarray: #TRUE if an array is present, otherwise #FALSE.
- * @array: The #JsonArray or #NULL.
- * @index: The advancing array index.
- * @error: The #GError.
  *
  * Represents a JSON value handler.
  */
 struct _FbJsonValues
 {
-	JsonNode *root;
-	GQueue *queue;
-	GList *next;
-
-	gboolean isarray;
-	JsonArray *array;
-	guint index;
-
-	GError *error;
+	/*< private >*/
+	GObject parent;
+	FbJsonValuesPrivate *priv;
 };
+
+/**
+ * FbJsonValuesClass:
+ *
+ * The base class for all #FbJsonValues's.
+ */
+struct _FbJsonValuesClass
+{
+	/*< private >*/
+	GObjectClass parent_class;
+};
+
+/**
+ * fb_json_values_get_type:
+ *
+ * Returns: The #GType for an #FbJsonValues.
+ */
+GType
+fb_json_values_get_type(void);
 
 /**
  * fb_json_error_quark:
@@ -382,21 +379,12 @@ fb_json_node_get_str(JsonNode *root, const gchar *expr, GError **error);
  * @root: The root #JsonNode.
  *
  * Creates a new #FbJsonValues. The returned #FbJsonValues should be
- * freed with #fb_json_values_free() when no longer needed.
+ * freed with #g_object_unref when no longer needed.
  *
  * Returns: The new #FbJsonValues.
  */
 FbJsonValues *
 fb_json_values_new(JsonNode *root);
-
-/**
- * fb_json_values_free:
- * @values: The #FbJsonValues.
- *
- * Frees all memory used by the #FbJsonValues.
- */
-void
-fb_json_values_free(FbJsonValues *values);
 
 /**
  * fb_json_values_add:
