@@ -63,6 +63,8 @@
  * FbUtilRequestBuddyFunc:
  * @buddies: The list of #PurpleBuddy's.
  * @data: The user-defined data.
+ *
+ * The callback for requested buddies.
  */
 typedef void (*FbUtilRequestBuddyFunc) (GSList *buddies, gpointer data);
 
