@@ -38,14 +38,12 @@
 
 #define FB_TYPE_MQTT             (fb_mqtt_get_type())
 #define FB_MQTT(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_MQTT, FbMqtt))
-#define FB_MQTT(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_MQTT, FbMqtt))
 #define FB_MQTT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_MQTT, FbMqttClass))
 #define FB_IS_MQTT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_MQTT))
 #define FB_IS_MQTT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_MQTT))
 #define FB_MQTT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_MQTT, FbMqttClass))
 
 #define FB_TYPE_MQTT_MESSAGE             (fb_mqtt_message_get_type())
-#define FB_MQTT_MESSAGE(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_MQTT_MESSAGE, FbMqttMessage))
 #define FB_MQTT_MESSAGE(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_MQTT_MESSAGE, FbMqttMessage))
 #define FB_MQTT_MESSAGE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_MQTT_MESSAGE, FbMqttMessageClass))
 #define FB_IS_MQTT_MESSAGE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_MQTT_MESSAGE))
