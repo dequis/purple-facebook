@@ -43,7 +43,6 @@
 
 #define FB_TYPE_API             (fb_api_get_type())
 #define FB_API(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_API, FbApi))
-#define FB_API(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_API, FbApi))
 #define FB_API_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_API, FbApiClass))
 #define FB_IS_API(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_API))
 #define FB_IS_API_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_API))
