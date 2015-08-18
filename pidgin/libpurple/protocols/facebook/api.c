@@ -1223,7 +1223,7 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 	JsonNode *xode;
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.mimeType");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.mimeType");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.imageMetadata.imageURIMap.0");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.xmaGraphQL");
@@ -1235,7 +1235,7 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 		str = fb_json_values_next_str(values, NULL);
 		url = fb_json_values_next_str(values, NULL);
 
-		if (g_str_has_prefix(str, "image/")) {
+		if ((str != NULL) && g_str_has_prefix(str, "image/")) {
 			msg->text = g_strdup(url);
 			mptr = fb_api_message_dup(msg, FALSE);
 			msgs = g_slist_prepend(msgs, mptr);
@@ -2069,7 +2069,7 @@ fb_api_cb_unread_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 	gpointer mptr;
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.mimetype");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.mimetype");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.image_full_screen.uri");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.filename");
@@ -2079,7 +2079,7 @@ fb_api_cb_unread_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 		str = fb_json_values_next_str(values, NULL);
 		url = fb_json_values_next_str(values, NULL);
 
-		if (g_str_has_prefix(str, "image/")) {
+		if ((str != NULL) && g_str_has_prefix(str, "image/")) {
 			msg->text = g_strdup(url);
 			mptr = fb_api_message_dup(msg, FALSE);
 			msgs = g_slist_prepend(msgs, mptr);
