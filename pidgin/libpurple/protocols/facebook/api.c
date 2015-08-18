@@ -1215,6 +1215,7 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
                             const gchar *body, JsonNode *root, GError **error)
 {
 	const gchar *str;
+	const gchar *url;
 	FbJsonValues *values;
 	GError *err = NULL;
 	gpointer mptr;
@@ -1222,6 +1223,7 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 	JsonNode *xode;
 
 	values = fb_json_values_new(root);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.mimeType");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.imageMetadata.imageURIMap.0");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.xmaGraphQL");
@@ -1230,9 +1232,11 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 	                                         ".attachments");
 
 	while (fb_json_values_update(values, &err)) {
-		msg->text = fb_json_values_next_str_dup(values, NULL);
+		str = fb_json_values_next_str(values, NULL);
+		url = fb_json_values_next_str(values, NULL);
 
-		if (msg->text != NULL) {
+		if (g_str_has_prefix(str, "image/")) {
+			msg->text = g_strdup(url);
 			mptr = fb_api_message_dup(msg, FALSE);
 			msgs = g_slist_prepend(msgs, mptr);
 			continue;
@@ -2059,20 +2063,24 @@ fb_api_cb_unread_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
                               JsonNode *root, GError **error)
 {
 	const gchar *str;
+	const gchar *url;
 	FbJsonValues *values;
 	GError *err = NULL;
 	gpointer mptr;
 
 	values = fb_json_values_new(root);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.mimetype");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.image_full_screen.uri");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.filename");
 	fb_json_values_set_array(values, FALSE, "$.blob_attachments");
 
 	while (fb_json_values_update(values, &err)) {
-		msg->text = fb_json_values_next_str_dup(values, NULL);
+		str = fb_json_values_next_str(values, NULL);
+		url = fb_json_values_next_str(values, NULL);
 
-		if (msg->text != NULL) {
+		if (g_str_has_prefix(str, "image/")) {
+			msg->text = g_strdup(url);
 			mptr = fb_api_message_dup(msg, FALSE);
 			msgs = g_slist_prepend(msgs, mptr);
 			continue;
