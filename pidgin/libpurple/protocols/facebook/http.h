@@ -274,4 +274,19 @@ fb_http_params_set_strf(FbHttpParams *params, const gchar *name,
                         const gchar *format, ...)
                         G_GNUC_PRINTF(3, 4);
 
+/**
+ * fb_http_urlcmp:
+ * @url1: The first URL.
+ * @url2: The second URL.
+ * @protocol: #TRUE to match the protocols, otherwise #FALSE.
+ *
+ * Compares two URLs. This is more reliable than just comparing two URL
+ * strings, as it avoids casing in some areas, while not in others. It
+ * can also, optionally, ignore the matching of the URL protocol.
+ *
+ * Returns: #TRUE if the URLs match, otherwise #FALSE.
+ */
+gboolean
+fb_http_urlcmp(const gchar *url1, const gchar *url2, gboolean protocol);
+
 #endif /* _FACEBOOK_HTTP_H_ */

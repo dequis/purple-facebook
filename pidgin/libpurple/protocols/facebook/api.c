@@ -1166,14 +1166,14 @@ fb_api_cb_publish_typing(FbApi *api, GByteArray *pload)
 	json_node_free(root);
 }
 
-static gchar *
-fb_api_message_parse_xma(FbApi *api, JsonNode *root, GError **error)
+static gboolean
+fb_api_xma_parse(FbApi *api, FbApiMessage *msg, const gchar *body,
+                 JsonNode *root, GError **error)
 {
 	const gchar *str;
 	const gchar *url;
 	FbHttpParams *params;
 	FbJsonValues *values;
-	gchar *ret;
 	GError *err = NULL;
 
 	values = fb_json_values_new(root);
@@ -1186,7 +1186,7 @@ fb_api_message_parse_xma(FbApi *api, JsonNode *root, GError **error)
 	if (G_UNLIKELY(err != NULL)) {
 		g_propagate_error(error, err);
 		fb_json_values_free(values);
-		return NULL;
+		return FALSE;
 	}
 
 	str = fb_json_values_next_str(values, NULL);
@@ -1194,14 +1194,20 @@ fb_api_message_parse_xma(FbApi *api, JsonNode *root, GError **error)
 
 	if (purple_strequal(str, "ExternalUrl")) {
 		params = fb_http_params_new_parse(url, TRUE);
-		ret = fb_http_params_dup_str(params, "u", NULL);
+		msg->text = fb_http_params_dup_str(params, "u", NULL);
 		fb_http_params_free(params);
 	} else {
-		ret = g_strdup(url);
+		msg->text = g_strdup(url);
+	}
+
+	if (fb_http_urlcmp(body, msg->text, FALSE)) {
+		g_free(msg->text);
+		fb_json_values_free(values);
+		return FALSE;
 	}
 
 	fb_json_values_free(values);
-	return ret;
+	return TRUE;
 }
 
 static GSList *
@@ -1242,22 +1248,18 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 			}
 
 			xode = fb_json_node_get_nth(node, 0);
-			msg->text = fb_api_message_parse_xma(api, xode, &err);
+
+			if (fb_api_xma_parse(api, msg, body, xode, &err)) {
+				mptr = fb_api_message_dup(msg, FALSE);
+				msgs = g_slist_prepend(msgs, mptr);
+			}
+
 			json_node_free(node);
 
 			if (G_UNLIKELY(err != NULL)) {
 				break;
 			}
 
-			if (purple_strequal(msg->text, body)) {
-				g_free(msg->text);
-				continue;
-			}
-
-			if (G_LIKELY(msg->text != NULL)) {
-				mptr = fb_api_message_dup(msg, FALSE);
-				msgs = g_slist_prepend(msgs, mptr);
-			}
 			continue;
 		}
 
@@ -2184,21 +2186,15 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		xode = fb_json_node_get(node, "$.extensible_attachment", NULL);
 
 		if (xode != NULL) {
-			msg.text = fb_api_message_parse_xma(api, xode, &err);
+			if (fb_api_xma_parse(api, &msg, body, xode, &err)) {
+				mptr = fb_api_message_dup(&msg, FALSE);
+				msgs = g_slist_prepend(msgs, mptr);
+			}
+
 			json_node_free(xode);
 
 			if (G_UNLIKELY(err != NULL)) {
 				break;
-			}
-
-			if (purple_strequal(msg.text, body)) {
-				g_free(msg.text);
-				continue;
-			}
-
-			if (msg.text != NULL) {
-				mptr = fb_api_message_dup(&msg, FALSE);
-				msgs = g_slist_prepend(msgs, mptr);
 			}
 		}
 
