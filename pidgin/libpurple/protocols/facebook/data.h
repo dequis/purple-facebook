@@ -48,6 +48,13 @@
 #define FB_IS_DATA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_DATA))
 #define FB_DATA_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_DATA, FbDataClass))
 
+#define FB_TYPE_DATA_IMAGE  (fb_data_image_get_type())
+#define FB_DATA_IMAGE(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA_IMAGE, FbDataImage))
+#define FB_DATA_IMAGE_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_DATA_IMAGE, FbDataImageClass))
+#define FB_IS_DATA_IMAGE(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_DATA_IMAGE))
+#define FB_IS_DATA_IMAGE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_DATA_IMAGE))
+#define FB_DATA_IMAGE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_DATA_IMAGE, FbDataImageClass))
+
 /**
  * FB_DATA_ICON_MAX:
  *
@@ -58,7 +65,18 @@
 typedef struct _FbData FbData;
 typedef struct _FbDataClass FbDataClass;
 typedef struct _FbDataPrivate FbDataPrivate;
-typedef struct _FbDataIcon FbDataIcon;
+typedef struct _FbDataImage FbDataImage;
+typedef struct _FbDataImageClass FbDataImageClass;
+typedef struct _FbDataImagePrivate FbDataImagePrivate;
+
+/**
+ * FbDataImageFunc:
+ * @img: The #FbDataImage.
+ * @error: The #GError or #NULL.
+ *
+ * The callback for a fetched #FbDataImage.
+ */
+typedef void (*FbDataImageFunc) (FbDataImage *img, GError *error);
 
 /**
  * FbData:
@@ -84,20 +102,26 @@ struct _FbDataClass
 };
 
 /**
- * FbDataIcon:
- * @fata: The #FbData.
- * @buddy: The #PurpleBuddy.
- * @url: The image URL.
- * @func: The #PurpleHttpCallback.
+ * FbDataImage:
  *
- * Represents the data used for fetching icons.
+ * Represents the data used for fetching images.
  */
-struct _FbDataIcon
+struct _FbDataImage
 {
-	FbData *fata;
-	PurpleBuddy *buddy;
-	gchar *url;
-	PurpleHttpCallback func;
+	/*< private >*/
+	GObject parent;
+	FbDataImagePrivate *priv;
+};
+
+/**
+ * FbDataImageClass:
+ *
+ * The base class for all #FbDataImage's.
+ */
+struct _FbDataImageClass
+{
+	/*< private >*/
+	GObjectClass parent_class;
 };
 
 /**
@@ -107,6 +131,14 @@ struct _FbDataIcon
  */
 GType
 fb_data_get_type(void);
+
+/**
+ * fb_data_image_get_type:
+ *
+ * Returns: The #GType for an #FbDataImage.
+ */
+GType
+fb_data_image_get_type(void);
 
 /**
  * fb_data_new:
@@ -259,40 +291,98 @@ GSList *
 fb_data_take_messages(FbData *fata, FbId uid);
 
 /**
- * fb_data_icon_add:
+ * fb_data_image_add:
  * @fata: The #FbData.
- * @buddy: The @PurpleBuddy.
  * @url: The image URL.
- * @func: The #PurpleHttpCallback.
+ * @func: The #FbDataImageFunc.
+ * @data: The user-defined data.
  *
- * Adds a new #FbDataIcon to the #FbData. This is used to fetch user
- * icons from HTTP sources. After calling this, #fb_data_icon_queue()
- * should be called to queue the fetching process. The returned
- * #FbDataIcon should not be freed.
+ * Adds a new #FbDataImage to the #FbData. This is used to fetch images
+ * from HTTP sources. After calling this, #fb_data_image_queue() should
+ * be called to queue the fetching process.
  *
- * Return: The #FbDataIcon.
+ * Return: The #FbDataImage.
  */
-FbDataIcon *
-fb_data_icon_add(FbData *fata, PurpleBuddy *buddy, const gchar *url,
-                 PurpleHttpCallback func);
+FbDataImage *
+fb_data_image_add(FbData *fata, const gchar *url, FbDataImageFunc func,
+                  gpointer data);
 
 /**
- * fb_data_icon_destroy:
- * @icon: The #FbDataIcon.
+ * fb_data_image_get_active:
+ * @img: The #FbDataImage.
  *
- * Destroys an #FbDataIcon by removing it from the #FbData, and freeing
- * all memory used by it.
+ * Gets the active fetching state from the #FbDataImage.
+ *
+ * Returns: #TRUE if the image is being fetched, otherwise #FALSE.
  */
-void
-fb_data_icon_destroy(FbDataIcon *icon);
+gboolean
+fb_data_image_get_active(FbDataImage *img);
 
 /**
- * fb_data_icon_queue:
+ * fb_data_image_get_data:
+ * @img: The #FbDataImage.
+ *
+ * Gets the user-defined data from the #FbDataImage.
+ *
+ * Returns: The user-defined data.
+ */
+gpointer
+fb_data_image_get_data(FbDataImage *img);
+
+/**
+ * fb_data_image_get_fata:
+ * @img: The #FbDataImage.
+ *
+ * Gets the #FbData from the #FbDataImage.
+ *
+ * Returns: The #FbData.
+ */
+FbData *
+fb_data_image_get_fata(FbDataImage *img);
+
+/**
+ * fb_data_image_get_image:
+ * @img: The #FbDataImage.
+ * @size: The return location for the image size or #NULL.
+ *
+ * Gets the image data from the #FbDataImage.
+ *
+ * Returns: The image data.
+ */
+const guint8 *
+fb_data_image_get_image(FbDataImage *img, gsize *size);
+
+/**
+ * fb_data_image_dup_image:
+ * @img: The #FbDataImage.
+ * @size: The return location for the image size or #NULL.
+ *
+ * Gets the duplicated image data from the #FbDataImage. The returned
+ * data should be freed with #g_free() when no longer needed.
+ *
+ * Returns: The duplicated image data.
+ */
+guint8 *
+fb_data_image_dup_image(FbDataImage *img, gsize *size);
+
+/**
+ * fb_data_image_get_url:
+ * @img: The #FbDataImage.
+ *
+ * Gets the image URL from the #FbDataImage.
+ *
+ * Returns: The image URL.
+ */
+const gchar *
+fb_data_image_get_url(FbDataImage *img);
+
+/**
+ * fb_data_image_queue:
  * @fata: The #FbData.
  *
- * Queues the next #FbDataIcon fetches.
+ * Queues the next #FbDataImage fetches.
  */
 void
-fb_data_icon_queue(FbData *fata);
+fb_data_image_queue(FbData *fata);
 
 #endif /* _FACEBOOK_DATA_H_ */

@@ -255,13 +255,24 @@ typedef enum
  * @FB_API_EVENT_TYPE_THREAD_USER_ADDED: A thread user was added.
  * @FB_API_EVENT_TYPE_THREAD_USER_REMOVED: A thread user was removed.
  *
- * The FbApiEvent types.
+ * The #FbApiEvent types.
  */
 typedef enum
 {
 	FB_API_EVENT_TYPE_THREAD_USER_ADDED,
 	FB_API_EVENT_TYPE_THREAD_USER_REMOVED
 } FbApiEventType;
+
+/**
+ * FbApiMessageFlags:
+ * @FB_API_MESSAGE_FLAG_SELF: The text is from the #FbApi user.
+ *
+ * The #FbApiMessage flags.
+ */
+typedef enum
+{
+	FB_API_MESSAGE_FLAG_SELF = 1 << 0
+} FbApiMessageFlags;
 
 /**
  * FbApi:
@@ -303,19 +314,19 @@ struct _FbApiEvent
 
 /**
  * FbApiMessage:
+ * @flags: The #FbApiMessageFlags.
  * @uid: The user #FbId.
  * @tid: The thread #FbId.
  * @text: The message text.
- * @isself: #TRUE if the user is the #FbApi user, otherwise #FALSE.
  *
  * Represents a Facebook user message.
  */
 struct _FbApiMessage
 {
+	FbApiMessageFlags flags;
 	FbId uid;
 	FbId tid;
 	gchar *text;
-	gboolean isself;
 };
 
 /**

@@ -1387,12 +1387,11 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 		oid = fb_json_values_next_int(values, 0);
 		msg.tid = fb_json_values_next_int(values, 0);
 
-		if (uid != priv->uid) {
-			msg.isself = FALSE;
-			msg.uid = uid;
-		} else {
-			msg.isself = TRUE;
+		if (uid == priv->uid) {
+			msg.flags |= FB_API_MESSAGE_FLAG_SELF;
 			msg.uid = oid;
+		} else {
+			msg.uid = uid;
 		}
 
 		if (msg.uid == 0) {
