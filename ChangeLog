@@ -1,3 +1,10 @@
+purple-facebook-7201f07fe8f7 (2015-08-19):
+  - Display the thread URL for videos
+  - Fixed memory leak with contact parsing
+  - Fixed URL comparisons being overly strict
+  - Lots of code refactoring
+  - Removed debugging support from Travis CI
+
 purple-facebook-dd1528f03f59 (2015-08-15):
   - Added GTK-Doc for the internal APIs
   - Fixed HTTP error checks being skipped
