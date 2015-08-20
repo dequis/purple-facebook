@@ -530,6 +530,11 @@ fb_data_image_cb(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbDataImagePrivate *priv = img->priv;
 	GError *err = NULL;
 
+	if (G_UNLIKELY(purple_http_conn_is_cancelling(con))) {
+		/* Ignore canceling HTTP requests */
+		return;
+	}
+
 	fb_http_error_chk(res, &err);
 	priv->image = (guint8*) purple_http_response_get_data(res, &priv->size);
 	priv->func(img, err);
