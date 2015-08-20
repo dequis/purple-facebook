@@ -262,7 +262,7 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 
 		bdy = purple_blist_find_buddy(acct, uid);
 
-		if (purple_buddy_get_group(bdy) == grpn) {
+		if ((bdy != NULL) && (purple_buddy_get_group(bdy) == grpn)) {
 			purple_blist_remove_buddy(bdy);
 			bdy = NULL;
 		}
