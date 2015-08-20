@@ -776,8 +776,8 @@ fb_blist_chat_create(GSList *buddies, gpointer data)
 	const gchar *name;
 	FbApi *api;
 	FbData *fata = data;
+	FbId *did;
 	FbId uid;
-	gpointer mptr;
 	GSList *l;
 	GSList *uids = NULL;
 	PurpleConnection *gc;
@@ -800,8 +800,8 @@ fb_blist_chat_create(GSList *buddies, gpointer data)
 	for (l = buddies; l != NULL; l = l->next) {
 		name = purple_buddy_get_name(l->data);
 		uid = FB_ID_FROM_STR(name);
-		mptr = g_memdup(&uid, sizeof uid);
-		uids = g_slist_prepend(uids, mptr);
+		did = g_memdup(&uid, sizeof uid);
+		uids = g_slist_prepend(uids, did);
 	}
 
 	fb_api_thread_create(api, uids);
