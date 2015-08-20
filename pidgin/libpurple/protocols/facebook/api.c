@@ -592,6 +592,11 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 	gint code;
 	gsize size;
 
+	if (G_UNLIKELY(purple_http_conn_is_cancelling(con))) {
+		/* Ignore canceling HTTP requests */
+		return FALSE;
+	}
+
 	msg = purple_http_response_get_error(res);
 	code = purple_http_response_get_code(res);
 	data = purple_http_response_get_data(res, &size);
