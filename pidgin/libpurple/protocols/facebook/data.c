@@ -382,6 +382,17 @@ fb_data_add_message(FbData *fata, FbApiMessage *msg)
 	g_queue_push_tail(priv->msgs, msg);
 }
 
+void
+fb_data_remove_message(FbData *fata, FbApiMessage *msg)
+{
+	FbDataPrivate *priv;
+
+	g_return_if_fail(FB_IS_DATA(fata));
+	priv = fata->priv;
+
+	g_queue_remove(priv->msgs, msg);
+}
+
 GSList *
 fb_data_take_messages(FbData *fata, FbId uid)
 {

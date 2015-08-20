@@ -278,6 +278,16 @@ void
 fb_data_add_message(FbData *fata, FbApiMessage *msg);
 
 /**
+ * fb_data_remove_message:
+ * @fata: The #FbData.
+ * @msg: The #FbApiMessage.
+ *
+ * Removes an #FbApiMessage from the #FbData.
+ */
+void
+fb_data_remove_message(FbData *fata, FbApiMessage *msg);
+
+/**
  * fb_data_take_messages:
  * @fata: The #FbData.
  * @uid: The user #FbId.
