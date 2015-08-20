@@ -625,12 +625,16 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 		FB_API_ERROR_EMIT(api, err, return FALSE);
 	}
 
-	if (fb_api_json_chk(api, data, size, root)) {
-		FB_API_ERROR_EMIT(api, err, return FALSE);
-		return TRUE;
+	if (!fb_api_json_chk(api, data, size, root)) {
+		if (G_UNLIKELY(err != NULL)) {
+			g_error_free(err);
+		}
+
+		return FALSE;
 	}
 
-	return FALSE;
+	FB_API_ERROR_EMIT(api, err, return FALSE);
+	return TRUE;
 }
 
 static PurpleHttpConnection *
