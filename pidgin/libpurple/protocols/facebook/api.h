@@ -265,13 +265,17 @@ typedef enum
 
 /**
  * FbApiMessageFlags:
+ * @FB_API_MESSAGE_FLAG_DONE: The text has been processed.
+ * @FB_API_MESSAGE_FLAG_IMAGE: The text is a URL to an image.
  * @FB_API_MESSAGE_FLAG_SELF: The text is from the #FbApi user.
  *
  * The #FbApiMessage flags.
  */
 typedef enum
 {
-	FB_API_MESSAGE_FLAG_SELF = 1 << 0
+	FB_API_MESSAGE_FLAG_DONE = 1 << 0,
+	FB_API_MESSAGE_FLAG_IMAGE = 1 << 1,
+	FB_API_MESSAGE_FLAG_SELF = 1 << 2
 } FbApiMessageFlags;
 
 /**

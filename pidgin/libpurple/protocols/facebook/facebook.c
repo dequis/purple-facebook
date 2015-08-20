@@ -33,6 +33,8 @@
 #include "conversations.h"
 #include "conversationtypes.h"
 #include "glibcompat.h"
+#include "image.h"
+#include "image-store.h"
 #include "message.h"
 #include "notify.h"
 #include "plugins.h"
@@ -405,8 +407,49 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 }
 
 static void
+fb_cb_image(FbDataImage *img, GError *error)
+{
+	const gchar *url;
+	FbApi *api;
+	FbApiMessage *msg;
+	FbData *fata;
+	gsize size;
+	GSList *msgs = NULL;
+	guint id;
+	guint8 *image;
+	PurpleImage *pimg;
+
+	fata = fb_data_image_get_fata(img);
+	msg = fb_data_image_get_data(img);
+	fb_data_remove_message(fata, msg);
+
+	if (G_UNLIKELY(error != NULL)) {
+		url = fb_data_image_get_url(img);
+		fb_util_debug_warning("Failed to retrieve image %s: %s",
+		                      url, error->message);
+		return;
+	}
+
+	api = fb_data_get_api(fata);
+	image = fb_data_image_dup_image(img, &size);
+	pimg = purple_image_new_from_data(image, size);
+	id = purple_image_store_add_weak(pimg);
+
+	g_free(msg->text);
+	msg->text = g_strdup_printf("<img src=\""
+	                            PURPLE_IMAGE_STORE_PROTOCOL
+	                            "%u\">", id);
+	msg->flags |= FB_API_MESSAGE_FLAG_DONE;
+
+	msgs = g_slist_prepend(msgs, msg);
+	fb_cb_api_messages(api, msgs, fata);
+	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+}
+
+static void
 fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 {
+	const gchar *text;
 	FbApiMessage *msg;
 	FbData *fata = data;
 	gboolean mark;
@@ -429,12 +472,10 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 
 	for (l = msgs; l != NULL; l = l->next) {
 		msg = l->data;
-		html = purple_markup_escape_text(msg->text, -1);
 		FB_ID_TO_STR(msg->uid, uid);
 
 		if (purple_blist_find_buddy(acct, uid) == NULL) {
-			msg = fb_api_message_dup(msg, FALSE);
-			msg->text = html;
+			msg = fb_api_message_dup(msg, TRUE);
 			fb_data_add_message(fata, msg);
 			fb_api_contact(api, msg->uid);
 			continue;
@@ -443,12 +484,30 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 		self = (msg->flags & FB_API_MESSAGE_FLAG_SELF) != 0;
 		flags = self ? PURPLE_MESSAGE_SEND : PURPLE_MESSAGE_RECV;
 
+		if (msg->flags & FB_API_MESSAGE_FLAG_IMAGE) {
+			if (!(msg->flags & FB_API_MESSAGE_FLAG_DONE)) {
+				msg = fb_api_message_dup(msg, TRUE);
+				fb_data_image_add(fata, msg->text,
+				                  fb_cb_image, msg);
+				fb_data_add_message(fata, msg);
+				fb_data_image_queue(fata);
+				continue;
+			}
+
+			flags |= PURPLE_MESSAGE_IMAGES;
+			text = msg->text;
+			html = NULL;
+		} else {
+			html = purple_markup_escape_text(msg->text, -1);
+			text = html;
+		}
+
 		if (msg->tid == 0) {
 			if (mark && !self) {
 				fb_data_set_unread(fata, msg->uid, TRUE);
 			}
 
-			fb_util_serv_got_im(gc, uid, html, flags, time(NULL));
+			fb_util_serv_got_im(gc, uid, text, flags, time(NULL));
 			g_free(html);
 			continue;
 		}
@@ -473,7 +532,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 			fb_data_set_unread(fata, msg->tid, TRUE);
 		}
 
-		fb_util_serv_got_chat_in(gc, id, uid, html, flags, time(NULL));
+		fb_util_serv_got_chat_in(gc, id, uid, text, flags, time(NULL));
 		g_free(html);
 	}
 }

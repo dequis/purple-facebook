@@ -1236,8 +1236,11 @@ fb_api_message_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 		url = fb_json_values_next_str(values, NULL);
 
 		if ((str != NULL) && g_str_has_prefix(str, "image/")) {
+			msg->flags |= FB_API_MESSAGE_FLAG_IMAGE;
 			msg->text = g_strdup(url);
 			mptr = fb_api_message_dup(msg, FALSE);
+
+			msg->flags &= ~FB_API_MESSAGE_FLAG_IMAGE;
 			msgs = g_slist_prepend(msgs, mptr);
 			continue;
 		}
@@ -2080,8 +2083,11 @@ fb_api_cb_unread_parse_attach(FbApi *api, FbApiMessage *msg, GSList *msgs,
 		url = fb_json_values_next_str(values, NULL);
 
 		if ((str != NULL) && g_str_has_prefix(str, "image/")) {
+			msg->flags |= FB_API_MESSAGE_FLAG_IMAGE;
 			msg->text = g_strdup(url);
 			mptr = fb_api_message_dup(msg, FALSE);
+
+			msg->flags &= ~FB_API_MESSAGE_FLAG_IMAGE;
 			msgs = g_slist_prepend(msgs, mptr);
 			continue;
 		}
