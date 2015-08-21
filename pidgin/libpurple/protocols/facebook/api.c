@@ -32,6 +32,8 @@
 #include "thrift.h"
 #include "util.h"
 
+typedef struct _FbApiData FbApiData;
+
 enum
 {
 	PROP_0,
@@ -50,6 +52,7 @@ struct _FbApiPrivate
 {
 	PurpleConnection *gc;
 	FbMqtt *mqtt;
+	GHashTable *data;
 
 	FbId uid;
 	gint64 sid;
@@ -65,8 +68,17 @@ struct _FbApiPrivate
 
 };
 
+struct _FbApiData
+{
+	gpointer data;
+	GDestroyNotify func;
+};
+
 static void
 fb_api_contacts_after(FbApi *api, const gchar *writeid);
+
+static void
+fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg);
 
 G_DEFINE_TYPE(FbApi, fb_api, G_TYPE_OBJECT);
 
@@ -141,7 +153,16 @@ fb_api_get_property(GObject *obj, guint prop, GValue *val, GParamSpec *pspec)
 static void
 fb_api_dispose(GObject *obj)
 {
+	FbApiData *fata;
 	FbApiPrivate *priv = FB_API(obj)->priv;
+	GHashTableIter iter;
+
+	g_hash_table_iter_init(&iter, priv->data);
+
+	while (g_hash_table_iter_next(&iter, NULL, (gpointer) &fata)) {
+		fata->func(fata->data);
+		g_free(fata);
+	}
 
 	if (G_LIKELY(priv->gc != NULL)) {
 		purple_http_conn_cancel_all(priv->gc);
@@ -151,6 +172,7 @@ fb_api_dispose(GObject *obj)
 		g_object_unref(priv->mqtt);
 	}
 
+	g_hash_table_destroy(priv->data);
 	g_hash_table_destroy(priv->msgids);
 
 	g_free(priv->cid);
@@ -460,6 +482,8 @@ fb_api_init(FbApi *api)
 	priv = G_TYPE_INSTANCE_GET_PRIVATE(api, FB_TYPE_API, FbApiPrivate);
 	api->priv = priv;
 
+	priv->data = g_hash_table_new_full(g_direct_hash, g_direct_equal,
+	                                   NULL, NULL);
 	priv->msgids = g_hash_table_new_full(g_int64_hash, g_int64_equal,
 	                                     g_free, NULL);
 }
@@ -474,6 +498,38 @@ fb_api_error_quark(void)
 	}
 
 	return q;
+}
+
+static void
+fb_api_data_set(FbApi *api, gpointer handle, gpointer data,
+                GDestroyNotify func)
+{
+	FbApiData *fata;
+	FbApiPrivate *priv = api->priv;
+
+	fata = g_new0(FbApiData, 1);
+	fata->data = data;
+	fata->func = func;
+	g_hash_table_replace(priv->data, handle, fata);
+}
+
+static gpointer
+fb_api_data_take(FbApi *api, gconstpointer handle)
+{
+	FbApiData *fata;
+	FbApiPrivate *priv = api->priv;
+	gpointer data;
+
+	fata = g_hash_table_lookup(priv->data, handle);
+
+	if (fata == NULL) {
+		return NULL;
+	}
+
+	data = fata->data;
+	g_hash_table_remove(priv->data, handle);
+	g_free(fata);
+	return data;
 }
 
 static gboolean
@@ -706,9 +762,9 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	return ret;
 }
 
-static void
+static PurpleHttpConnection *
 fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
-                  PurpleHttpCallback callback)
+                  PurpleHttpCallback hcb)
 {
 	const gchar *name;
 	FbHttpParams *prms;
@@ -724,6 +780,9 @@ fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
 	case FB_API_QUERY_CONTACTS_AFTER:
 		name = "FetchContactsFullWithAfterQuery";
 		break;
+	case FB_API_QUERY_STICKER:
+		name = "FetchStickersWithPreviewsQuery";
+		break;
 	case FB_API_QUERY_THREAD:
 		name = "ThreadQuery";
 		break;
@@ -734,8 +793,8 @@ fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
 		name = "XMAQuery";
 		break;
 	default:
-		g_return_if_reached();
-		return;
+		g_return_val_if_reached(NULL);
+		return NULL;
 	}
 
 	prms = fb_http_params_new();
@@ -743,9 +802,9 @@ fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
 
 	fb_http_params_set_strf(prms, "query_id", "%" G_GINT64_FORMAT, query);
 	fb_http_params_set_str(prms, "query_params", json);
-	fb_api_http_req(api, FB_API_URL_GQL, name, "get", prms, callback);
-
 	g_free(json);
+
+	return fb_api_http_req(api, FB_API_URL_GQL, name, "get", prms, hcb);
 }
 
 static void
@@ -1309,7 +1368,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	FbApiMessage *dmsg;
 	FbApiMessage msg;
 	FbApiPrivate *priv = api->priv;
-	FbHttpParams *params;
+	FbId id;
 	FbId oid;
 	FbId uid;
 	FbJsonValues *values;
@@ -1317,7 +1376,6 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	gchar *json;
 	gchar *stoken;
 	GError *err = NULL;
-	gint64 id;
 	GRegex *regex;
 	GSList *msgs = NULL;
 	guint size;
@@ -1423,11 +1481,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 
 		if (id != 0) {
 			dmsg = fb_api_message_dup(&msg, FALSE);
-			params = fb_http_params_new();
-			fb_http_params_set_int(params, "sticker_id", id);
-			dmsg->text = fb_http_params_close(params,
-			                                  FB_API_URL_STICKER);
-			msgs = g_slist_prepend(msgs, dmsg);
+			fb_api_sticker(api, id, dmsg);
 		}
 
 		node = fb_json_values_get_root(values);
@@ -2131,7 +2185,7 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApi *api = data;
 	FbApiMessage *dmsg;
 	FbApiMessage msg;
-	FbHttpParams *params;
+	FbId id;
 	FbId tid;
 	FbJsonValues *values;
 	gchar *xma;
@@ -2199,11 +2253,8 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 		if (str != NULL) {
 			dmsg = fb_api_message_dup(&msg, FALSE);
-			params = fb_http_params_new();
-			fb_http_params_set_str(params, "sticker_id", str);
-			dmsg->text = fb_http_params_close(params,
-			                                  FB_API_URL_STICKER);
-			msgs = g_slist_prepend(msgs, dmsg);
+			id = FB_ID_FROM_STR(str);
+			fb_api_sticker(api, id, dmsg);
 		}
 
 		node = fb_json_values_get_root(values);
@@ -2326,6 +2377,69 @@ fb_api_unread(FbApi *api)
 	fb_json_bldr_add_str(bldr, "13", "false");
 	fb_api_http_query(api, FB_API_QUERY_THREADS, bldr,
 	                  fb_api_cb_unread);
+}
+
+static void
+fb_api_cb_sticker(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                  gpointer data)
+{
+	FbApi *api = data;
+	FbApiMessage *msg;
+	FbJsonValues *values;
+	GError *err = NULL;
+	GSList *msgs = NULL;
+	JsonNode *node;
+	JsonNode *root;
+
+	if (!fb_api_http_chk(api, con, res, &root)) {
+		return;
+	}
+
+	node = fb_json_node_get_nth(root, 0);
+	values = fb_json_values_new(node);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.thread_image.uri");
+	fb_json_values_update(values, &err);
+
+	FB_API_ERROR_EMIT(api, err,
+		g_object_unref(values);
+		json_node_free(root);
+		return;
+	);
+
+	msg = fb_api_data_take(api, con);
+	msg->flags |= FB_API_MESSAGE_FLAG_IMAGE;
+	msg->text = fb_json_values_next_str_dup(values, NULL);
+	msgs = g_slist_prepend(msgs, msg);
+
+	g_signal_emit_by_name(api, "messages", msgs);
+	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+	g_object_unref(values);
+	json_node_free(root);
+}
+
+static void
+fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg)
+{
+	JsonBuilder *bldr;
+	PurpleHttpConnection *http;
+
+	/* Object key mapping:
+	 *   0: sticker_ids
+	 *   1: media_type
+	 *   2: preview_size
+	 *   3: scaling_factor
+	 *   4: animated_media_type
+	 */
+
+	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
+	fb_json_bldr_arr_begin(bldr, "0");
+	fb_json_bldr_add_strf(bldr, NULL, "%" FB_ID_FORMAT, sid);
+	fb_json_bldr_arr_end(bldr);
+
+	http = fb_api_http_query(api, FB_API_QUERY_STICKER, bldr,
+	                         fb_api_cb_sticker);
+	fb_api_data_set(api, http, msg, (GDestroyNotify) fb_api_message_free);
 }
 
 static gboolean
