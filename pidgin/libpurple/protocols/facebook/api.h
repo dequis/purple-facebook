@@ -91,6 +91,14 @@
 #define FB_API_SECRET  "374e60f8b9bb6b8cbb30f78030438895"
 
 /**
+ * FB_API_URL_ATTACH:
+ *
+ * The URL for attachment URL requests.
+ */
+#define FB_API_URL_ATTACH  FB_API_AHOST "/method/messaging.getAttachment"
+//#define FB_API_URL_ATTACH  FB_API_AHOST "/method/messaging.attachmentRedirect"
+
+/**
  * FB_API_URL_AUTH:
  *
  * The URL for authentication requests.
