@@ -144,6 +144,15 @@ static inline gint64 g_get_monotonic_time(void)
 	return ((gint64)time_s.tv_sec << 32) | time_s.tv_usec;
 }
 
+static inline gint64 g_get_real_time(void)
+{
+	GTimeVal time_s;
+
+	g_get_current_time(&time_s);
+
+	return (((gint64)time_s.tv_sec) * 1000000) + time_s.tv_usec;
+}
+
 static inline void g_list_free_full(GList *list, GDestroyNotify free_func)
 {
 	g_list_foreach(list, (GFunc)free_func, NULL);
