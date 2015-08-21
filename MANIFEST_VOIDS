@@ -3,6 +3,8 @@ include/blistnodetypes.h
 include/buddylist.h
 include/conversations.h
 include/conversationtypes.h
+include/image.h
+include/image-store.h
 include/message.h
 include/plugins.h
 include/presence.h

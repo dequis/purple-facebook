@@ -1,3 +1,12 @@
+purple-facebook-5727ffb502c7 (2015-08-21):
+  - Added missing g_get_real_time() compat function
+  - Display images and stickers in-line
+  - Fetch URLs for all message attachments
+  - Fixed the group checking on NULL buddies
+  - Fixed memory leak with HTTP error checking
+  - Ignore canceling HTTP requests
+  - Minor code refactoring
+
 purple-facebook-7201f07fe8f7 (2015-08-19):
   - Display the thread URL for videos
   - Fixed memory leak with contact parsing

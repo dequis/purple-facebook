@@ -18,9 +18,7 @@
 #ifndef _PURPLE_COMPAT_H_
 #define _PURPLE_COMPAT_H_
 
-#include "accountopt.h"
-#include "connection.h"
-#include "debug.h"
+#include "imgstore.h"
 #include "notify.h"
 #include "prpl.h"
 #include "request.h"
@@ -39,6 +37,7 @@ struct _PurpleMessage
 
 #define PurpleChatConversation  PurpleConvChat
 #define PurpleConversationUpdateType PurpleConvUpdateType
+#define PurpleImage  void
 #define PurpleIMConversation  PurpleConvIm
 #define PurpleIMTypingState  PurpleTypingState
 #define PurpleProtocol  void
@@ -51,6 +50,7 @@ struct _PurpleMessage
 #define PURPLE_CONVERSATION_UPDATE_UNSEEN PURPLE_CONV_UPDATE_UNSEEN
 #define PURPLE_IM_NOT_TYPING  PURPLE_NOT_TYPING
 #define PURPLE_IM_TYPING  PURPLE_TYPING
+#define PURPLE_IMAGE_STORE_PROTOCOL  ""
 
 #define PURPLE_CHAT_CONVERSATION  purple_conversation_get_chat_data
 #define PURPLE_CONVERSATION(c)  ((c)->conv)
@@ -112,6 +112,12 @@ struct _PurpleMessage
     purple_conversation_get_im_data( \
         purple_conversation_new(PURPLE_CONV_TYPE_IM, a, n) \
     )
+
+#define purple_image_new_from_data(d, s) \
+    GUINT_TO_POINTER(purple_imgstore_add_with_id(d, s, NULL))
+
+#define purple_image_store_add_weak(i) \
+    GPOINTER_TO_UINT(i)
 
 #define purple_message_new_outgoing(n, t, f) \
     ((PurpleMessage *) &((PurpleMessage) {n, t, f}))

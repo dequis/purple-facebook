@@ -1,7 +1,16 @@
-diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
---- a/libpurple/protocols/facebook/facebook.c	Tue Aug 18 19:58:40 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.c	Tue Aug 18 23:57:23 2015 -0400
-@@ -756,7 +756,7 @@
+diff -r 5727ffb502c7 libpurple/protocols/facebook/facebook.c
+--- a/libpurple/protocols/facebook/facebook.c	Fri Aug 21 01:18:30 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.c	Fri Aug 21 11:51:33 2015 -0400
+@@ -436,7 +436,7 @@
+ 	id = purple_image_store_add_weak(pimg);
+ 
+ 	g_free(msg->text);
+-	msg->text = g_strdup_printf("<img src=\""
++	msg->text = g_strdup_printf("<img id=\""
+ 	                            PURPLE_IMAGE_STORE_PROTOCOL
+ 	                            "%u\">", id);
+ 	msg->flags |= FB_API_MESSAGE_FLAG_DONE;
+@@ -815,7 +815,7 @@
  	GSList *select = NULL;
  	PurpleConnection *gc;
  
@@ -10,7 +19,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  		return;
  	}
  
-@@ -949,7 +949,7 @@
+@@ -1008,7 +1008,7 @@
  	PurpleConnection *gc;
  	PurpleMenuAction *act;
  
@@ -19,7 +28,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  		return NULL;
  	}
  
-@@ -997,7 +997,8 @@
+@@ -1056,7 +1056,8 @@
  }
  
  static gint
@@ -29,7 +38,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  {
  	const gchar *name;
  	const gchar *text;
-@@ -1006,6 +1007,8 @@
+@@ -1065,6 +1066,8 @@
  	FbId uid;
  	gchar *sext;
  
@@ -38,7 +47,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  	fata = purple_connection_get_protocol_data(gc);
  	api = fb_data_get_api(fata);
  
-@@ -1144,7 +1147,8 @@
+@@ -1203,7 +1206,8 @@
  }
  
  static gint
@@ -48,7 +57,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  {
  	const gchar *name;
  	const gchar *text;
-@@ -1155,6 +1159,8 @@
+@@ -1214,6 +1218,8 @@
  	PurpleAccount *acct;
  	PurpleChatConversation *chat;
  
@@ -57,7 +66,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  	acct = purple_connection_get_account(gc);
  	fata = purple_connection_get_protocol_data(gc);
  	api = fb_data_get_api(fata);
-@@ -1328,99 +1334,6 @@
+@@ -1387,99 +1393,6 @@
  }
  
  static void
@@ -157,7 +166,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  fb_cmds_register(void)
  {
  	PurpleCmdId id;
-@@ -1432,13 +1345,13 @@
+@@ -1491,13 +1404,13 @@
  	g_return_if_fail(fb_cmds == NULL);
  
  	id = purple_cmd_register("kick", "s", PURPLE_CMD_P_PROTOCOL, cflags,
@@ -173,7 +182,7 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
  				 _("leave: Leave the chat"),
  				 NULL);
  	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
-@@ -1457,43 +1370,102 @@
+@@ -1516,43 +1429,102 @@
  	g_slist_free_full(fb_cmds, fb_cmds_unregister_free);
  }
  
@@ -306,9 +315,9 @@ diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.c
 +	inited = TRUE;
 +	return purple_plugin_register(plugin);
 +}
-diff -r 7201f07fe8f7 libpurple/protocols/facebook/facebook.h
---- a/libpurple/protocols/facebook/facebook.h	Tue Aug 18 19:58:40 2015 -0400
-+++ b/libpurple/protocols/facebook/facebook.h	Tue Aug 18 23:57:23 2015 -0400
+diff -r 5727ffb502c7 libpurple/protocols/facebook/facebook.h
+--- a/libpurple/protocols/facebook/facebook.h	Fri Aug 21 01:18:30 2015 -0400
++++ b/libpurple/protocols/facebook/facebook.h	Fri Aug 21 11:51:33 2015 -0400
 @@ -22,24 +22,8 @@
  #ifndef _FACEBOOK_H_
  #define _FACEBOOK_H_
