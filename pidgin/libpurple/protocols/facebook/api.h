@@ -119,13 +119,6 @@
 #define FB_API_URL_PARTS  FB_API_GHOST "/participants"
 
 /**
- * FB_API_URL_STICKER:
- *
- * The URL for linking stickers.
- */
-#define FB_API_URL_STICKER  FB_API_WHOST "/stickers/asset/"
-
-/**
  * FB_API_URL_THREADS:
  *
  * The URL for thread management requests.
@@ -159,6 +152,13 @@
  * The query hash for the `FetchContactsFullWithAfterQuery`.
  */
 #define FB_API_QUERY_CONTACTS_AFTER  10153856456281729
+
+/**
+ * FB_API_QUERY_STICKER:
+ *
+ * The query hash for the `FetchStickersWithPreviewsQuery`.
+ */
+#define FB_API_QUERY_STICKER  10152877994321729
 
 /**
  * FB_API_QUERY_THREAD:
