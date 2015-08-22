@@ -584,7 +584,7 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 	);
 
 	code = fb_json_values_next_int(values, 0);
-	str = fb_json_values_next_str(values, 0);
+	str = fb_json_values_next_str(values, NULL);
 
 	if (purple_strequal(str, "OAuthException") || (code == 401)) {
 		errc = FB_API_ERROR_AUTH;
@@ -597,7 +597,7 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 		priv->token = NULL;
 	}
 
-	str = fb_json_values_next_str(values, 0);
+	str = fb_json_values_next_str(values, NULL);
 
 	if (purple_strequal(str, "ERROR_QUEUE_NOT_FOUND") ||
 	    purple_strequal(str, "ERROR_QUEUE_LOST"))
