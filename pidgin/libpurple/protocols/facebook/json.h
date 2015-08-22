@@ -22,13 +22,6 @@
 #ifndef _FACEBOOK_JSON_H_
 #define _FACEBOOK_JSON_H_
 
-#define FB_TYPE_JSON_VALUES  (fb_json_values_get_type())
-#define FB_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_JSON_VALUES, FbJsonValues))
-#define FB_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
-#define FB_IS_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_JSON_VALUES))
-#define FB_IS_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_JSON_VALUES))
-#define FB_JSON_VALUES_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
-
 /**
  * SECTION:json
  * @section_id: facebook-json
@@ -40,6 +33,13 @@
 
 #include <glib.h>
 #include <json-glib/json-glib.h>
+
+#define FB_TYPE_JSON_VALUES  (fb_json_values_get_type())
+#define FB_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_JSON_VALUES, FbJsonValues))
+#define FB_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
+#define FB_IS_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_JSON_VALUES))
+#define FB_IS_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_JSON_VALUES))
+#define FB_JSON_VALUES_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
 
 /**
  * FB_JSON_ERROR:
