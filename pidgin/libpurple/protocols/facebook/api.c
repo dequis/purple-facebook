@@ -602,7 +602,7 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 	if (purple_strequal(str, "ERROR_QUEUE_NOT_FOUND") ||
 	    purple_strequal(str, "ERROR_QUEUE_LOST"))
 	{
-		errc = FB_API_ERROR_AUTH;
+		errc = FB_API_ERROR_QUEUE;
 		success = FALSE;
 
 		g_free(priv->stoken);
