@@ -383,7 +383,7 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 		switch (event->type) {
 		case FB_API_EVENT_TYPE_THREAD_USER_ADDED:
 			if (purple_blist_find_buddy(acct, uid) == NULL) {
-				g_hash_table_insert(fetch, &event->uid, event);
+				g_hash_table_insert(fetch, &event->tid, event);
 				break;
 			}
 
