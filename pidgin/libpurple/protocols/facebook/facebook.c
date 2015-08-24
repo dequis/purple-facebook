@@ -336,6 +336,11 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 		return;
 	}
 
+	if (g_error_matches(error, FB_API_ERROR, FB_API_ERROR_QUEUE)) {
+		/* Save the reset data */
+		fb_data_save(fata);
+	}
+
 	if ((error->domain == FB_HTTP_ERROR) &&
 	    (error->code >= 400) &&
 	    (error->code <= 500))
