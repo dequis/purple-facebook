@@ -349,7 +349,7 @@ fb_api_class_init(FbApiClass *klass)
 	 * @error: The #GError.
 	 *
 	 * Emitted whenever an error is hit within the #FbApi. This
-	 * should disconnect #FbApi with #fb_api_disconnect().
+	 * should disconnect the #FbApi with #fb_api_disconnect().
 	 */
 	g_signal_new("error",
 	             G_TYPE_FROM_CLASS(klass),

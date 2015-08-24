@@ -105,8 +105,8 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	 * @mqtt: The #FbMqtt.
 	 * @error: The #GError.
 	 *
-	 * Emitted whenever an error is hit within the #FbMqtt. The
-	 * connection is automatically closed after this is emitted.
+	 * Emitted whenever an error is hit within the #FbMqtt. This
+	 * should close the #FbMqtt with #fb_mqtt_close().
 	 */
 	g_signal_new("error",
 	             G_TYPE_FROM_CLASS(klass),
@@ -282,7 +282,6 @@ fb_mqtt_error(FbMqtt *mqtt, FbMqttError error, const gchar *format, ...)
 	va_end(ap);
 
 	g_signal_emit_by_name(mqtt, "error", err);
-	fb_mqtt_close(mqtt);
 	g_error_free(err);
 }
 
@@ -601,12 +600,11 @@ fb_mqtt_cb_open_error(PurpleSslConnection *ssl, PurpleSslErrorType error,
 	str = purple_ssl_strerror(error);
 	err = g_error_new_literal(FB_MQTT_SSL_ERROR, error, str);
 
-	g_signal_emit_by_name(mqtt, "error", err);
-	g_error_free(err);
-
 	/* Do not call purple_ssl_close() from the error_func */
 	priv->gsc = NULL;
-	fb_mqtt_close(mqtt);
+
+	g_signal_emit_by_name(mqtt, "error", err);
+	g_error_free(err);
 }
 
 void
