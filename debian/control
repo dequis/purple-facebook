@@ -3,14 +3,14 @@ Maintainer: jgeboski <jgeboski@gmail.com>
 Section: misc
 Priority: optional
 Standards-Version: 3.9.6
-Build-Depends: debhelper (>= 9), dh-autoreconf, libglib2.0-dev (>= 2.32), libjson-glib-dev, libpurple-dev, zlib1g-dev
+Build-Depends: debhelper (>= 9), dh-autoreconf, libglib2.0-dev (>= 2.20), libjson-glib-dev (>= 0.14), libpurple-dev, zlib1g-dev
 Homepage: https://github.com/jgeboski/purple-facebook
 
 Package: purple-facebook
 Architecture: any
 Section: misc
 Priority: optional
-Depends: ${shlibs:Depends}, ${misc:Depends}, libpurple0, libjson-glib-1.0-0
+Depends: ${shlibs:Depends}, ${misc:Depends}, libpurple0, libglib2.0-0 (>= 2.20), libjson-glib-1.0-0 (>= 0.14), zlib1g
 Homepage: https://github.com/jgeboski/purple-facebook
 Description: Facebook protocol plugin for libpurple
  Purple Facebook implements the Facebook Messenger protocol into
