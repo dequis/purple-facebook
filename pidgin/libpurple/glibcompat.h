@@ -61,23 +61,6 @@ static inline gboolean g_close(gint fd, GError **error)
 	return FALSE;
 }
 
-#if !GLIB_CHECK_VERSION(2, 34, 0)
-
-static inline GSList * g_slist_copy_deep(GSList *list, GCopyFunc func,
-	gpointer data)
-{
-	GSList *ret = NULL;
-	GSList *l;
-
-	if (G_UNLIKELY(func == NULL))
-		return g_slist_copy(list);
-
-	for (l = list; l != NULL; l = l->next)
-		ret = g_slist_prepend(ret, func(l->data, data));
-
-	return g_slist_reverse(ret);
-}
-
 #if !GLIB_CHECK_VERSION(2, 32, 0)
 
 #include <glib-object.h>
@@ -208,8 +191,6 @@ static inline GError * g_error_new_valist(GQuark domain, gint code,
 #endif /* < 2.30.0 */
 
 #endif /* < 2.32.0 */
-
-#endif /* < 2.34.0 */
 
 #endif /* < 2.36.0 */
 
