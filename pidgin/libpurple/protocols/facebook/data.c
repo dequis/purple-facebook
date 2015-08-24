@@ -449,7 +449,7 @@ fb_data_image_get_active(FbDataImage *img)
 {
 	FbDataImagePrivate *priv;
 
-	g_return_val_if_fail(FB_IS_DATA_IMAGE(img), NULL);
+	g_return_val_if_fail(FB_IS_DATA_IMAGE(img), FALSE);
 	priv = img->priv;
 
 	return priv->active;
