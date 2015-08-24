@@ -2943,6 +2943,8 @@ FbApiThread *
 fb_api_thread_dup(const FbApiThread *thrd, gboolean deep)
 {
 	FbApiThread *ret;
+	FbApiUser *user;
+	GSList *l;
 
 	if (thrd == NULL) {
 		return g_new0(FbApiThread, 1);
@@ -2951,10 +2953,15 @@ fb_api_thread_dup(const FbApiThread *thrd, gboolean deep)
 	ret = g_memdup(thrd, sizeof *thrd);
 
 	if (deep) {
+		ret->users = NULL;
+
+		for (l = thrd->users; l != NULL; l = l->next) {
+			user = fb_api_user_dup(l->data, TRUE);
+			ret->users = g_slist_prepend(ret->users, user);
+		}
+
 		ret->topic = g_strdup(thrd->topic);
-		ret->users = g_slist_copy_deep(thrd->users,
-		                               (GCopyFunc) fb_api_user_dup,
-		                               GINT_TO_POINTER(deep));
+		ret->users = g_slist_reverse(ret->users);
 	}
 
 	return ret;
