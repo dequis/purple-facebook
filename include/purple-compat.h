@@ -120,7 +120,7 @@ struct _PurpleMessage
     GPOINTER_TO_UINT(i)
 
 #define purple_message_new_outgoing(n, t, f) \
-    ((PurpleMessage *) &((PurpleMessage) {n, t, f}))
+    ((PurpleMessage *) &((PurpleMessage) {n, t, f, time(NULL)}))
 
 #define purple_message_set_time(m, t) \
     G_STMT_START { \

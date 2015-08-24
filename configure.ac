@@ -44,6 +44,30 @@ m4_define_default(
      AS_IF([test -n "$$1"], [$4], [$5])]
 )
 
+AC_ARG_ENABLE(
+    [warnings],
+    [AS_HELP_STRING(
+        [--enable-warnings],
+        [Enable additional compile-time (GCC) warnings]
+    )],
+    [WARNINGS="yes"],
+    [WARNINGS="no"]
+)
+
+AS_IF(
+    [test "x$WARNINGS" == "xyes"],
+    [CFLAGS="$CFLAGS -Wall -Wextra \
+     -Waggregate-return \
+     -Wdeclaration-after-statement \
+     -Wfloat-equal \
+     -Wformat \
+     -Winit-self \
+     -Wmissing-declarations \
+     -Wmissing-prototypes \
+     -Wno-unused-parameter \
+     -Wpointer-arith"]
+)
+
 AC_ARG_WITH(
     [plugindir],
     [AS_HELP_STRING(

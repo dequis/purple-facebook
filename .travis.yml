@@ -18,7 +18,7 @@ before_install:
     libpurple-dev
 
 script:
-  - CFLAGS="-Wall" ./autogen.sh
+  - CFLAGS="-Werror" ./autogen.sh --enable-warnings
   - scan-build -k
       --use-cc=$(which "${CC}")
       --status-bugs
