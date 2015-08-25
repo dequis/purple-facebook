@@ -262,6 +262,7 @@ typedef enum
 
 /**
  * FbApiEventType:
+ * @FB_API_EVENT_TYPE_THREAD_TOPIC: The thread topic was changed.
  * @FB_API_EVENT_TYPE_THREAD_USER_ADDED: A thread user was added.
  * @FB_API_EVENT_TYPE_THREAD_USER_REMOVED: A thread user was removed.
  *
@@ -269,6 +270,7 @@ typedef enum
  */
 typedef enum
 {
+	FB_API_EVENT_TYPE_THREAD_TOPIC,
 	FB_API_EVENT_TYPE_THREAD_USER_ADDED,
 	FB_API_EVENT_TYPE_THREAD_USER_REMOVED
 } FbApiEventType;
@@ -316,6 +318,7 @@ struct _FbApiClass
  * @type: The #FbApiEventType.
  * @uid: The user #FbId.
  * @tid: The thread #FbId.
+ * @text: The event text.
  *
  * Represents a Facebook update event.
  */
@@ -324,6 +327,7 @@ struct _FbApiEvent
 	FbApiEventType type;
 	FbId uid;
 	FbId tid;
+	gchar *text;
 };
 
 /**
@@ -651,6 +655,7 @@ fb_api_typing(FbApi *api, FbId uid, gboolean state);
 /**
  * fb_api_event_dup:
  * @event: The #FbApiEvent or #NULL.
+ * @deep: #TRUE to duplicate allocated data, otherwise #FALSE.
  *
  * Duplicates an #FbApiEvent. If @event is #NULL, a new zero filled
  * #FbApiEvent is returned. The returned #FbApiEvent should be freed
@@ -659,16 +664,17 @@ fb_api_typing(FbApi *api, FbId uid, gboolean state);
  * Returns: The new #FbApiEvent.
  */
 FbApiEvent *
-fb_api_event_dup(const FbApiEvent *event);
+fb_api_event_dup(const FbApiEvent *event, gboolean deep);
 
 /**
  * fb_api_event_reset:
  * @event: The #FbApiEvent.
+ * @deep: #TRUE to free allocated data, otherwise #FALSE.
  *
  * Resets an #FbApiEvent.
  */
 void
-fb_api_event_reset(FbApiEvent *event);
+fb_api_event_reset(FbApiEvent *event, gboolean deep);
 
 /**
  * fb_api_event_free:
