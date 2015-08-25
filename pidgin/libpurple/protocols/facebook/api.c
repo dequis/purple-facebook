@@ -823,7 +823,7 @@ fb_api_cb_http_bool(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	hata = purple_http_response_get_data(res, NULL);
 
-	if (g_ascii_strcasecmp(hata, "true") != 0) {
+	if (!purple_strequal(hata, "true")) {
 		fb_api_error(api, FB_API_ERROR,
 		             _("Failed generic API operation"));
 	}
