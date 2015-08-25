@@ -1113,6 +1113,37 @@ fb_api_event_parse(FbApi *api, FbApiEvent *event, GSList *events,
 		}
 	};
 
+	values = fb_json_values_new(root);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.log_message_type");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.author");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+	                   "$.log_message_data.name");
+	fb_json_values_update(values, &err);
+
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
+		g_object_unref(values);
+		return events;
+	}
+
+	str = fb_json_values_next_str(values, NULL);
+
+	if (g_strcmp0(str, "log:thread-name") == 0) {
+		str = fb_json_values_next_str(values, "");
+		str = strrchr(str, ':');
+
+		if (str != NULL) {
+			devent = fb_api_event_dup(event, FALSE);
+			devent->type = FB_API_EVENT_TYPE_THREAD_TOPIC;
+			devent->uid = FB_ID_FROM_STR(str + 1);
+			devent->text = fb_json_values_next_str_dup(values, NULL);
+			events = g_slist_prepend(events, devent);
+		}
+	}
+
+	g_object_unref(values);
+
 	for (i = 0; i < G_N_ELEMENTS(evtypes); i++) {
 		values = fb_json_values_new(root);
 		fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$");
@@ -1123,7 +1154,7 @@ fb_api_event_parse(FbApi *api, FbApiEvent *event, GSList *events,
 			str = strrchr(str, ':');
 
 			if (str != NULL) {
-				devent = fb_api_event_dup(event);
+				devent = fb_api_event_dup(event, FALSE);
 				devent->type = evtypes[i].type;
 				devent->uid = FB_ID_FROM_STR(str + 1);
 				events = g_slist_prepend(events, devent);
@@ -1142,7 +1173,7 @@ fb_api_event_parse(FbApi *api, FbApiEvent *event, GSList *events,
 }
 
 static void
-fb_api_cb_mercury(FbApi *api, GByteArray *pload)
+fb_api_cb_publish_mercury(FbApi *api, GByteArray *pload)
 {
 	const gchar *str;
 	FbApiEvent event;
@@ -1161,7 +1192,7 @@ fb_api_cb_mercury(FbApi *api, GByteArray *pload)
 	fb_json_values_set_array(values, FALSE, "$.actions");
 
 	while (fb_json_values_update(values, &err)) {
-		fb_api_event_reset(&event);
+		fb_api_event_reset(&event, FALSE);
 		str = fb_json_values_next_str(values, "0");
 		event.tid = FB_ID_FROM_STR(str);
 
@@ -1569,7 +1600,7 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 		void (*func) (FbApi *api, GByteArray *pload);
 	} parsers[] = {
 		{"/mark_thread_response", fb_api_cb_publish_mark},
-		{"/mercury", fb_api_cb_mercury},
+		{"/mercury", fb_api_cb_publish_mercury},
 		{"/orca_typing_notifications", fb_api_cb_publish_typing},
 		{"/t_ms", fb_api_cb_publish_ms},
 		{"/t_p", fb_api_cb_publish_p}
@@ -2851,19 +2882,32 @@ fb_api_typing(FbApi *api, FbId uid, gboolean state)
 }
 
 FbApiEvent *
-fb_api_event_dup(const FbApiEvent *event)
+fb_api_event_dup(const FbApiEvent *event, gboolean deep)
 {
+	FbApiEvent *ret;
+
 	if (event == NULL) {
 		return g_new0(FbApiEvent, 1);
 	}
 
-	return g_memdup(event, sizeof *event);
+	ret = g_memdup(event, sizeof *event);
+
+	if (deep) {
+		ret->text = g_strdup(event->text);
+	}
+
+	return ret;
 }
 
 void
-fb_api_event_reset(FbApiEvent *event)
+fb_api_event_reset(FbApiEvent *event, gboolean deep)
 {
 	g_return_if_fail(event != NULL);
+
+	if (deep) {
+		g_free(event->text);
+	}
+
 	memset(event, 0, sizeof *event);
 }
 
@@ -2871,6 +2915,7 @@ void
 fb_api_event_free(FbApiEvent *event)
 {
 	if (G_LIKELY(event != NULL)) {
+		g_free(event->text);
 		g_free(event);
 	}
 }

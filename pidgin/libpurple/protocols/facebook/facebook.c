@@ -386,6 +386,11 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 		FB_ID_TO_STR(event->uid, uid);
 
 		switch (event->type) {
+		case FB_API_EVENT_TYPE_THREAD_TOPIC:
+			purple_chat_conversation_set_topic(chat, uid,
+			                                   event->text);
+			break;
+
 		case FB_API_EVENT_TYPE_THREAD_USER_ADDED:
 			if (purple_blist_find_buddy(acct, uid) == NULL) {
 				g_hash_table_insert(fetch, &event->tid, event);
@@ -1247,19 +1252,14 @@ fb_chat_set_topic(PurpleConnection *gc, gint id, const gchar *topic)
 	FbApi *api;
 	FbData *fata;
 	FbId tid;
-	PurpleAccount *acct;
 	PurpleChatConversation *chat;
 
-	acct = purple_connection_get_account(gc);
 	fata = purple_connection_get_protocol_data(gc);
 	api = fb_data_get_api(fata);
 	chat = purple_conversations_find_chat(gc, id);
 
 	name = purple_conversation_get_name(PURPLE_CONVERSATION(chat));
 	tid = FB_ID_FROM_STR(name);
-
-	name = purple_account_get_username(acct);
-	purple_chat_conversation_set_topic(chat, name, topic);
 	fb_api_thread_topic(api, tid, topic);
 }
 
