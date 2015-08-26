@@ -143,9 +143,9 @@
 /**
  * FB_API_QUERY_CONTACT:
  *
- * The query hash for the `FetchContactQuery`.
+ * The query hash for the `UsersQuery`.
  */
-#define FB_API_QUERY_CONTACT  10153746900701729
+#define FB_API_QUERY_CONTACT  10153915107411729
 
 /**
  * FB_API_QUERY_CONTACTS:
