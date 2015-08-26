@@ -1265,20 +1265,26 @@ fb_api_xma_parse(FbApi *api, const gchar *body, JsonNode *root, GError **error)
 	GError *err = NULL;
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.story_attachment.target.__type__.name");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.story_attachment.url");
 	fb_json_values_update(values, &err);
 
 	if (G_UNLIKELY(err != NULL)) {
 		g_propagate_error(error, err);
 		g_object_unref(values);
-		return FALSE;
+		return NULL;
 	}
 
 	str = fb_json_values_next_str(values, NULL);
 	url = fb_json_values_next_str(values, NULL);
+
+	if ((str == NULL) || (url == NULL)) {
+		g_propagate_error(error, err);
+		g_object_unref(values);
+		return NULL;
+	}
 
 	if (purple_strequal(str, "ExternalUrl")) {
 		params = fb_http_params_new_parse(url, TRUE);
