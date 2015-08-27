@@ -1,3 +1,16 @@
+purple-facebook-6a0a79182ebc (2015-08-27):
+  - Added check to autoconf for glib-genmarshal
+  - Added missing g_get_real_time() compat function
+  - Added option to autoconf for extra compiler warnings
+  - Depend on and link to gobject-2.0
+  - Fixed deleted XMAs being fatal
+  - Fixed improper handling of queue errors
+  - Fixed possible NULL string comparison
+  - Fixed the contact query not fetching non-users
+  - Fixed the debian dependencies
+  - Implemented group chat topic change events
+  - Minor code refactoring
+
 purple-facebook-5727ffb502c7 (2015-08-21):
   - Added missing g_get_real_time() compat function
   - Display images and stickers in-line
