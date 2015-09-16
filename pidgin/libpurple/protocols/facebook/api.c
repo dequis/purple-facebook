@@ -1375,7 +1375,6 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	FbApiPrivate *priv = api->priv;
 	FbId id;
 	FbId oid;
-	FbId uid;
 	FbJsonValues *values;
 	FbThrift *thft;
 	gchar *stoken;
@@ -1450,15 +1449,16 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 		}
 
 		fb_api_message_reset(&msg, FALSE);
-		uid = fb_json_values_next_int(values, 0);
+		msg.uid = fb_json_values_next_int(values, 0);
 		oid = fb_json_values_next_int(values, 0);
 		msg.tid = fb_json_values_next_int(values, 0);
 
-		if (uid == priv->uid) {
+		if (msg.uid == priv->uid) {
 			msg.flags |= FB_API_MESSAGE_FLAG_SELF;
-			msg.uid = oid;
-		} else {
-			msg.uid = uid;
+
+			if (msg.tid == 0) {
+				msg.uid = oid;
+			}
 		}
 
 		if (msg.uid == 0) {
