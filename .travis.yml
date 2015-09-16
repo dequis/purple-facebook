@@ -9,6 +9,10 @@ os:
 compiler:
   - gcc
 
+env:
+  - ANALYZER=""
+  - ANALYZER="scan-build -k --status-bugs"
+
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq
@@ -19,8 +23,4 @@ before_install:
 
 script:
   - CFLAGS="-Werror" ./autogen.sh --enable-warnings
-  - scan-build -k
-      --use-cc=$(which "${CC}")
-      --status-bugs
-      -analyze-headers
-      make
+  - ${ANALYZER} make
