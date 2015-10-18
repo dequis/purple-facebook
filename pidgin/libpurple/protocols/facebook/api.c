@@ -1106,7 +1106,7 @@ fb_api_event_parse(FbApi *api, FbApiEvent *event, GSList *events,
 	} evtypes[] = {
 		{
 			FB_API_EVENT_TYPE_THREAD_USER_ADDED,
-		 	"$.log_message_data.added_participants"
+			"$.log_message_data.added_participants"
 		}, {
 			FB_API_EVENT_TYPE_THREAD_USER_REMOVED,
 			"$.log_message_data.removed_participants"
