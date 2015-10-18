@@ -2459,6 +2459,8 @@ static void purple_http_request_free(PurpleHttpRequest *request)
 	purple_http_headers_free(request->headers);
 	purple_http_cookie_jar_unref(request->cookie_jar);
 	purple_http_keepalive_pool_unref(request->keepalive_pool);
+	g_free(request->method);
+	g_free(request->contents);
 	g_free(request->url);
 	g_free(request);
 }
@@ -2875,8 +2877,6 @@ purple_http_url_parse(const char *raw_url)
 
 	g_return_val_if_fail(raw_url != NULL, NULL);
 
-	url = g_new0(PurpleHttpURL, 1);
-
 	if (!g_regex_match(purple_http_re_url, raw_url, 0, &match_info)) {
 		if (purple_debug_is_verbose() && purple_debug_is_unsafe()) {
 			purple_debug_warning("http",
@@ -2885,6 +2885,8 @@ purple_http_url_parse(const char *raw_url)
 		}
 		return NULL;
 	}
+
+	url = g_new0(PurpleHttpURL, 1);
 
 	url->protocol = g_match_info_fetch(match_info, 1);
 	host_full = g_match_info_fetch(match_info, 2);
