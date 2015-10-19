@@ -1,6 +1,6 @@
 #!/bin/sh
 
-URL="https://hg.pidgin.im/soc/2015/jgeboski/facebook"
+URL="https://bitbucket.org/pidgin/main"
 HASHG=$(_TMP_=$(type hg 2>&1); echo $?)
 
 if test "$HASHG" != "0"; then
