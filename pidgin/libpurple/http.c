@@ -1169,6 +1169,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			gchar *buffer = g_string_free(hc->response_buffer, FALSE);
 			hc->response_buffer = NULL;
 			_purple_http_recv_body(hc, buffer, buffer_len);
+			g_free(buffer);
 		}
 		if (!hc->headers_got)
 			return got_anything;
