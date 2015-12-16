@@ -167,7 +167,7 @@ fb_json_bldr_close(JsonBuilder *bldr, JsonNodeType type, gsize *size);
 /**
  * fb_json_bldr_arr_begin:
  * @bldr: The #JsonBuilder.
- * @name: The member name, or #NULL.
+ * @name: The member name or #NULL.
  *
  * Begins an array member in the #JsonBuilder.
  */
@@ -186,7 +186,7 @@ fb_json_bldr_arr_end(JsonBuilder *bldr);
 /**
  * fb_json_bldr_obj_begin:
  * @bldr: The #JsonBuilder.
- * @name: The member name, or #NULL.
+ * @name: The member name or #NULL.
  *
  * Begins an object member in the #JsonBuilder.
  */
@@ -205,7 +205,7 @@ fb_json_bldr_obj_end(JsonBuilder *bldr);
 /**
  * fb_json_bldr_add_bool:
  * @bldr: The #JsonBuilder.
- * @name: The member name, or #NULL.
+ * @name: The member name or #NULL.
  * @value: The value.
  *
  * Adds a boolean memeber to the #JsonBuilder.
@@ -216,7 +216,7 @@ fb_json_bldr_add_bool(JsonBuilder *bldr, const gchar *name, gboolean value);
 /**
  * fb_json_bldr_add_dbl:
  * @bldr: The #JsonBuilder.
- * @name: The member name, or #NULL.
+ * @name: The member name or #NULL.
  * @value: The value.
  *
  * Adds a floating point memeber to the #JsonBuilder.
@@ -227,7 +227,7 @@ fb_json_bldr_add_dbl(JsonBuilder *bldr, const gchar *name, gdouble value);
 /**
  * fb_json_bldr_add_int:
  * @bldr: The #JsonBuilder.
- * @name: The member name, or #NULL.
+ * @name: The member name or #NULL.
  * @value: The value.
  *
  * Adds a integer memeber to the #JsonBuilder.
@@ -238,7 +238,7 @@ fb_json_bldr_add_int(JsonBuilder *bldr, const gchar *name, gint64 value);
 /**
  * fb_json_bldr_add_str:
  * @bldr: The #JsonBuilder.
- * @name: The member name, or #NULL.
+ * @name: The member name or #NULL.
  * @value: The value.
  *
  * Adds a string memeber to the #JsonBuilder.
@@ -249,7 +249,7 @@ fb_json_bldr_add_str(JsonBuilder *bldr, const gchar *name, const gchar *value);
 /**
  * fb_json_bldr_add_strf:
  * @bldr: The #JsonBuilder.
- * @name: The member name, or #NULL.
+ * @name: The member name or #NULL.
  * @format: The format string literal.
  * @...: The arguments for @format.
  *
@@ -263,8 +263,8 @@ fb_json_bldr_add_strf(JsonBuilder *bldr, const gchar *name,
 /**
  * fb_json_node_new:
  * @data: The string JSON.
- * @size: The size of @json, or -1 if null-terminated.
- * @error: The return location for the #GError, or #NULL.
+ * @size: The size of @json or -1 if null-terminated.
+ * @error: The return location for the #GError or #NULL.
  *
  * Creates a new #JsonNode. The returned #JsonBuilder should be freed
  * wuth #json_node_free() when no longer needed.
@@ -278,7 +278,7 @@ fb_json_node_new(const gchar *data, gssize size, GError **error);
  * fb_json_node_get:
  * @root: The root #JsonNode.
  * @expr: The #JsonPath expression.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a new #JsonNode value from a parent #JsonNode with a #JsonPath
  * expression. The returned #JsonNode should be freed with
@@ -306,7 +306,7 @@ fb_json_node_get_nth(JsonNode *root, guint n);
  * fb_json_node_get_arr:
  * @root: The root #JsonNode.
  * @expr: The #JsonPath expression.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a new #JsonArray value from a parent #JsonNode with a #JsonPath
  * expression. The returned #JsonArray should be freed with
@@ -321,7 +321,7 @@ fb_json_node_get_arr(JsonNode *root, const gchar *expr, GError **error);
  * fb_json_node_get_bool:
  * @root: The root #JsonNode.
  * @expr: The #JsonPath expression.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a boolean value from a parent #JsonNode with a #JsonPath
  * expression.
@@ -335,7 +335,7 @@ fb_json_node_get_bool(JsonNode *root, const gchar *expr, GError **error);
  * fb_json_node_get_dbl:
  * @root: The root #JsonNode.
  * @expr: The #JsonPath expression.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a floating point value from a parent #JsonNode with a #JsonPath
  * expression.
@@ -349,7 +349,7 @@ fb_json_node_get_dbl(JsonNode *root, const gchar *expr, GError **error);
  * fb_json_node_get_int:
  * @root: The root #JsonNode.
  * @expr: The #JsonPath expression.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets an integer value from a parent #JsonNode with a #JsonPath
  * expression.
@@ -363,7 +363,7 @@ fb_json_node_get_int(JsonNode *root, const gchar *expr, GError **error);
  * fb_json_node_get_str:
  * @root: The root #JsonNode.
  * @expr: The #JsonPath expression.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets an string value from a parent #JsonNode with a #JsonPath
  * expression. The returned string should be freed with #g_free()
@@ -404,8 +404,8 @@ fb_json_values_add(FbJsonValues *values, FbJsonType type, gboolean required,
  * @values: The #FbJsonValues.
  *
  * Gets the current working root #JsonNode. This is either the current
- * array #JsonNode, or the root #JsonNode. The returned #JsonNode
- * should not be freed.
+ * array #JsonNode or the root #JsonNode. The returned #JsonNode should
+ * not be freed.
  */
 JsonNode *
 fb_json_values_get_root(FbJsonValues *values);
@@ -425,7 +425,7 @@ fb_json_values_set_array(FbJsonValues *values, gboolean required,
 /**
  * fb_json_values_update:
  * @values: The #FbJsonValues.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Updates the current working root. This should be called after all of
  * the #FbJsonValue's have been added with #fb_json_values_add(). If an

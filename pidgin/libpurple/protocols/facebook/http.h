@@ -75,7 +75,7 @@ fb_http_error_quark(void);
 /**
  * fb_http_error_chk:
  * @res: The #PurpleHttpResponse.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Checks a #PurpleHttpResponse for success. This optionally assigns an
  * appropriate #GError upon failure.
@@ -142,7 +142,7 @@ fb_http_params_close(FbHttpParams *params, const gchar *url);
  * fb_http_params_get_bool:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a boolean value from the #FbHttpParams. This optionally assigns
  * an appropriate #GError upon failure.
@@ -157,7 +157,7 @@ fb_http_params_get_bool(FbHttpParams *params, const gchar *name,
  * fb_http_params_get_dbl:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a floating point value from the #FbHttpParams. This optionally
  * assigns an appropriate #GError upon failure.
@@ -172,7 +172,7 @@ fb_http_params_get_dbl(FbHttpParams *params, const gchar *name,
  * fb_http_params_get_int:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets an integer value from the #FbHttpParams. This optionally
  * assigns an appropriate #GError upon failure.
@@ -187,7 +187,7 @@ fb_http_params_get_int(FbHttpParams *params, const gchar *name,
  * fb_http_params_get_str:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a string value from the #FbHttpParams. This optionally assigns
  * an appropriate #GError upon failure.
@@ -202,7 +202,7 @@ fb_http_params_get_str(FbHttpParams *params, const gchar *name,
  * fb_http_params_dup_str:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a duplicated string value from the #FbHttpParams. This
  * optionally assigns an appropriate #GError upon failure. The returned
