@@ -1,0 +1,101 @@
+#
+# Makefile.mingw
+#
+# Description: Makefile for win32 (mingw) version of libfacebook
+#
+
+PIDGIN_TREE_TOP := ../../..
+include $(PIDGIN_TREE_TOP)/libpurple/win32/global.mak
+
+TARGET = libfacebook
+TYPE = PLUGIN
+
+# Static or Plugin...
+ifeq ($(TYPE),STATIC)
+  DEFINES += -DSTATIC
+  DLL_INSTALL_DIR =	$(PURPLE_INSTALL_DIR)
+else
+ifeq ($(TYPE),PLUGIN)
+  DLL_INSTALL_DIR =	$(PURPLE_INSTALL_PLUGINS_DIR)
+endif
+endif
+
+##
+## INCLUDE PATHS
+##
+INCLUDE_PATHS +=	-I. \
+			-I$(GTK_TOP)/include \
+			-I$(GTK_TOP)/include/glib-2.0 \
+			-I$(GTK_TOP)/lib/glib-2.0/include \
+			-I$(JSON_GLIB_TOP)/include/json-glib-1.0 \
+			-I$(PURPLE_TOP) \
+			-I$(PURPLE_TOP)/win32 \
+			-I$(GPLUGIN_TOP) \
+			-I$(PIDGIN_TREE_TOP)
+
+LIB_PATHS +=		-L$(GTK_TOP)/lib \
+			-L$(JSON_GLIB_TOP)/lib \
+			-L$(GPLUGIN_TOP) \
+			-L$(PURPLE_TOP)
+
+##
+##  SOURCES, OBJECTS
+##
+C_SRC =	\
+			marshal.c \
+			api.c \
+			data.c \
+			facebook.c \
+			http.c \
+			json.c \
+			mqtt.c \
+			thrift.c \
+			util.c
+
+OBJECTS = $(C_SRC:%.c=%.o)
+
+##
+## LIBRARIES
+##
+LIBS =	\
+			-lglib-2.0 \
+			-lgobject-2.0 \
+			-lws2_32 \
+			-lintl \
+			-lgplugin \
+			-ljson-glib-1.0 \
+			-lz \
+			-lpurple
+
+include $(PIDGIN_COMMON_RULES)
+
+##
+## TARGET DEFINITIONS
+##
+.PHONY: all install clean
+
+all: $(TARGET).dll
+
+install: all $(DLL_INSTALL_DIR)
+	cp $(TARGET).dll $(DLL_INSTALL_DIR)
+
+$(OBJECTS): $(PURPLE_CONFIG_H)
+
+$(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
+	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+
+marshal.c: marshaller.list marshal.h
+	@echo "#include \"marshal.h\"" > $@
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --body marshaller.list >> $@
+
+marshal.h: marshaller.list
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --header marshaller.list > $@
+
+##
+## CLEAN RULES
+##
+clean:
+	rm -f $(OBJECTS) marshal.c marshal.h
+	rm -f $(TARGET).dll
+
+include $(PIDGIN_COMMON_TARGETS)
