@@ -21,9 +21,9 @@
 
 #include "internal.h"
 
+#include <gio/gio.h>
 #include <stdarg.h>
 #include <string.h>
-#include <zlib.h>
 
 #include "blistnodetypes.h"
 #include "buddylist.h"
@@ -483,18 +483,6 @@ fb_util_str_is(const gchar *str, GAsciiType type)
 	return TRUE;
 }
 
-static voidpf
-fb_util_zalloc(voidpf opaque, uInt items, uInt size)
-{
-	return g_malloc(size * items);
-}
-
-static void
-fb_util_zfree(voidpf opaque, voidpf address)
-{
-	g_free(address);
-}
-
 gboolean
 fb_util_zcompressed(const GByteArray *bytes)
 {
@@ -510,90 +498,73 @@ fb_util_zcompressed(const GByteArray *bytes)
 	b0 = *(bytes->data + 0);
 	b1 = *(bytes->data + 1);
 
-	return ((((b0 << 8) | b1) % 31) == 0) && /* Check the header */
-	       ((b0 & 0x0F) == Z_DEFLATED);      /* Check the method */
+	return ((((b0 << 8) | b1) % 31) == 0) &&    /* Check the header */
+	       ((b0 & 0x0F) == 8 /* Z_DEFLATED */); /* Check the method */
+}
+
+static GByteArray *
+fb_util_zconv(GConverter *conv, const GByteArray *bytes, GError **error)
+{
+	GByteArray *ret;
+	GConverterResult res;
+	gsize cize = 0;
+	gsize rize;
+	gsize wize;
+	guint8 data[1024];
+
+	ret = g_byte_array_new();
+
+	while (TRUE) {
+		rize = 0;
+		wize = 0;
+
+		res = g_converter_convert(conv,
+		                          bytes->data + cize,
+		                          bytes->len - cize,
+		                          data, sizeof data,
+		                          G_CONVERTER_INPUT_AT_END,
+		                          &rize, &wize, error);
+
+		switch (res) {
+		case G_CONVERTER_CONVERTED:
+			g_byte_array_append(ret, data, wize);
+			cize += rize;
+			break;
+
+		case G_CONVERTER_ERROR:
+			g_byte_array_free(ret, TRUE);
+			return NULL;
+
+		case G_CONVERTER_FINISHED:
+			g_byte_array_append(ret, data, wize);
+			return ret;
+
+		default:
+			break;
+		}
+	}
 }
 
 GByteArray *
-fb_util_zcompress(const GByteArray *bytes)
+fb_util_zcompress(const GByteArray *bytes, GError **error)
 {
 	GByteArray *ret;
-	gint res;
-	gsize size;
-	z_stream zs;
+	GZlibCompressor *conv;
 
-	g_return_val_if_fail(bytes != NULL, NULL);
-
-	memset(&zs, 0, sizeof zs);
-	zs.zalloc = fb_util_zalloc;
-	zs.zfree = fb_util_zfree;
-	zs.next_in = bytes->data;
-	zs.avail_in = bytes->len;
-
-	if (deflateInit(&zs, Z_BEST_COMPRESSION) != Z_OK) {
-		return NULL;
-	}
-
-	size = compressBound(bytes->len);
-	ret = g_byte_array_new();
-
-	g_byte_array_set_size(ret, size);
-
-	zs.next_out = ret->data;
-	zs.avail_out = size;
-
-	res = deflate(&zs, Z_FINISH);
-
-	if (res != Z_STREAM_END) {
-		deflateEnd(&zs);
-		g_byte_array_free(ret, TRUE);
-		return NULL;
-	}
-
-	size -= zs.avail_out;
-	g_byte_array_remove_range(ret, size, ret->len - size);
-
-	deflateEnd(&zs);
+	conv = g_zlib_compressor_new(G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
+	ret = fb_util_zconv(G_CONVERTER(conv), bytes, error);
+	g_object_unref(conv);
 	return ret;
 }
 
 GByteArray *
-fb_util_zuncompress(const GByteArray *bytes)
+fb_util_zuncompress(const GByteArray *bytes, GError **error)
 {
 	GByteArray *ret;
-	gint res;
-	guint8 out[1024];
-	z_stream zs;
+	GZlibDecompressor *conv;
 
-	g_return_val_if_fail(bytes != NULL, NULL);
-
-	memset(&zs, 0, sizeof zs);
-	zs.zalloc = fb_util_zalloc;
-	zs.zfree = fb_util_zfree;
-	zs.next_in = bytes->data;
-	zs.avail_in = bytes->len;
-
-	if (inflateInit(&zs) != Z_OK) {
-		return NULL;
-	}
-
-	ret = g_byte_array_new();
-
-	do {
-		zs.next_out = out;
-		zs.avail_out = sizeof out;
-
-		res = inflate(&zs, Z_NO_FLUSH);
-
-		if ((res != Z_OK) && (res != Z_STREAM_END)) {
-			inflateEnd(&zs);
-			g_byte_array_free(ret, TRUE);
-			return NULL;
-		}
-
-		g_byte_array_append(ret, out, sizeof out - zs.avail_out);
-	} while (res != Z_STREAM_END);
-
-	inflateEnd(&zs);
+	conv = g_zlib_decompressor_new(G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
+	ret = fb_util_zconv(G_CONVERTER(conv), bytes, error);
+	g_object_unref(conv);
 	return ret;
 }
