@@ -717,7 +717,7 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	fb_http_params_set_str(params, "format", "json");
 	fb_http_params_set_str(params, "method", method);
 
-	val = fb_util_locale_str();
+	val = fb_util_get_locale();
 	fb_http_params_set_str(params, "locale", val);
 	g_free(val);
 
@@ -919,7 +919,7 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	fb_thrift_write_stop(thft);
 
 	bytes = fb_thrift_get_bytes(thft);
-	cytes = fb_util_zcompress(bytes, &err);
+	cytes = fb_util_zlib_deflate(bytes, &err);
 
 	FB_API_ERROR_EMIT(api, err,
 		g_object_unref(thft);
@@ -1619,10 +1619,10 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 		{"/t_p", fb_api_cb_publish_p}
 	};
 
-	comp = fb_util_zcompressed(pload);
+	comp = fb_util_zlib_test(pload);
 
 	if (G_LIKELY(comp)) {
-		bytes = fb_util_zuncompress(pload, &err);
+		bytes = fb_util_zlib_inflate(pload, &err);
 		FB_API_ERROR_EMIT(api, err, return);
 	} else {
 		bytes = (GByteArray*) pload;
@@ -1685,7 +1685,7 @@ fb_api_rehash(FbApi *api)
 	priv = api->priv;
 
 	if (priv->cid == NULL) {
-		priv->cid = fb_util_randstr(32);
+		priv->cid = fb_util_rand_alnum(32);
 	}
 
 	if (priv->did == NULL) {
@@ -2127,7 +2127,7 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *format, ...)
 	va_end(ap);
 
 	bytes = g_byte_array_new_take((guint8*) msg, strlen(msg));
-	cytes = fb_util_zcompress(bytes, &err);
+	cytes = fb_util_zlib_deflate(bytes, &err);
 
 	FB_API_ERROR_EMIT(api, err,
 		g_byte_array_free(bytes, TRUE);
