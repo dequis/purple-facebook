@@ -1474,13 +1474,6 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 		return FALSE;
 	}
 
-	if (is_ssl && !purple_ssl_is_supported()) {
-		_purple_http_error(hc, _("Unable to connect to %s: %s"),
-			url->host, _("Server requires TLS/SSL, "
-			"but no TLS/SSL support was found."));
-		return FALSE;
-	}
-
 	if (hc->request->keepalive_pool != NULL) {
 		hc->socket_request = purple_http_keepalive_pool_request(
 			hc->request->keepalive_pool, hc->gc, url->host,
