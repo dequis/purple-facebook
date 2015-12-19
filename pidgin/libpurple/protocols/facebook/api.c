@@ -844,6 +844,7 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	FbApiPrivate *priv = api->priv;
 	FbThrift *thft;
 	GByteArray *cytes;
+	GError *err = NULL;
 
 	static guint8 flags = FB_MQTT_CONNECT_FLAG_USER |
 	                      FB_MQTT_CONNECT_FLAG_PASS |
@@ -918,7 +919,12 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	fb_thrift_write_stop(thft);
 
 	bytes = fb_thrift_get_bytes(thft);
-	cytes = fb_util_zcompress(bytes);
+	cytes = fb_util_zcompress(bytes, &err);
+
+	FB_API_ERROR_EMIT(api, err,
+		g_object_unref(thft);
+		return;
+	);
 
 	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, bytes, "Writing connect");
 	fb_mqtt_connect(mqtt, flags, cytes);
@@ -1599,6 +1605,7 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 	FbApi *api = data;
 	gboolean comp;
 	GByteArray *bytes;
+	GError *err = NULL;
 	guint i;
 
 	static const struct {
@@ -1615,13 +1622,8 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 	comp = fb_util_zcompressed(pload);
 
 	if (G_LIKELY(comp)) {
-		bytes = fb_util_zuncompress(pload);
-
-		if (G_UNLIKELY(bytes == NULL)) {
-			fb_api_error(api, FB_API_ERROR,
-			             _("Failed to decompress"));
-			return;
-		}
+		bytes = fb_util_zuncompress(pload, &err);
+		FB_API_ERROR_EMIT(api, err, return);
 	} else {
 		bytes = (GByteArray*) pload;
 	}
@@ -2112,6 +2114,7 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *format, ...)
 	GByteArray *bytes;
 	GByteArray *cytes;
 	gchar *msg;
+	GError *err = NULL;
 	va_list ap;
 
 	g_return_if_fail(FB_IS_API(api));
@@ -2124,7 +2127,12 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *format, ...)
 	va_end(ap);
 
 	bytes = g_byte_array_new_take((guint8*) msg, strlen(msg));
-	cytes = fb_util_zcompress(bytes);
+	cytes = fb_util_zcompress(bytes, &err);
+
+	FB_API_ERROR_EMIT(api, err,
+		g_byte_array_free(bytes, TRUE);
+		return;
+	);
 
 	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, bytes,
 	                      "Writing message (topic: %s)",
