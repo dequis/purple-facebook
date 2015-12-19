@@ -61,65 +61,6 @@ static inline gboolean g_close(gint fd, GError **error)
 	return FALSE;
 }
 
-#if !GLIB_CHECK_VERSION(2, 32, 0)
-
-#include <glib-object.h>
-#include <string.h>
-
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#define G_GNUC_END_IGNORE_DEPRECATIONS
-
-#define G_SOURCE_REMOVE FALSE
-#define G_SOURCE_CONTINUE TRUE
-
-#define g_signal_handlers_disconnect_by_data(instance, data) \
-	g_signal_handlers_disconnect_matched((instance), G_SIGNAL_MATCH_DATA, \
-			0, 0, NULL, NULL, (data))
-
-static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
-{
-	GByteArray *array;
-
-	array = g_byte_array_new();
-	g_byte_array_append(array, data, len);
-	g_free(data);
-
-	return array;
-}
-
-static inline void g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
-{
-	g_queue_foreach(queue, (GFunc)free_func, NULL);
-	g_queue_free(queue);
-}
-
-static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
-	gpointer data, GError **error)
-{
-	return g_thread_create(func, data, TRUE, error);
-}
-
-#if !GLIB_CHECK_VERSION(2, 30, 0)
-
-#define G_VALUE_INIT {0, {{0}}}
-
-static inline gchar *g_utf8_substring(const gchar *str, glong start_pos,
-	glong end_pos)
-{
-	gchar *start = g_utf8_offset_to_pointer(str, start_pos);
-	gchar *end = g_utf8_offset_to_pointer(start, end_pos - start_pos);
-	gchar *out = g_malloc(end - start + 1);
-
-	memcpy(out, start, end - start);
-	out[end - start] = 0;
-
-	return out;
-}
-
-#endif /* < 2.30.0 */
-
-#endif /* < 2.32.0 */
-
 #endif /* < 2.36.0 */
 
 
