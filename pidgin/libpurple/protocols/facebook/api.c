@@ -1954,6 +1954,8 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.graph_api_write_id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.represented_profile.friendship_status");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.represented_profile.id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.structured_name.text");
@@ -1965,6 +1967,12 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	while (fb_json_values_update(values, &err)) {
 		g_free(writeid);
 		writeid = fb_json_values_next_str_dup(values, NULL);
+		str = fb_json_values_next_str(values, NULL);
+
+		if (!purple_strequal(str, "ARE_FRIENDS")) {
+			continue;
+		}
+
 		user = fb_api_user_dup(NULL, FALSE);
 		str = fb_json_values_next_str(values, "0");
 
