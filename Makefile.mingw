@@ -15,10 +15,8 @@ GTK_BIN = $(GTK_TOP)/bin
 GLIB_GENMARSHAL = $(GTK_BIN)/glib-genmarshal
 JSON_GLIB_TOP = $(WIN32_DEV_TOP)/json-glib-0.14
 
-export CFLAGS = \
-	-include purple-compat.h \
-	-Wno-unused-variable \
-	-Wno-unused-but-set-variable
+CFLAGS = -O0 -g
+export CFLAGS += -include purple-compat.h
 
 export DEFINES = $(AUTOTOOLS_DEFINES) \
 	-DPACKAGE_NAME=\"purple-facebook\" \
