@@ -10,22 +10,23 @@ fi
 
 test -z "$srcdir" && srcdir=$(dirname "$0")
 test -z "$srcdir" && srcdir=.
+test -z "$pidgindir" && pidgindir=.pidgin
 
 cd "$srcdir"
 REVISION=$(cat VERSION)
 
-if ! test -d .pidgin/.hg; then
-    rm -rf .pidgin
-    hg clone "$URL" .pidgin
+if ! test -d "$pidgindir/.hg"; then
+    rm -rf "$pidgindir"
+    hg clone "$URL" "$pidgindir"
 fi
 
-hg -R .pidgin -v pull
-hg -R .pidgin -v update -C "$REVISION"
+hg -R "$pidgindir" -v pull
+hg -R "$pidgindir" -v update -C "$REVISION"
 rm -rf pidgin
 
 for FILE in $(cat MANIFEST_PIDGIN); do
     mkdir -p $(dirname "pidgin/$FILE")
-    cp ".pidgin/$FILE" "pidgin/$FILE"
+    cp "$pidgindir/$FILE" "pidgin/$FILE"
 done
 
 touch $(cat MANIFEST_VOIDS)

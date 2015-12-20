@@ -10,17 +10,52 @@ compiler:
   - gcc
 
 env:
-  - ANALYZER=""
-  - ANALYZER="scan-build -k --status-bugs"
+  global:
+    - secure: "de18DuRkeapGDbP+1u4+5lgUTeZeVdZVKZdeULv2PbArf+XjAGp1XIRPCLQ0tmrmGZuOb4Py8Hm+mrFgmli+maoUV8dxqN0oLMFgcRyAzwHfHohMNNLn+0VTmxc2S36EHx0iYzPcLU8xADv2fWgG008Ql093UlPivTHB26uC22hdX8HBkF2mtLtlSPrWtJk2Ojr53hCZZCiw0b5SpgFtvcPHkDbmp54XlK4fSGyX0rcLaQHcJZxe7A0hFE4tEB+exxp4UgBckeP7gEQLwmw6XXwt/vQcNXy75qtw0RvrLvnJDMZZM2cBbBcHug+9ORNS5WrSTcJ16Onjq+qZBC++hniJHPtLFqLymmvVt3+qLhSlOyFIxPCPCUMenOiXI1rHyMgAiZFJDwFeInm97rBnS0CKUuZ7/x+8kK/T8pSqjGLXczJ5SDhBZvaBrkyrqB9lGmDFPTK9+v/XwZl6FZncAT1CqlU070ZsfRQJlx8K41OJ534nUaxutPG32BY+2AODmmusYygVVXI0yF6ry5nuWsV6RqBa5wrg8ZQx64yYxk7BPsIpKvCiiBeHfkHZt7C4CDdrQD6+kQVuB13TXI74Uv2olzp3RSRmii8eCU9RtCZeF7GmYFbEG5PPYX5kFKBn4u90ctVBc7Sb5jWOqIMaYjCtmT5+B6lRPrUeemh4P2o="
+    - secure: "lgKD/7KlClD77CLnQzvIuIsdDhTwACtRzL0vuqIGBlyclTO+UVC7vIQ6RyOt1Jab9Vg77xItsyRgZqbjDnE/4Vml614rrSfPAaHCBCvf3Z9j7/oqv0maYmX7bhN3/nbkru2LeQMQENZO5CyhYpHcoqPfqEwdryOx4TUj3Tt75QjCfzWr5IM4g8327M+In8NhoovwI+5FMGZUTJZxyAAD8KgdCxnRk8U2c2M096eDObilwEQoD69gM/ZJ8aAyGZkKmGbAkLP8bSx9u6DYAiT3vhRJwopX99u1Y4V8zEik9tqFZYyWlJLrd0wz4EkAN6jdG4rbhyZ33jVr2zMsAnqMeVnB0tLdw7ajWTSOHMwqyK+S8GMDZ87iwQknmE8Zn9wghtJdHTOTJGScFUkS35vOjBXPg2zB6FKP2RAioRBYQfnSV5PWWfADj2j7X6hEsCqO+rdOGq/GPQcRBiveAalq4vcciAaVr01xjU1d7dBSGiMMLWtnWWJfcCwDsJ8lhcNbDXSrfDXRDmO7OsTXzP9Dzc6moJdmOmJVCcdXPjYJGuDHPsDd9qRlx0wXMKzKrHIf/fgwx304EA68OA4j5WkEKcqYYlhzjTG83CKAwLP/8gQ8gsgOeeDeCEyKHN/bmr8Jb7kDYHat34NElEwYpW558rE1U7cNxQtyzaDN7nY/9dg="
+    - secure: "WF5OAKWYgKdPO7H6UuLoDupfJyjzJlVxXd3IQR/Dq6eytDF5k5tzsRkqE8BwbpmX51bgbWAhxU+9yeyb7GDNp6koIDltgMYCqt7KZsstKjz7fHSqkjqxmzzXA3reKO/iOz7eddPPrhsliNpsx7iEC8/HWE3hXuyL68SlPzLpFK1h4o2rJMPF9VNmS1hruY21qiuEltxEmqYMR9skMKfddebNChp23pza8i6MWkBIMDsAiZ0ek5WVerWHM8+5/NZx/kKPG0wDThvKsB5lLF8OqlsbBO2AyQMxvQVxHgx6rK3y9GOPiAdVyJHPQHk66hFDkWCkak5xTcbbOJ0P8Qou5A+c/BM9Cyy2W6m4M3BboOD9oso49veAF7p6bcL/QZwEUr/MlJFGfWez9UQaRfESn3kipF/Jhct6OOk+M50DBrVsHgL5ph8y8GJiU7xpKOHeUjM5iB4GJimjotR9u3YYxszbQxjpQ0MG2vnTUNQ1YEnTJ384Y+OQI9KXCjhmxfgymZ3/UyZd9EPnfc8gi2SCr8+xtogA4Bxkz12EEM9vdS195I0dot0OQYlYpZL0HsBMEirsKr049mX6A+Ca8WKUVPqZnqNfbpg80G/F/+hToGTkFoUmOCkpIhwvJb1zMbMLHQhDv1k5YqIcIMg8dY1sxO2IvVsueDBSEqhtZUPNxgQ="
+    - secure: "QOIE9TZzTYgFfMPVhwvOEo8buxU0s6/a2+vBsOprAw94juhafpPyiBEUzqyzVLJX+ZY3aVt+s6ch4y4ehEwmyWnqJzxKg6CIy3dGLaBEW+GvZDVtTj1rC3Q/bkPB/MrHkChv08o1Ysb8yQ0gF0GWS+wUQ3m58qgKYMH/ve0Tt76AMBxVU548j1CdKKF1SO6bedCDhX8txiB4MeYWV6pfripYIMcjL5w3fHN8LIw/ctc8APPr2owIJ6rxv8scQXfWWpgCJVxHCZaP7TP5HwLnjFPX+UNpxlH7ZDm+opA9clep5Q1SDmDgUcXT3aMXjRulbzJxcKXXiVNfByEm+Gu85W+c0ka0rXvcKtRZmpwprbiBnMQ+bP/1MqicNkjCLDT/EFMzX0Bo2Kzwu/9Wc/VdAohnIWq03NUsErTL8CGmkI5QhCBJ4nBY1u87wpkOghq95woqxhiC7VI+qV26u0JNBf3miUD5nUfSTS1Ym7BoeEgKFUViDeX7P7LMzKoGfM0+Clutpemq0FuLRP+Ez+4a//UhY42TxUAfdPUCPmGrcm0DlHAa1cZYa2jPcTHOB7trvk31AUgNFCTa36SbLeEym8Z68Z8/8XOLw7Hej8wYSewmc/xwXAq3jNOXh9DAKc4ktOv7EC8fmdCM8qzUDkOzkEcG+tOB7DNPHQi/ZqoNdMk="
+    - MY_DEPLOY_BRANCH=master
+    - pidgindir=/tmp/pidgin
 
 before_install:
+  - echo "deb http://download.opensuse.org/repositories/openSUSE:/Tools/xUbuntu_$(lsb_release -rs) ./"
+      | sudo tee /etc/apt/sources.list.d/suse.list
+  - curl -s "http://download.opensuse.org/repositories/openSUSE:/Tools/xUbuntu_$(lsb_release -rs)/Release.key"
+      | sudo apt-key add -
   - sudo apt-get update -qq
   - sudo apt-get install -qq
-    --no-install-recommends
-    clang
-    libjson-glib-dev
-    libpurple-dev
+      --no-install-recommends
+      binutils-mingw-w64-i686
+      clang
+      gcc-mingw-w64-i686
+      libjson-glib-dev
+      libpurple-dev
+      osc
+  - mkdir -p ~/.ssh
+  - openssl aes-256-cbc
+      -K $encrypted_1a8668021c4a_key
+      -iv $encrypted_1a8668021c4a_iv
+      -in .travis/key -out ~/.ssh/id_rsa -d
+  - chmod 600 ~/.ssh/id_rsa
+
+install:
+  - .travis/win32-install.sh
+
+before_script:
+  - ./update.sh
 
 script:
   - CFLAGS="-Werror" ./autogen.sh --enable-warnings
-  - ${ANALYZER} make
+  - make
+  - make clean
+  - scan-build -k --status-bugs make
+  - .travis/win32-build.sh
+
+after_success:
+  - .travis/win32-deploy.sh
+  - .travis/obs.sh
+
+after_script:
+  - shred ~/.ssh/id_rsa
+  - rm -f ~/.ssh/id_rsa
