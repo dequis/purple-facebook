@@ -751,8 +751,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		request_url,
 		req->http11 ? "1.1" : "1.0");
 
-	if (tmp_url)
-		g_free(tmp_url);
+	g_free(tmp_url);
 
 	if (!purple_http_headers_get(hdrs, "host"))
 		g_string_append_printf(h, "Host: %s\r\n", url->host);
