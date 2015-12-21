@@ -262,9 +262,14 @@ fb_json_node_new(const gchar *data, gssize size, GError **error)
 	JsonNode *root;
 	JsonParser *prsr;
 
+	g_return_val_if_fail(data != NULL, NULL);
+
+	if (size < 0) {
+		size = strlen(data);
+	}
+
 	/* Ensure data is null terminated for json-glib < 1.0.2 */
 	slice = g_strndup(data, size);
-
 	prsr = json_parser_new();
 
 	if (!json_parser_load_from_data(prsr, slice, size, error)) {
