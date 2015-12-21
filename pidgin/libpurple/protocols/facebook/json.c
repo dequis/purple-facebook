@@ -258,13 +258,18 @@ fb_json_bldr_add_strf(JsonBuilder *bldr, const gchar *name,
 JsonNode *
 fb_json_node_new(const gchar *data, gssize size, GError **error)
 {
+	gchar *slice;
 	JsonNode *root;
 	JsonParser *prsr;
 
+	/* Ensure data is null terminated for json-glib < 1.0.2 */
+	slice = g_strndup(data, size);
+
 	prsr = json_parser_new();
 
-	if (!json_parser_load_from_data(prsr, data, size, error)) {
+	if (!json_parser_load_from_data(prsr, slice, size, error)) {
 		g_object_unref(prsr);
+		g_free(slice);
 		return NULL;
 	}
 
@@ -272,6 +277,7 @@ fb_json_node_new(const gchar *data, gssize size, GError **error)
 	root = json_node_copy(root);
 
 	g_object_unref(prsr);
+	g_free(slice);
 	return root;
 }
 
