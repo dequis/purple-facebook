@@ -290,6 +290,11 @@ fb_json_node_get(JsonNode *root, const gchar *expr, GError **error)
 	JsonNode *node;
 	JsonNode *ret;
 
+	/* Special case for json-glib < 0.99.2 */
+	if (purple_strequal(expr, "$")) {
+		return json_node_copy(root);
+	}
+
 	node = json_path_query(expr, root, &err);
 
 	if (err != NULL) {
