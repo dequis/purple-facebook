@@ -32,6 +32,7 @@
  */
 
 #include <glib.h>
+#include <gmodule.h>
 
 #define FACEBOOK_TYPE_PROTOCOL  (facebook_protocol_get_type())
 #define FACEBOOK_PROTOCOL(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FACEBOOK_TYPE_PROTOCOL, FacebookProtocol))

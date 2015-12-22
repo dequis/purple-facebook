@@ -93,7 +93,7 @@
  *
  * Return: #TRUE if the string is an #FbId, otherwise #FALSE.
  */
-#define FB_ID_IS_STR(s) fb_util_str_is(s, G_ASCII_DIGIT)
+#define FB_ID_IS_STR(s) fb_util_strtest(s, G_ASCII_DIGIT)
 
 /**
  * FB_ID_TO_STR:

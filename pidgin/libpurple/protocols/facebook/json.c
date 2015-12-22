@@ -258,13 +258,23 @@ fb_json_bldr_add_strf(JsonBuilder *bldr, const gchar *name,
 JsonNode *
 fb_json_node_new(const gchar *data, gssize size, GError **error)
 {
+	gchar *slice;
 	JsonNode *root;
 	JsonParser *prsr;
 
+	g_return_val_if_fail(data != NULL, NULL);
+
+	if (size < 0) {
+		size = strlen(data);
+	}
+
+	/* Ensure data is null terminated for json-glib < 1.0.2 */
+	slice = g_strndup(data, size);
 	prsr = json_parser_new();
 
-	if (!json_parser_load_from_data(prsr, data, size, error)) {
+	if (!json_parser_load_from_data(prsr, slice, size, error)) {
 		g_object_unref(prsr);
+		g_free(slice);
 		return NULL;
 	}
 
@@ -272,6 +282,7 @@ fb_json_node_new(const gchar *data, gssize size, GError **error)
 	root = json_node_copy(root);
 
 	g_object_unref(prsr);
+	g_free(slice);
 	return root;
 }
 
@@ -283,6 +294,11 @@ fb_json_node_get(JsonNode *root, const gchar *expr, GError **error)
 	JsonArray *rslt;
 	JsonNode *node;
 	JsonNode *ret;
+
+	/* Special case for json-glib < 0.99.2 */
+	if (purple_strequal(expr, "$")) {
+		return json_node_copy(root);
+	}
 
 	node = json_path_query(expr, root, &err);
 

@@ -244,7 +244,7 @@ fb_util_debug_hexdump(PurpleDebugLevel level, const GByteArray *bytes,
 }
 
 gchar *
-fb_util_locale_str(void)
+fb_util_get_locale(void)
 {
 	const gchar * const *langs;
 	const gchar *lang;
@@ -272,7 +272,7 @@ fb_util_locale_str(void)
 }
 
 gchar *
-fb_util_randstr(gsize size)
+fb_util_rand_alnum(guint len)
 {
 	gchar *ret;
 	GRand *rand;
@@ -285,19 +285,16 @@ fb_util_randstr(gsize size)
 		"0123456789";
 	static const gsize charc = G_N_ELEMENTS(chars) - 1;
 
-	if (G_UNLIKELY(size < 1)) {
-		return NULL;
-	}
-
+	g_return_val_if_fail(len > 0, NULL);
 	rand = g_rand_new();
-	ret = g_new(gchar, size + 1);
+	ret = g_new(gchar, len + 1);
 
-	for (i = 0; i < size; i++) {
+	for (i = 0; i < len; i++) {
 		j = g_rand_int_range(rand, 0, charc);
 		ret[i] = chars[j];
 	}
 
-	ret[size] = 0;
+	ret[len] = 0;
 	g_rand_free(rand);
 	return ret;
 }
@@ -463,7 +460,7 @@ fb_util_serv_got_chat_in(PurpleConnection *gc, gint id, const gchar *who,
 }
 
 gboolean
-fb_util_str_is(const gchar *str, GAsciiType type)
+fb_util_strtest(const gchar *str, GAsciiType type)
 {
 	gsize i;
 	gsize size;
@@ -484,7 +481,7 @@ fb_util_str_is(const gchar *str, GAsciiType type)
 }
 
 gboolean
-fb_util_zcompressed(const GByteArray *bytes)
+fb_util_zlib_test(const GByteArray *bytes)
 {
 	guint8 b0;
 	guint8 b1;
@@ -503,7 +500,7 @@ fb_util_zcompressed(const GByteArray *bytes)
 }
 
 static GByteArray *
-fb_util_zconv(GConverter *conv, const GByteArray *bytes, GError **error)
+fb_util_zlib_conv(GConverter *conv, const GByteArray *bytes, GError **error)
 {
 	GByteArray *ret;
 	GConverterResult res;
@@ -546,25 +543,25 @@ fb_util_zconv(GConverter *conv, const GByteArray *bytes, GError **error)
 }
 
 GByteArray *
-fb_util_zcompress(const GByteArray *bytes, GError **error)
+fb_util_zlib_deflate(const GByteArray *bytes, GError **error)
 {
 	GByteArray *ret;
 	GZlibCompressor *conv;
 
 	conv = g_zlib_compressor_new(G_ZLIB_COMPRESSOR_FORMAT_ZLIB, -1);
-	ret = fb_util_zconv(G_CONVERTER(conv), bytes, error);
+	ret = fb_util_zlib_conv(G_CONVERTER(conv), bytes, error);
 	g_object_unref(conv);
 	return ret;
 }
 
 GByteArray *
-fb_util_zuncompress(const GByteArray *bytes, GError **error)
+fb_util_zlib_inflate(const GByteArray *bytes, GError **error)
 {
 	GByteArray *ret;
 	GZlibDecompressor *conv;
 
 	conv = g_zlib_decompressor_new(G_ZLIB_COMPRESSOR_FORMAT_ZLIB);
-	ret = fb_util_zconv(G_CONVERTER(conv), bytes, error);
+	ret = fb_util_zlib_conv(G_CONVERTER(conv), bytes, error);
 	g_object_unref(conv);
 	return ret;
 }
