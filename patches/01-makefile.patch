@@ -1,6 +1,6 @@
-diff -r 9e3520d6ec49 libpurple/protocols/facebook/Makefile.am
---- a/libpurple/protocols/facebook/Makefile.am	Wed Aug 05 17:57:33 2015 -0400
-+++ b/libpurple/protocols/facebook/Makefile.am	Wed Aug 05 19:22:43 2015 -0400
+diff -r 078fbf8d1a4e libpurple/protocols/facebook/Makefile.am
+--- a/libpurple/protocols/facebook/Makefile.am	Mon Dec 21 22:29:34 2015 -0500
++++ b/libpurple/protocols/facebook/Makefile.am	Mon Dec 21 22:37:31 2015 -0500
 @@ -23,7 +23,12 @@
  	thrift.c \
  	thrift.h \
@@ -28,9 +28,9 @@ diff -r 9e3520d6ec49 libpurple/protocols/facebook/Makefile.am
 -	$(GPLUGIN_CFLAGS) \
 +	$(PLUGIN_CFLAGS) \
  	$(DEBUG_CFLAGS)
-diff -r 9e3520d6ec49 libpurple/protocols/facebook/Makefile.mingw
---- a/libpurple/protocols/facebook/Makefile.mingw	Wed Aug 05 17:57:33 2015 -0400
-+++ b/libpurple/protocols/facebook/Makefile.mingw	Wed Aug 05 19:22:43 2015 -0400
+diff -r 078fbf8d1a4e libpurple/protocols/facebook/Makefile.mingw
+--- a/libpurple/protocols/facebook/Makefile.mingw	Mon Dec 21 22:29:34 2015 -0500
++++ b/libpurple/protocols/facebook/Makefile.mingw	Mon Dec 21 22:37:31 2015 -0500
 @@ -50,7 +50,9 @@
  			json.c \
  			mqtt.c \
@@ -42,7 +42,7 @@ diff -r 9e3520d6ec49 libpurple/protocols/facebook/Makefile.mingw
  
  OBJECTS = $(C_SRC:%.c=%.o)
  
-@@ -62,7 +64,6 @@
+@@ -63,7 +65,6 @@
  			-lgobject-2.0 \
  			-lws2_32 \
  			-lintl \
@@ -50,7 +50,7 @@ diff -r 9e3520d6ec49 libpurple/protocols/facebook/Makefile.mingw
  			-ljson-glib-1.0 \
  			-lz \
  			-lpurple
-@@ -76,12 +77,12 @@
+@@ -77,12 +78,12 @@
  
  all: $(TARGET).dll
  

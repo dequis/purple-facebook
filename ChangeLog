@@ -1,3 +1,6 @@
+purple-facebook-078fbf8d1a4e (2015-12-21):
+  - Fixed missing link to libgio-2.0 with Windows
+
 purple-facebook-50bb40c42245 (2015-12-21):
   - Bumped the required GLib version to 2.28
   - Fixed groupchat self messages
