@@ -1,3 +1,14 @@
+purple-facebook-50bb40c42245 (2015-12-21):
+  - Bumped the required GLib version to 2.28
+  - Fixed groupchat self messages
+  - Fixed JSON parsing with older json-glib versions
+  - Fixed memory leak with HTTP requests
+  - Fixed non-friend contacts showing as buddies
+  - Implemented better HTTP connection handling (addresses many bugs)
+  - Migrated from Jenkins to Travis
+  - Migrated to GIO for ZLib inflation and deflation
+  - Minor code refactoring
+
 purple-facebook-6a0a79182ebc (2015-08-27):
   - Added check to autoconf for glib-genmarshal
   - Added missing g_get_real_time() compat function
