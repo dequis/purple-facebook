@@ -5,7 +5,8 @@
 ] || exit
 set -e
 
-FULLVERS="$(date +%Y%m%d)~$(git rev-parse --short=7 HEAD)~${TRAVIS_BUILD_NUMBER}"
+GITREV=$(git rev-parse --short=7 HEAD)
+FULLVERS="$(date +%Y%m%d)~${GITREV}~$(cat VERSION)~${TRAVIS_BUILD_NUMBER}"
 FULLDATE=$(date -R)
 REPONAME=$(basename "${TRAVIS_REPO_SLUG}")
 
