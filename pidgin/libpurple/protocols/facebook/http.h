@@ -43,6 +43,13 @@
 #define FB_HTTP_ERROR fb_http_error_quark()
 
 /**
+ * FbHttpConns:
+ *
+ * Represents a set of #PurpleHttpConnection.
+ */
+typedef struct _FbHttpConns FbHttpConns;
+
+/**
  * FbHttpParams:
  *
  * Represents a set of key/value HTTP parameters.
@@ -71,6 +78,78 @@ typedef enum
  */
 GQuark
 fb_http_error_quark(void);
+
+/**
+ * fb_http_conns_new:
+ *
+ * Creates a new #FbHttpConns. The returned #FbHttpConns should be
+ * freed with #fb_http_conns_free() when no longer needed.
+ *
+ * Returns: The new #FbHttpConns.
+ */
+FbHttpConns *
+fb_http_conns_new(void);
+
+/**
+ * fb_http_conns_free:
+ * @cons: The #FbHttpConns.
+ *
+ * Frees all memory used by the #FbHttpConns. This will *not* cancel
+ * the any of the added #PurpleHttpConnection.
+ */
+void
+fb_http_conns_free(FbHttpConns *cons);
+
+/**
+ * fb_http_conns_cancel_all:
+ * @cons: The #FbHttpConns.
+ *
+ * Cancels each #PurpleHttpConnection in the #FbHttpConns.
+ */
+void
+fb_http_conns_cancel_all(FbHttpConns *cons);
+
+/**
+ * fb_http_conns_is_canceled:
+ * @cons: The #FbHttpConns.
+ *
+ * Determines if the #FbHttpConns has been canceled.
+ *
+ * Returns: #TRUE if it has been canceled, otherwise #FALSE.
+ */
+gboolean
+fb_http_conns_is_canceled(FbHttpConns *cons);
+
+/**
+ * fb_http_conns_add:
+ * @cons: The #FbHttpConns.
+ * @con: The #PurpleHttpConnection.
+ *
+ * Adds a #PurpleHttpConnection to the #FbHttpConns.
+ */
+void
+fb_http_conns_add(FbHttpConns *cons, PurpleHttpConnection *con);
+
+/**
+ * fb_http_conns_remove:
+ * @cons: The #FbHttpConns.
+ * @con: The #PurpleHttpConnection.
+ *
+ * Removes a #PurpleHttpConnection from the #FbHttpConns.
+ */
+void
+fb_http_conns_remove(FbHttpConns *cons, PurpleHttpConnection *con);
+
+/**
+ * fb_http_conns_reset:
+ * @cons: The #FbHttpConns.
+ *
+ * Resets the #FbHttpConns. This removes each #PurpleHttpConnection
+ * from the #FbHttpConns *without* canceling it. This allows the the
+ * #FbHttpConns to be reused.
+ */
+void
+fb_http_conns_reset(FbHttpConns *cons);
 
 /**
  * fb_http_error_chk:

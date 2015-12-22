@@ -222,16 +222,6 @@ void purple_http_conn_cancel(PurpleHttpConnection *http_conn);
 void purple_http_conn_cancel_all(PurpleConnection *gc);
 
 /**
- * purple_http_conn_is_cancelling:
- * @http_conn: The HTTP connection (may be invalid pointer).
- *
- * Checks, if provided HTTP request is cancelling.
- *
- * Returns:          TRUE, if provided connection is currently cancelling.
- */
-gboolean purple_http_conn_is_cancelling(PurpleHttpConnection *http_conn);
-
-/**
  * purple_http_conn_is_running:
  * @http_conn: The HTTP connection (may be invalid pointer).
  *

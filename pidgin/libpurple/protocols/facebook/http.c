@@ -25,6 +25,12 @@
 
 #include "http.h"
 
+struct _FbHttpConns
+{
+	GHashTable *cons;
+	gboolean canceled;
+};
+
 GQuark
 fb_http_error_quark(void)
 {
@@ -35,6 +41,74 @@ fb_http_error_quark(void)
 	}
 
 	return q;
+}
+
+FbHttpConns *
+fb_http_conns_new(void)
+{
+	FbHttpConns *cons;
+
+	cons = g_new0(FbHttpConns, 1);
+	cons->cons = g_hash_table_new(g_direct_hash, g_direct_equal);
+	return cons;
+}
+
+void
+fb_http_conns_free(FbHttpConns *cons)
+{
+	g_return_if_fail(cons != NULL);
+
+	g_hash_table_destroy(cons->cons);
+	g_free(cons);
+}
+
+void
+fb_http_conns_cancel_all(FbHttpConns *cons)
+{
+	GHashTableIter iter;
+	gpointer con;
+
+	g_return_if_fail(cons != NULL);
+	g_return_if_fail(!cons->canceled);
+
+	cons->canceled = TRUE;
+	g_hash_table_iter_init(&iter, cons->cons);
+
+	while (g_hash_table_iter_next(&iter, &con, NULL)) {
+		g_hash_table_iter_remove(&iter);
+		purple_http_conn_cancel(con);
+	}
+}
+
+gboolean
+fb_http_conns_is_canceled(FbHttpConns *cons)
+{
+	g_return_val_if_fail(cons != NULL, TRUE);
+	return cons->canceled;
+}
+
+void
+fb_http_conns_add(FbHttpConns *cons, PurpleHttpConnection *con)
+{
+	g_return_if_fail(cons != NULL);
+	g_return_if_fail(!cons->canceled);
+	g_hash_table_replace(cons->cons, con, con);
+}
+
+void
+fb_http_conns_remove(FbHttpConns *cons, PurpleHttpConnection *con)
+{
+	g_return_if_fail(cons != NULL);
+	g_return_if_fail(!cons->canceled);
+	g_hash_table_remove(cons->cons, con);
+}
+
+void
+fb_http_conns_reset(FbHttpConns *cons)
+{
+	g_return_if_fail(cons != NULL);
+	cons->canceled = FALSE;
+	g_hash_table_remove_all(cons->cons);
 }
 
 gboolean
