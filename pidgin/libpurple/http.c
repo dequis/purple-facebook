@@ -751,8 +751,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		request_url,
 		req->http11 ? "1.1" : "1.0");
 
-	if (tmp_url)
-		g_free(tmp_url);
+	g_free(tmp_url);
 
 	if (!purple_http_headers_get(hdrs, "host"))
 		g_string_append_printf(h, "Host: %s\r\n", url->host);
@@ -1474,13 +1473,6 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 		return FALSE;
 	}
 
-	if (is_ssl && !purple_ssl_is_supported()) {
-		_purple_http_error(hc, _("Unable to connect to %s: %s"),
-			url->host, _("Server requires TLS/SSL, "
-			"but no TLS/SSL support was found."));
-		return FALSE;
-	}
-
 	if (hc->request->keepalive_pool != NULL) {
 		hc->socket_request = purple_http_keepalive_pool_request(
 			hc->request->keepalive_pool, hc->gc, url->host,
@@ -1754,13 +1746,6 @@ void purple_http_conn_cancel_all(PurpleConnection *gc)
 	if (NULL != g_hash_table_lookup(purple_http_hc_by_gc, gc))
 		purple_debug_fatal("http", "Couldn't cancel all connections "
 			"related to gc=%p (it shouldn't happen)\n", gc);
-}
-
-gboolean purple_http_conn_is_cancelling(PurpleHttpConnection *http_conn)
-{
-	if (http_conn == NULL)
-		return FALSE;
-	return http_conn->is_cancelling;
 }
 
 gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn)

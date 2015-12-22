@@ -110,7 +110,7 @@ fb_util_error_quark(void);
  * @acct: The #PurpleAccount.
  * @chat: The #PurpleChatConversation.
  * @name: The name of the buddy.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Finds a buddy by their name or alias.
  *
@@ -216,7 +216,7 @@ fb_util_debug_hexdump(PurpleDebugLevel level, const GByteArray *bytes,
                       G_GNUC_PRINTF(3, 4);
 
 /**
- * fb_util_locale_str:
+ * fb_util_get_locale:
  *
  * Gets the locale string (ex: en_US) from the system. The returned
  * string should be freed with #g_free() when no longer needed.
@@ -224,19 +224,20 @@ fb_util_debug_hexdump(PurpleDebugLevel level, const GByteArray *bytes,
  * Returns: The locale string.
  */
 gchar *
-fb_util_locale_str(void);
+fb_util_get_locale(void);
 
 /**
- * fb_util_randstr:
- * @size: The size of the string.
+ * fb_util_rand_alnum:
+ * @len: The length of the string.
  *
- * Gets a random alphanumeric string. The returned string should be
- * freed with #g_free() when no longer needed.
+ * Gets a random alphanumeric (A-Za-z0-9) string. This function should
+ * *not* be relied on for cryptographic operations. The returned string
+ * should be freed with #g_free() when no longer needed.
  *
- * Returns: The random string.
+ * Returns: The alphanumeric string.
  */
 gchar *
-fb_util_randstr(gsize size);
+fb_util_rand_alnum(guint len);
 
 /**
  * fb_util_request_buddy:
@@ -244,7 +245,7 @@ fb_util_randstr(gsize size);
  * @title: The title of the message or #NULL.
  * @primary: The main point of the message or #NULL.
  * @secondary: The secondary information or #NULL.
- * @select: A #GSList of selected buddies, or #NULL.
+ * @select: A #GSList of selected buddies or #NULL.
  * @multi: #TRUE to for multiple buddy selections, otherwise #FALSE.
  * @ok_cb: The callback for the `OK` button or #NULL.
  * @cancel_cb: The callback for the `Cancel` button or #NULL.
@@ -295,52 +296,55 @@ fb_util_serv_got_chat_in(PurpleConnection *gc, gint id, const gchar *who,
                          guint64 timestamp);
 
 /**
- * fb_util_str_is:
+ * fb_util_strtest:
  * @str: The string.
  * @type: The #GAsciiType.
  *
- * Determines if @str abides to the #GAsciiType.
+ * Tests if the string only contains characters allowed by the
+ * #GAsciiType. More than one type can be specified by ORing the types
+ * together.
  *
- * Returns: #TRUE if the string abides to @type, otherwise #FALSE.
+ * Returns: #TRUE if the string only contains characters allowed by the
+ *          #GAsciiType, otherwise #FALSE.
  */
 gboolean
-fb_util_str_is(const gchar *str, GAsciiType type);
+fb_util_strtest(const gchar *str, GAsciiType type);
 
 /**
- * fb_util_zcompressed:
+ * fb_util_zlib_test:
  * @bytes: The #GByteArray.
  *
- * Determines if the #GByteArray is zlib compressed.
+ * Tests if the #GByteArray is zlib compressed.
  *
  * Returns: #TRUE if the #GByteArray is compressed, otherwise #FALSE.
  */
 gboolean
-fb_util_zcompressed(const GByteArray *bytes);
+fb_util_zlib_test(const GByteArray *bytes);
 
 /**
- * fb_util_zcompress:
+ * fb_util_zlib_deflate:
  * @bytes: The #GByteArray.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
- * Compresses a #GByteArray with zlib. The returned #GByteArray should
- * be freed with #g_byte_array_free() when no longer needed.
+ * Deflates a #GByteArray with zlib. The returned #GByteArray should be
+ * freed with #g_byte_array_free() when no longer needed.
  *
- * Returns: The compressed #GByteArray.
+ * Returns: The deflated #GByteArray or #NULL on error.
  */
 GByteArray *
-fb_util_zcompress(const GByteArray *bytes, GError **error);
+fb_util_zlib_deflate(const GByteArray *bytes, GError **error);
 
 /**
- * fb_util_zuncompress:
+ * fb_util_zlib_inflate:
  * @bytes: The #GByteArray.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
- * Uncompresses a #GByteArray with zlib. The returned #GByteArray
- * should be freed with #g_byte_array_free() when no longer needed.
+ * Inflates a #GByteArray with zlib. The returned #GByteArray should be
+ * freed with #g_byte_array_free() when no longer needed.
  *
- * Returns: The uncompressed #GByteArray, or #NULL on error.
+ * Returns: The inflated #GByteArray or #NULL on error.
  */
 GByteArray *
-fb_util_zuncompress(const GByteArray *bytes, GError **error);
+fb_util_zlib_inflate(const GByteArray *bytes, GError **error);
 
 #endif /* _FACEBOOK_UTIL_H_ */

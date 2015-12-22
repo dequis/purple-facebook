@@ -854,13 +854,6 @@ fb_login(PurpleAccount *acct)
 
 	gc = purple_account_get_connection(acct);
 
-	if (!purple_ssl_is_supported()) {
-		purple_connection_error(gc,
-			PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-			_("SSL support unavailable"));
-		return;
-	}
-
 	fata = fb_data_new(gc);
 	api = fb_data_get_api(fata);
 	convh = purple_conversations_get_handle();

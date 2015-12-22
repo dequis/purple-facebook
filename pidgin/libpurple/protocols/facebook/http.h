@@ -43,6 +43,13 @@
 #define FB_HTTP_ERROR fb_http_error_quark()
 
 /**
+ * FbHttpConns:
+ *
+ * Represents a set of #PurpleHttpConnection.
+ */
+typedef struct _FbHttpConns FbHttpConns;
+
+/**
  * FbHttpParams:
  *
  * Represents a set of key/value HTTP parameters.
@@ -73,9 +80,81 @@ GQuark
 fb_http_error_quark(void);
 
 /**
+ * fb_http_conns_new:
+ *
+ * Creates a new #FbHttpConns. The returned #FbHttpConns should be
+ * freed with #fb_http_conns_free() when no longer needed.
+ *
+ * Returns: The new #FbHttpConns.
+ */
+FbHttpConns *
+fb_http_conns_new(void);
+
+/**
+ * fb_http_conns_free:
+ * @cons: The #FbHttpConns.
+ *
+ * Frees all memory used by the #FbHttpConns. This will *not* cancel
+ * the any of the added #PurpleHttpConnection.
+ */
+void
+fb_http_conns_free(FbHttpConns *cons);
+
+/**
+ * fb_http_conns_cancel_all:
+ * @cons: The #FbHttpConns.
+ *
+ * Cancels each #PurpleHttpConnection in the #FbHttpConns.
+ */
+void
+fb_http_conns_cancel_all(FbHttpConns *cons);
+
+/**
+ * fb_http_conns_is_canceled:
+ * @cons: The #FbHttpConns.
+ *
+ * Determines if the #FbHttpConns has been canceled.
+ *
+ * Returns: #TRUE if it has been canceled, otherwise #FALSE.
+ */
+gboolean
+fb_http_conns_is_canceled(FbHttpConns *cons);
+
+/**
+ * fb_http_conns_add:
+ * @cons: The #FbHttpConns.
+ * @con: The #PurpleHttpConnection.
+ *
+ * Adds a #PurpleHttpConnection to the #FbHttpConns.
+ */
+void
+fb_http_conns_add(FbHttpConns *cons, PurpleHttpConnection *con);
+
+/**
+ * fb_http_conns_remove:
+ * @cons: The #FbHttpConns.
+ * @con: The #PurpleHttpConnection.
+ *
+ * Removes a #PurpleHttpConnection from the #FbHttpConns.
+ */
+void
+fb_http_conns_remove(FbHttpConns *cons, PurpleHttpConnection *con);
+
+/**
+ * fb_http_conns_reset:
+ * @cons: The #FbHttpConns.
+ *
+ * Resets the #FbHttpConns. This removes each #PurpleHttpConnection
+ * from the #FbHttpConns *without* canceling it. This allows the the
+ * #FbHttpConns to be reused.
+ */
+void
+fb_http_conns_reset(FbHttpConns *cons);
+
+/**
  * fb_http_error_chk:
  * @res: The #PurpleHttpResponse.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Checks a #PurpleHttpResponse for success. This optionally assigns an
  * appropriate #GError upon failure.
@@ -142,7 +221,7 @@ fb_http_params_close(FbHttpParams *params, const gchar *url);
  * fb_http_params_get_bool:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a boolean value from the #FbHttpParams. This optionally assigns
  * an appropriate #GError upon failure.
@@ -157,7 +236,7 @@ fb_http_params_get_bool(FbHttpParams *params, const gchar *name,
  * fb_http_params_get_dbl:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a floating point value from the #FbHttpParams. This optionally
  * assigns an appropriate #GError upon failure.
@@ -172,7 +251,7 @@ fb_http_params_get_dbl(FbHttpParams *params, const gchar *name,
  * fb_http_params_get_int:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets an integer value from the #FbHttpParams. This optionally
  * assigns an appropriate #GError upon failure.
@@ -187,7 +266,7 @@ fb_http_params_get_int(FbHttpParams *params, const gchar *name,
  * fb_http_params_get_str:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a string value from the #FbHttpParams. This optionally assigns
  * an appropriate #GError upon failure.
@@ -202,7 +281,7 @@ fb_http_params_get_str(FbHttpParams *params, const gchar *name,
  * fb_http_params_dup_str:
  * @params: The #FbHttpParams.
  * @name: The parameter name.
- * @error: The return location for the #GError, or #NULL.
+ * @error: The return location for the #GError or #NULL.
  *
  * Gets a duplicated string value from the #FbHttpParams. This
  * optionally assigns an appropriate #GError upon failure. The returned

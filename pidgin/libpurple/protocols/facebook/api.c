@@ -50,8 +50,9 @@ enum
 
 struct _FbApiPrivate
 {
-	PurpleConnection *gc;
 	FbMqtt *mqtt;
+	FbHttpConns *cons;
+	PurpleConnection *gc;
 	GHashTable *data;
 
 	FbId uid;
@@ -160,6 +161,7 @@ fb_api_dispose(GObject *obj)
 	FbApiPrivate *priv = FB_API(obj)->priv;
 	GHashTableIter iter;
 
+	fb_http_conns_cancel_all(priv->cons);
 	g_hash_table_iter_init(&iter, priv->data);
 
 	while (g_hash_table_iter_next(&iter, NULL, (gpointer) &fata)) {
@@ -167,14 +169,11 @@ fb_api_dispose(GObject *obj)
 		g_free(fata);
 	}
 
-	if (G_LIKELY(priv->gc != NULL)) {
-		purple_http_conn_cancel_all(priv->gc);
-	}
-
 	if (G_UNLIKELY(priv->mqtt != NULL)) {
 		g_object_unref(priv->mqtt);
 	}
 
+	fb_http_conns_free(priv->cons);
 	g_hash_table_destroy(priv->data);
 	g_hash_table_destroy(priv->mids);
 
@@ -485,6 +484,7 @@ fb_api_init(FbApi *api)
 	priv = G_TYPE_INSTANCE_GET_PRIVATE(api, FB_TYPE_API, FbApiPrivate);
 	api->priv = priv;
 
+	priv->cons = fb_http_conns_new();
 	priv->data = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                   NULL, NULL);
 	priv->mids = g_hash_table_new_full(g_int64_hash, g_int64_equal,
@@ -646,19 +646,20 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 {
 	const gchar *data;
 	const gchar *msg;
+	FbApiPrivate *priv = api->priv;
 	gchar *emsg;
 	GError *err = NULL;
 	gint code;
 	gsize size;
 
-	if (G_UNLIKELY(purple_http_conn_is_cancelling(con))) {
-		/* Ignore canceling HTTP requests */
+	if (fb_http_conns_is_canceled(priv->cons)) {
 		return FALSE;
 	}
 
 	msg = purple_http_response_get_error(res);
 	code = purple_http_response_get_code(res);
 	data = purple_http_response_get_data(res, &size);
+	fb_http_conns_remove(priv->cons, con);
 
 	if (msg != NULL) {
 		emsg = g_strdup_printf("%s (%d)", msg, code);
@@ -717,7 +718,7 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	fb_http_params_set_str(params, "format", "json");
 	fb_http_params_set_str(params, "method", method);
 
-	val = fb_util_locale_str();
+	val = fb_util_get_locale();
 	fb_http_params_set_str(params, "locale", val);
 	g_free(val);
 
@@ -755,6 +756,7 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	data = fb_http_params_close(params, NULL);
 	purple_http_request_set_contents(req, data, -1);
 	ret = purple_http_request(priv->gc, req, callback, api);
+	fb_http_conns_add(priv->cons, ret);
 	purple_http_request_unref(req);
 
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", ret);
@@ -919,7 +921,7 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	fb_thrift_write_stop(thft);
 
 	bytes = fb_thrift_get_bytes(thft);
-	cytes = fb_util_zcompress(bytes, &err);
+	cytes = fb_util_zlib_deflate(bytes, &err);
 
 	FB_API_ERROR_EMIT(api, err,
 		g_object_unref(thft);
@@ -1619,10 +1621,10 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 		{"/t_p", fb_api_cb_publish_p}
 	};
 
-	comp = fb_util_zcompressed(pload);
+	comp = fb_util_zlib_test(pload);
 
 	if (G_LIKELY(comp)) {
-		bytes = fb_util_zuncompress(pload, &err);
+		bytes = fb_util_zlib_inflate(pload, &err);
 		FB_API_ERROR_EMIT(api, err, return);
 	} else {
 		bytes = (GByteArray*) pload;
@@ -1685,7 +1687,7 @@ fb_api_rehash(FbApi *api)
 	priv = api->priv;
 
 	if (priv->cid == NULL) {
-		priv->cid = fb_util_randstr(32);
+		priv->cid = fb_util_rand_alnum(32);
 	}
 
 	if (priv->did == NULL) {
@@ -1954,6 +1956,8 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.graph_api_write_id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.represented_profile.friendship_status");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.represented_profile.id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.structured_name.text");
@@ -1965,6 +1969,12 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	while (fb_json_values_update(values, &err)) {
 		g_free(writeid);
 		writeid = fb_json_values_next_str_dup(values, NULL);
+		str = fb_json_values_next_str(values, NULL);
+
+		if (!purple_strequal(str, "ARE_FRIENDS")) {
+			continue;
+		}
+
 		user = fb_api_user_dup(NULL, FALSE);
 		str = fb_json_values_next_str(values, "0");
 
@@ -2127,7 +2137,7 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *format, ...)
 	va_end(ap);
 
 	bytes = g_byte_array_new_take((guint8*) msg, strlen(msg));
-	cytes = fb_util_zcompress(bytes, &err);
+	cytes = fb_util_zlib_deflate(bytes, &err);
 
 	FB_API_ERROR_EMIT(api, err,
 		g_byte_array_free(bytes, TRUE);
