@@ -76,6 +76,23 @@ static inline gboolean g_close(gint fd, GError **error)
 	g_signal_handlers_disconnect_matched((instance), G_SIGNAL_MATCH_DATA, \
 			0, 0, NULL, NULL, (data))
 
+static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
+{
+	GByteArray *array;
+
+	array = g_byte_array_new();
+	g_byte_array_append(array, data, len);
+	g_free(data);
+
+	return array;
+}
+
+static inline void g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
+{
+	g_queue_foreach(queue, (GFunc)free_func, NULL);
+	g_queue_free(queue);
+}
+
 static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
 	gpointer data, GError **error)
 {
@@ -83,6 +100,8 @@ static inline GThread * g_thread_try_new(const gchar *name, GThreadFunc func,
 }
 
 #if !GLIB_CHECK_VERSION(2, 30, 0)
+
+#define G_VALUE_INIT {0, {{0}}}
 
 static inline gchar *g_utf8_substring(const gchar *str, glong start_pos,
 	glong end_pos)
@@ -96,50 +115,6 @@ static inline gchar *g_utf8_substring(const gchar *str, glong start_pos,
 
 	return out;
 }
-
-#if !GLIB_CHECK_VERSION(2, 28, 0)
-
-static inline gint64 g_get_monotonic_time(void)
-{
-	GTimeVal time_s;
-
-	g_get_current_time(&time_s);
-
-	return ((gint64)time_s.tv_sec << 32) | time_s.tv_usec;
-}
-
-static inline void g_list_free_full(GList *list, GDestroyNotify free_func)
-{
-	g_list_foreach(list, (GFunc)free_func, NULL);
-	g_list_free(list);
-}
-
-static inline void g_slist_free_full(GSList *list, GDestroyNotify free_func)
-{
-	g_slist_foreach(list, (GFunc)free_func, NULL);
-	g_slist_free(list);
-}
-
-#if !GLIB_CHECK_VERSION(2, 26, 0)
-
-typedef struct stat GStatBuf;
-
-static inline void g_object_notify_by_pspec(GObject *object, GParamSpec *pspec)
-{
-	g_object_notify(object, g_param_spec_get_name(pspec));
-}
-
-static inline void g_object_class_install_properties(GObjectClass *oclass,
-	guint n_pspecs, GParamSpec **pspecs)
-{
-	guint i;
-	for (i = 1; i < n_pspecs; ++i)
-		g_object_class_install_property(oclass, i, pspecs[i]);
-}
-
-#endif /* < 2.26.0 */
-
-#endif /* < 2.28.0 */
 
 #endif /* < 2.30.0 */
 
