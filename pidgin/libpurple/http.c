@@ -1748,13 +1748,6 @@ void purple_http_conn_cancel_all(PurpleConnection *gc)
 			"related to gc=%p (it shouldn't happen)\n", gc);
 }
 
-gboolean purple_http_conn_is_cancelling(PurpleHttpConnection *http_conn)
-{
-	if (http_conn == NULL)
-		return FALSE;
-	return http_conn->is_cancelling;
-}
-
 gboolean purple_http_conn_is_running(PurpleHttpConnection *http_conn)
 {
 	if (http_conn == NULL)
