@@ -751,8 +751,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		request_url,
 		req->http11 ? "1.1" : "1.0");
 
-	if (tmp_url)
-		g_free(tmp_url);
+	g_free(tmp_url);
 
 	if (!purple_http_headers_get(hdrs, "host"))
 		g_string_append_printf(h, "Host: %s\r\n", url->host);
@@ -1169,6 +1168,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 			gchar *buffer = g_string_free(hc->response_buffer, FALSE);
 			hc->response_buffer = NULL;
 			_purple_http_recv_body(hc, buffer, buffer_len);
+			g_free(buffer);
 		}
 		if (!hc->headers_got)
 			return got_anything;
@@ -1470,13 +1470,6 @@ static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
 	} else {
 		_purple_http_error(hc, _("Unsupported protocol: %s"),
 			url->protocol);
-		return FALSE;
-	}
-
-	if (is_ssl && !purple_ssl_is_supported()) {
-		_purple_http_error(hc, _("Unable to connect to %s: %s"),
-			url->host, _("Server requires TLS/SSL, "
-			"but no TLS/SSL support was found."));
 		return FALSE;
 	}
 
@@ -2452,6 +2445,8 @@ static void purple_http_request_free(PurpleHttpRequest *request)
 	purple_http_headers_free(request->headers);
 	purple_http_cookie_jar_unref(request->cookie_jar);
 	purple_http_keepalive_pool_unref(request->keepalive_pool);
+	g_free(request->method);
+	g_free(request->contents);
 	g_free(request->url);
 	g_free(request);
 }
@@ -2868,8 +2863,6 @@ purple_http_url_parse(const char *raw_url)
 
 	g_return_val_if_fail(raw_url != NULL, NULL);
 
-	url = g_new0(PurpleHttpURL, 1);
-
 	if (!g_regex_match(purple_http_re_url, raw_url, 0, &match_info)) {
 		if (purple_debug_is_verbose() && purple_debug_is_unsafe()) {
 			purple_debug_warning("http",
@@ -2878,6 +2871,8 @@ purple_http_url_parse(const char *raw_url)
 		}
 		return NULL;
 	}
+
+	url = g_new0(PurpleHttpURL, 1);
 
 	url->protocol = g_match_info_fetch(match_info, 1);
 	host_full = g_match_info_fetch(match_info, 2);
