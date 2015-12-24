@@ -62,7 +62,7 @@
  *
  * The level of the MQTT version.
  */
-#define FB_MQTT_LEVEL 3
+#define FB_MQTT_LEVEL  3
 
 /**
  * FB_MQTT_KA:
@@ -91,14 +91,14 @@
  * The timeout, in milliseconds, to wait for a PING back from the
  * server.
  */
-#define FB_MQTT_TIMEOUT_CONN (FB_MQTT_KA * 1500)
+#define FB_MQTT_TIMEOUT_CONN  (FB_MQTT_KA * 1500)
 
 /**
  * FB_MQTT_TIMEOUT_PING:
  *
  * The timeout, in milliseconds, to send a PING to the server.
  */
-#define FB_MQTT_TIMEOUT_PING (FB_MQTT_KA * 1000)
+#define FB_MQTT_TIMEOUT_PING  (FB_MQTT_KA * 1000)
 
 /**
  * FB_MQTT_ERROR:

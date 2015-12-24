@@ -543,7 +543,7 @@ fb_data_image_cb(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	fb_http_conns_remove(driv->cons, con);
 	fb_http_error_chk(res, &err);
 
-	priv->image = (guint8*) purple_http_response_get_data(res, &priv->size);
+	priv->image = (guint8 *) purple_http_response_get_data(res, &priv->size);
 	priv->func(img, err);
 
 	if (G_LIKELY(err == NULL)) {
@@ -569,7 +569,7 @@ fb_data_image_queue(FbData *fata)
 	priv = fata->priv;
 	g_hash_table_iter_init(&iter, priv->imgs);
 
-	while (g_hash_table_iter_next(&iter, (gpointer*) &img, NULL)) {
+	while (g_hash_table_iter_next(&iter, (gpointer *) &img, NULL)) {
 		if (fb_data_image_get_active(img)) {
 			active++;
 		}
@@ -581,7 +581,7 @@ fb_data_image_queue(FbData *fata)
 
 	g_hash_table_iter_init(&iter, priv->imgs);
 
-	while (g_hash_table_iter_next(&iter, (gpointer*) &img, NULL)) {
+	while (g_hash_table_iter_next(&iter, (gpointer *) &img, NULL)) {
 		if (fb_data_image_get_active(img)) {
 			continue;
 		}

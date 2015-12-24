@@ -182,7 +182,7 @@ fb_http_params_new_parse(const gchar *data, gboolean isurl)
 	}
 
 	if (isurl) {
-		g_free((gchar*) data);
+		g_free((gchar *) data);
 	}
 
 	g_strfreev(ps);
