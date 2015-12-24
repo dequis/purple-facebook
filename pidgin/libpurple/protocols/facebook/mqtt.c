@@ -962,7 +962,7 @@ fb_mqtt_message_read_str(FbMqttMessage *msg, gchar **value)
 	}
 
 	if (value != NULL) {
-		*value = (gchar*) data;
+		*value = (gchar *) data;
 	}
 
 	return TRUE;

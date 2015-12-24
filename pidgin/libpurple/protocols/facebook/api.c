@@ -1627,7 +1627,7 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 		bytes = fb_util_zlib_inflate(pload, &err);
 		FB_API_ERROR_EMIT(api, err, return);
 	} else {
-		bytes = (GByteArray*) pload;
+		bytes = (GByteArray *) pload;
 	}
 
 	fb_util_debug_hexdump(FB_UTIL_DEBUG_INFO, bytes,
@@ -2136,7 +2136,7 @@ fb_api_publish(FbApi *api, const gchar *topic, const gchar *format, ...)
 	msg = g_strdup_vprintf(format, ap);
 	va_end(ap);
 
-	bytes = g_byte_array_new_take((guint8*) msg, strlen(msg));
+	bytes = g_byte_array_new_take((guint8 *) msg, strlen(msg));
 	cytes = fb_util_zlib_deflate(bytes, &err);
 
 	FB_API_ERROR_EMIT(api, err,

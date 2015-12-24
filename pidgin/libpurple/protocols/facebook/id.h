@@ -83,7 +83,7 @@
  *
  * Return: The converted #FbId value.
  */
-#define FB_ID_FROM_STR(s) g_ascii_strtoll(s, NULL, 10)
+#define FB_ID_FROM_STR(s)  g_ascii_strtoll(s, NULL, 10)
 
 /**
  * FB_ID_IS_STR:
@@ -93,7 +93,7 @@
  *
  * Return: #TRUE if the string is an #FbId, otherwise #FALSE.
  */
-#define FB_ID_IS_STR(s) fb_util_strtest(s, G_ASCII_DIGIT)
+#define FB_ID_IS_STR(s)  fb_util_strtest(s, G_ASCII_DIGIT)
 
 /**
  * FB_ID_TO_STR:
@@ -105,7 +105,7 @@
  *
  * Return: The converted string value.
  */
-#define FB_ID_TO_STR(i, s) g_sprintf(s, "%" FB_ID_FORMAT, (FbId) i)
+#define FB_ID_TO_STR(i, s)  g_sprintf(s, "%" FB_ID_FORMAT, (FbId) i)
 
 /**
  * fb_id_equal:

@@ -233,7 +233,7 @@
  *
  * The #GQuark of the domain of API errors.
  */
-#define FB_API_ERROR fb_api_error_quark()
+#define FB_API_ERROR  fb_api_error_quark()
 
 typedef struct _FbApi FbApi;
 typedef struct _FbApiClass FbApiClass;

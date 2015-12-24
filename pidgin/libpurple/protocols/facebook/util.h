@@ -57,7 +57,7 @@
  *
  * The #GQuark of the domain of utility errors.
  */
-#define FB_UTIL_ERROR fb_util_error_quark()
+#define FB_UTIL_ERROR  fb_util_error_quark()
 
 /**
  * FbUtilRequestBuddyFunc:
