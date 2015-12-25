@@ -1,3 +1,7 @@
+purple-facebook-1852eb9052a0 (2015-12-25):
+  - Fixed broken contact counting with non-friends
+  - Trivial documentation fixes
+
 purple-facebook-078fbf8d1a4e (2015-12-21):
   - Fixed missing link to libgio-2.0 with Windows
 

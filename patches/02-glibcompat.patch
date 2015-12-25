@@ -1,0 +1,37 @@
+diff -r 1852eb9052a0 libpurple/glibcompat.h
+--- a/libpurple/glibcompat.h	Fri Dec 25 15:20:41 2015 -0500
++++ b/libpurple/glibcompat.h	Fri Dec 25 15:49:07 2015 -0500
+@@ -61,6 +61,33 @@
+ 	return FALSE;
+ }
+ 
++#if !GLIB_CHECK_VERSION(2, 32, 0)
++
++static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
++{
++	GByteArray *array;
++
++	array = g_byte_array_new();
++	g_byte_array_append(array, data, len);
++	g_free(data);
++
++	return array;
++}
++
++static inline void g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
++{
++	g_queue_foreach(queue, (GFunc)free_func, NULL);
++	g_queue_free(queue);
++}
++
++#if !GLIB_CHECK_VERSION(2, 30, 0)
++
++#define G_VALUE_INIT {0, {{0}}}
++
++#endif /* < 2.30.0 */
++
++#endif /* < 2.32.0 */
++
+ #endif /* < 2.36.0 */
+ 
+ 
