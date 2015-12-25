@@ -1970,6 +1970,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		g_free(writeid);
 		writeid = fb_json_values_next_str_dup(values, NULL);
 		str = fb_json_values_next_str(values, NULL);
+		count++;
 
 		if (!purple_strequal(str, "ARE_FRIENDS")) {
 			continue;
@@ -1985,8 +1986,6 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		prms = fb_http_params_new_parse(user->icon, TRUE);
 		user->csum = fb_http_params_dup_str(prms, "oh", &err);
 		fb_http_params_free(prms);
-
-		count++;
 		users = g_slist_prepend(users, user);
 	}
 
