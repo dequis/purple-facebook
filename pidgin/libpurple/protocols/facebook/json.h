@@ -390,7 +390,7 @@ fb_json_values_new(JsonNode *root);
  * fb_json_values_add:
  * @values: The #FbJsonValues.
  * @type: The #FbJsonType.
- * @required: TRUE if the node is required, otherwise FALSE.
+ * @required: #TRUE if the node is required, otherwise #FALSE.
  * @expr: The #JsonPath expression.
  *
  * Adds a new #FbJsonValue to the #FbJsonValues.
@@ -413,7 +413,7 @@ fb_json_values_get_root(FbJsonValues *values);
 /**
  * fb_json_values_set_array:
  * @values: The #FbJsonValues.
- * @required: TRUE if the node is required, otherwise FALSE.
+ * @required: #TRUE if the node is required, otherwise #FALSE.
  * @expr: The #JsonPath expression.
  *
  * Sets the #JsonPath for an array to base all #FbJsonValue's off.

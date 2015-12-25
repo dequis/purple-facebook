@@ -158,7 +158,7 @@ fb_data_new(PurpleConnection *gc);
  *
  * Loads the internal data from the underlying #PurpleAccount.
  *
- * Return: TRUE if all of the data was loaded, otherwise FALSE.
+ * Return: #TRUE if all of the data was loaded, otherwise #FALSE.
  */
 gboolean
 fb_data_load(FbData *fata);
@@ -260,7 +260,7 @@ fb_data_set_roomlist(FbData *fata, PurpleRoomlist *list);
  * fb_data_set_unread:
  * @fata: The #FbData.
  * @id: The #FbId.
- * @unread: #TRUE if the #FbId is unread, otherwise FALSE.
+ * @unread: #TRUE if the #FbId is unread, otherwise #FALSE.
  *
  * Sets the unread state of an #FbId to the #FbData.
  */
