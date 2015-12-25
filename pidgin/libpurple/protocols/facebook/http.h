@@ -180,7 +180,7 @@ fb_http_params_new(void);
 /**
  * fb_http_params_new_parse:
  * @data: The string containing HTTP parameters.
- * @isurl: TRUE if @data is a URL, otherwise FALSE.
+ * @isurl: #TRUE if @data is a URL, otherwise #FALSE.
  *
  * Creates a new #FbHttpParams. This parses the #FbHttpParams from a
  * string, which can be a URL. The returned #FbHttpParams should be
