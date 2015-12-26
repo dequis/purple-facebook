@@ -1441,6 +1441,8 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
 	                   "$.deltaNewMessage.messageMetadata"
 	                    ".threadKey.threadFbId");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.deltaNewMessage.messageMetadata.timestamp");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.deltaNewMessage.body");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
@@ -1460,6 +1462,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 		msg.uid = fb_json_values_next_int(values, 0);
 		oid = fb_json_values_next_int(values, 0);
 		msg.tid = fb_json_values_next_int(values, 0);
+		msg.tstamp = fb_json_values_next_int(values, 0);
 
 		if (msg.uid == priv->uid) {
 			msg.flags |= FB_API_MESSAGE_FLAG_SELF;
@@ -2258,6 +2261,8 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.message_sender.messaging_actor.id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.message.text");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	                   "$.timestamp_precise");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.sticker.id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.message_id");
 	fb_json_values_set_array(values, FALSE, "$.messages.nodes");
@@ -2273,6 +2278,9 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		fb_api_message_reset(&msg, FALSE);
 		msg.uid = FB_ID_FROM_STR(str);
 		msg.tid = tid;
+
+		str = fb_json_values_next_str(values, "0");
+		msg.tstamp = g_ascii_strtoll(str, NULL, 10);
 
 		if (body != NULL) {
 			dmsg = fb_api_message_dup(&msg, FALSE);

@@ -335,6 +335,7 @@ struct _FbApiEvent
  * @flags: The #FbApiMessageFlags.
  * @uid: The user #FbId.
  * @tid: The thread #FbId.
+ * @tstamp: The timestamp in milliseconds (UTC).
  * @text: The message text.
  *
  * Represents a Facebook user message.
@@ -344,6 +345,7 @@ struct _FbApiMessage
 	FbApiMessageFlags flags;
 	FbId uid;
 	FbId tid;
+	gint64 tstamp;
 	gchar *text;
 };
 
