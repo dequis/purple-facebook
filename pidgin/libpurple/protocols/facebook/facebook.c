@@ -469,6 +469,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
 	gint id;
+	gint64 tstamp;
 	GSList *l;
 	PurpleAccount *acct;
 	PurpleChatConversation *chat;
@@ -493,6 +494,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 
 		self = (msg->flags & FB_API_MESSAGE_FLAG_SELF) != 0;
 		flags = self ? PURPLE_MESSAGE_SEND : PURPLE_MESSAGE_RECV;
+		tstamp = msg->tstamp / 1000;
 
 		if (msg->flags & FB_API_MESSAGE_FLAG_IMAGE) {
 			if (!(msg->flags & FB_API_MESSAGE_FLAG_DONE)) {
@@ -517,7 +519,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 				fb_data_set_unread(fata, msg->uid, TRUE);
 			}
 
-			fb_util_serv_got_im(gc, uid, text, flags, time(NULL));
+			fb_util_serv_got_im(gc, uid, text, flags, tstamp);
 			g_free(html);
 			continue;
 		}
@@ -542,7 +544,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 			fb_data_set_unread(fata, msg->tid, TRUE);
 		}
 
-		fb_util_serv_got_chat_in(gc, id, uid, text, flags, time(NULL));
+		fb_util_serv_got_chat_in(gc, id, uid, text, flags, tstamp);
 		g_free(html);
 	}
 }
