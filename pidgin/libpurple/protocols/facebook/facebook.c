@@ -584,6 +584,7 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 {
 	FbApiUser *user;
 	FbData *fata = data;
+	gboolean active;
 	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
 	gint id;
@@ -598,8 +599,9 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 	FB_ID_TO_STR(thrd->tid, tid);
 
 	chat = purple_conversations_find_chat_with_account(tid, acct);
+	active = (chat != NULL) && !purple_chat_conversation_has_left(chat);
 
-	if (chat == NULL) {
+	if (!active) {
 		chat = purple_serv_got_joined_chat(gc, id, tid);
 	}
 
@@ -617,7 +619,7 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 			fb_buddy_add_nonfriend(acct, user);
 		}
 
-		purple_chat_conversation_add_user(chat, uid, NULL, 0, TRUE);
+		purple_chat_conversation_add_user(chat, uid, NULL, 0, active);
 	}
 }
 
@@ -1153,7 +1155,7 @@ fb_chat_join(PurpleConnection *gc, GHashTable *data)
 	id = fb_id_hash(&tid);
 	chat = purple_conversations_find_chat(gc, id);
 
-	if (chat != NULL) {
+	if ((chat != NULL) && !purple_chat_conversation_has_left(chat)) {
 		purple_conversation_present(PURPLE_CONVERSATION(chat));
 		return;
 	}
