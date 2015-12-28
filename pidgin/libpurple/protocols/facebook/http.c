@@ -152,11 +152,11 @@ fb_http_params_new_parse(const gchar *data, gboolean isurl)
 	if (isurl) {
 		data = strchr(data, '?');
 
-		if (data++ == NULL) {
+		if (data == NULL) {
 			return params;
 		}
 
-		tail = strchr(data, '#');
+		tail = strchr(++data, '#');
 
 		if (tail != NULL) {
 			data = g_strndup(data, tail - data);
