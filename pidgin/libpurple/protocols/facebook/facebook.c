@@ -462,6 +462,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 	const gchar *text;
 	FbApiMessage *msg;
 	FbData *fata = data;
+	gboolean isself;
 	gboolean mark;
 	gboolean open;
 	gboolean self;
@@ -480,6 +481,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 	acct = purple_connection_get_account(gc);
 	mark = purple_account_get_bool(acct, "mark-read", TRUE);
 	open = purple_account_get_bool(acct, "group-chat-open", TRUE);
+	self = purple_account_get_bool(acct, "show-self", TRUE);
 
 	for (l = msgs; l != NULL; l = l->next) {
 		msg = l->data;
@@ -492,8 +494,13 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 			continue;
 		}
 
-		self = (msg->flags & FB_API_MESSAGE_FLAG_SELF) != 0;
-		flags = self ? PURPLE_MESSAGE_SEND : PURPLE_MESSAGE_RECV;
+		isself = (msg->flags & FB_API_MESSAGE_FLAG_SELF) != 0;
+
+		if (isself && !self) {
+			continue;
+		}
+
+		flags = isself ? PURPLE_MESSAGE_SEND : PURPLE_MESSAGE_RECV;
 		tstamp = msg->tstamp / 1000;
 
 		if (msg->flags & FB_API_MESSAGE_FLAG_IMAGE) {
@@ -515,7 +522,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 		}
 
 		if (msg->tid == 0) {
-			if (mark && !self) {
+			if (mark && !isself) {
 				fb_data_set_unread(fata, msg->uid, TRUE);
 			}
 
@@ -540,7 +547,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 			id = purple_chat_conversation_get_id(chat);
 		}
 
-		if (mark && !self) {
+		if (mark && !isself) {
 			fb_data_set_unread(fata, msg->tid, TRUE);
 		}
 
@@ -584,6 +591,7 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 {
 	FbApiUser *user;
 	FbData *fata = data;
+	gboolean active;
 	gchar tid[FB_ID_STRMAX];
 	gchar uid[FB_ID_STRMAX];
 	gint id;
@@ -598,8 +606,9 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 	FB_ID_TO_STR(thrd->tid, tid);
 
 	chat = purple_conversations_find_chat_with_account(tid, acct);
+	active = (chat != NULL) && !purple_chat_conversation_has_left(chat);
 
-	if (chat == NULL) {
+	if (!active) {
 		chat = purple_serv_got_joined_chat(gc, id, tid);
 	}
 
@@ -617,7 +626,7 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 			fb_buddy_add_nonfriend(acct, user);
 		}
 
-		purple_chat_conversation_add_user(chat, uid, NULL, 0, TRUE);
+		purple_chat_conversation_add_user(chat, uid, NULL, 0, active);
 	}
 }
 
@@ -1153,7 +1162,7 @@ fb_chat_join(PurpleConnection *gc, GHashTable *data)
 	id = fb_id_hash(&tid);
 	chat = purple_conversations_find_chat(gc, id);
 
-	if (chat != NULL) {
+	if ((chat != NULL) && !purple_chat_conversation_has_left(chat)) {
 		purple_conversation_present(PURPLE_CONVERSATION(chat));
 		return;
 	}
@@ -1402,6 +1411,10 @@ facebook_protocol_init(PurpleProtocol *protocol)
 
 	opt = purple_account_option_bool_new(_("Mark messages as read"),
 	                                     "mark-read", TRUE);
+	opts = g_list_prepend(opts, opt);
+
+	opt = purple_account_option_bool_new(_("Show self messages"),
+	                                     "show-self", TRUE);
 	opts = g_list_prepend(opts, opt);
 
 	opt = purple_account_option_bool_new(_("Show unread messages"),

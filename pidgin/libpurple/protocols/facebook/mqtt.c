@@ -469,6 +469,7 @@ fb_mqtt_read(FbMqtt *mqtt, FbMqttMessage *msg)
 			}
 
 			if (!fb_mqtt_message_read_mid(msg, &mid)) {
+				g_free(str);
 				break;
 			}
 
