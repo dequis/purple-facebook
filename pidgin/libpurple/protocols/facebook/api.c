@@ -855,66 +855,66 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	thft = fb_thrift_new(NULL, 0);
 
 	/* Write the client identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 1);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 1, 0);
 	fb_thrift_write_str(thft, priv->cid);
 
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRUCT, 4);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRUCT, 4, 1);
 
 	/* Write the user identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 5);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 1, 0);
 	fb_thrift_write_i64(thft, priv->uid);
 
 	/* Write the information string */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 6);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 2, 1);
 	fb_thrift_write_str(thft, "");
 
 	/* Write the UNKNOWN ("cp"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 7);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 3, 2);
 	fb_thrift_write_i64(thft, 23);
 
 	/* Write the UNKNOWN ("ecp"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 8);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 4, 3);
 	fb_thrift_write_i64(thft, 26);
 
 	/* Write the UNKNOWN */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 9);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 5, 4);
 	fb_thrift_write_i32(thft, 1);
 
 	/* Write the UNKNOWN ("no_auto_fg"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 10);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 6, 5);
 	fb_thrift_write_bool(thft, TRUE);
 
 	/* Write the visibility state */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 11);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 7, 6);
 	fb_thrift_write_bool(thft, !priv->invisible);
 
 	/* Write the device identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 12);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 8, 7);
 	fb_thrift_write_str(thft, priv->did);
 
 	/* Write the UNKNOWN ("fg"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 13);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 9, 8);
 	fb_thrift_write_bool(thft, TRUE);
 
 	/* Write the UNKNOWN ("nwt"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 14);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 10, 9);
 	fb_thrift_write_i32(thft, 1);
 
 	/* Write the UNKNOWN ("nwst"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 15);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 11, 10);
 	fb_thrift_write_i32(thft, 0);
 
 	/* Write the MQTT identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 16);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 12, 11);
 	fb_thrift_write_i64(thft, priv->mid);
 
 	/* Write the UNKNOWN */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_LIST, 18);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_LIST, 14, 12);
 	fb_thrift_write_list(thft, FB_THRIFT_TYPE_I32, 0);
 	fb_thrift_write_stop(thft);
 
 	/* Write the token */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 19);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 15, 14);
 	fb_thrift_write_str(thft, priv->token);
 
 	/* Write the STOP for the struct */
@@ -1392,6 +1392,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	JsonNode *root;
 	JsonNode *node;
 
+	/* Read identifier string (for Facebook employees) */
 	thft = fb_thrift_new(pload, 0);
 	fb_thrift_read_str(thft, NULL);
 	size = fb_thrift_get_pos(thft);
@@ -1519,87 +1520,112 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 }
 
 static void
-fb_api_cb_publish_p(FbApi *api, GByteArray *pload)
+fb_api_cb_publish_pt(FbThrift *thft, GSList **press, GError **error)
 {
 	FbApiPresence *pres;
-	FbThrift *thft;
 	FbThriftType type;
+	gint16 id;
 	gint32 i32;
 	gint64 i64;
-	GSList *press;
 	guint i;
-	guint size;
+	guint size = 0;
 
-	/* Start at 1 to skip the NULL byte */
-	thft  = fb_thrift_new(pload, 1);
-	press = NULL;
+	/* Read identifier string (for Facebook employees) */
+	FB_API_TCHK(fb_thrift_read_str(thft, NULL));
 
-	/* Skip the full list boolean field */
-	fb_thrift_read_field(thft, &type, NULL);
-	g_warn_if_fail(type == FB_THRIFT_TYPE_BOOL);
-	fb_thrift_read_bool(thft, NULL);
+	/* Read the full list boolean field */
+	FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, 0));
+	FB_API_TCHK(type == FB_THRIFT_TYPE_BOOL);
+	FB_API_TCHK(id == 1);
+	FB_API_TCHK(fb_thrift_read_bool(thft, NULL));
 
 	/* Read the list field */
-	fb_thrift_read_field(thft, &type, NULL);
-	g_warn_if_fail(type == FB_THRIFT_TYPE_LIST);
+	FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, id));
+	FB_API_TCHK(type == FB_THRIFT_TYPE_LIST);
+	FB_API_TCHK(id == 2);
 
 	/* Read the list */
-	fb_thrift_read_list(thft, &type, &size);
-	g_warn_if_fail(type == FB_THRIFT_TYPE_STRUCT);
+	FB_API_TCHK(fb_thrift_read_list(thft, &type, &size));
+	FB_API_TCHK(type == FB_THRIFT_TYPE_STRUCT);
 
 	for (i = 0; i < size; i++) {
 		/* Read the user identifier field */
-		fb_thrift_read_field(thft, &type, NULL);
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I64);
-		fb_thrift_read_i64(thft, &i64);
+		FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, 0));
+		FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
+		FB_API_TCHK(id == 1);
+		FB_API_TCHK(fb_thrift_read_i64(thft, &i64));
 
 		/* Read the active field */
-		fb_thrift_read_field(thft, &type, NULL);
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I32);
-		fb_thrift_read_i32(thft, &i32);
+		FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, id));
+		FB_API_TCHK(type == FB_THRIFT_TYPE_I32);
+		FB_API_TCHK(id == 2);
+		FB_API_TCHK(fb_thrift_read_i32(thft, &i32));
 
 		pres = fb_api_presence_dup(NULL);
 		pres->uid = i64;
 		pres->active = i32 != 0;
-		press = g_slist_prepend(press, pres);
+		*press = g_slist_prepend(*press, pres);
 
 		fb_util_debug_info("Presence: %" FB_ID_FORMAT " (%d)",
 		                   i64, i32 != 0);
 
-		/* Skip the last active timestamp field */
-		if (!fb_thrift_read_field(thft, &type, NULL)) {
-			continue;
+		while (id <= 5) {
+			if (fb_thrift_read_isstop(thft)) {
+				break;
+			}
+
+			FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, id));
+
+			switch (id) {
+			case 3:
+				/* Read the last active timestamp field */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
+				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+				break;
+
+			case 4:
+				/* Read the active client bits field */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I16);
+				FB_API_TCHK(fb_thrift_read_i16(thft, NULL));
+				break;
+
+			case 5:
+				/* Read the VoIP compatibility bits field */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
+				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+				break;
+
+			default:
+				FB_API_TCHK(FALSE);
+				break;
+			}
 		}
-
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I64);
-		fb_thrift_read_i64(thft, NULL);
-
-		/* Skip the active client bits field */
-		if (!fb_thrift_read_field(thft, &type, NULL)) {
-			continue;
-		}
-
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I16);
-		fb_thrift_read_i16(thft, NULL);
-
-		/* Skip the VoIP compatibility bits field */
-		if (!fb_thrift_read_field(thft, &type, NULL)) {
-			continue;
-		}
-
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I64);
-		fb_thrift_read_i64(thft, NULL);
 
 		/* Read the field stop */
-		fb_thrift_read_stop(thft);
+		FB_API_TCHK(fb_thrift_read_stop(thft));
 	}
 
 	/* Read the field stop */
-	fb_thrift_read_stop(thft);
+	FB_API_TCHK(fb_thrift_read_stop(thft));
+}
+
+static void
+fb_api_cb_publish_p(FbApi *api, GByteArray *pload)
+{
+	FbThrift *thft;
+	GError *err = NULL;
+	GSList *press = NULL;
+
+	thft = fb_thrift_new(pload, 0);
+	fb_api_cb_publish_pt(thft, &press, &err);
 	g_object_unref(thft);
 
-	press = g_slist_reverse(press);
-	g_signal_emit_by_name(api, "presences", press);
+	if (G_LIKELY(err == NULL)) {
+		g_signal_emit_by_name(api, "presences", press);
+	} else {
+		fb_api_error_emit(api, err);
+	}
+
 	g_slist_free_full(press, (GDestroyNotify) fb_api_presence_free);
 }
 
