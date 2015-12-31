@@ -199,6 +199,30 @@
 #define FB_API_CONTACTS_COUNT  500
 
 /**
+ * FB_API_TCHK:
+ * @e: The expression.
+ *
+ * Checks the Thrift related expression to ensure that it evaluates to
+ * #TRUE. If the expression evaluates to #FALSE, a #GError is assigned
+ * to the local `error` variable, then returns with no value.
+ *
+ * This macro is meant to only be used for Thrift related expressions,
+ * where the calling function has a `void` return type. This macro also
+ * requires the existence of a predefined `error` variable, which is a
+ * pointer of a pointer to a #GError.
+ */
+#define FB_API_TCHK(e) \
+	G_STMT_START { \
+		if (G_UNLIKELY(!(e))) { \
+			g_set_error(error, FB_API_ERROR, FB_API_ERROR_GENERAL, \
+						"Failed to read thrift: %s:%d " \
+						"%s: assertion '%s' failed", \
+						__FILE__, __LINE__, G_STRFUNC, #e); \
+			return; \
+		} \
+	} G_STMT_END
+
+/**
  * FB_API_MSGID:
  * @m: The time in milliseconds.
  * @i: The random integer.
