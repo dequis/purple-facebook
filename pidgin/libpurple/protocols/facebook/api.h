@@ -144,6 +144,13 @@
  * FB_API_QUERY_CONTACT:
  *
  * The query hash for the `UsersQuery`.
+ *
+ * Key mapping:
+ *   0: user_fbids
+ *   1: include_full_user_info
+ *   2: profile_pic_large_size
+ *   3: profile_pic_medium_size
+ *   4: profile_pic_small_size
  */
 #define FB_API_QUERY_CONTACT  10153915107411729
 
@@ -151,6 +158,15 @@
  * FB_API_QUERY_CONTACTS:
  *
  * The query hash for the `FetchContactsFullQuery`.
+ *
+ * Key mapping:
+ *   0: profile_types
+ *   1: limit
+ *   2: big_img_size
+ *   3: huge_img_size
+ *   4: small_img_size
+ *   5: low_res_cover_size
+ *   6: media_type
  */
 #define FB_API_QUERY_CONTACTS  10153856456271729
 
@@ -158,6 +174,16 @@
  * FB_API_QUERY_CONTACTS_AFTER:
  *
  * The query hash for the `FetchContactsFullWithAfterQuery`.
+ *
+ * Key mapping:
+ *   0: profile_types
+ *   1: after
+ *   2: limit
+ *   3: big_img_size
+ *   4: huge_img_size
+ *   5: small_img_size
+ *   6: low_res_cover_size
+ *   7: media_type
  */
 #define FB_API_QUERY_CONTACTS_AFTER  10153856456281729
 
@@ -165,6 +191,13 @@
  * FB_API_QUERY_STICKER:
  *
  * The query hash for the `FetchStickersWithPreviewsQuery`.
+ *
+ * Key mapping:
+ *   0: sticker_ids
+ *   1: media_type
+ *   2: preview_size
+ *   3: scaling_factor
+ *   4: animated_media_type
  */
 #define FB_API_QUERY_STICKER  10152877994321729
 
@@ -172,6 +205,25 @@
  * FB_API_QUERY_THREAD:
  *
  * The query hash for the `ThreadQuery`.
+ *
+ * Key mapping:
+ *   0: thread_ids
+ *   1: verification_type
+ *   2: hash_key
+ *   3: small_preview_size
+ *   4: large_preview_size
+ *   5: item_count
+ *   6: event_count
+ *   7: full_screen_height
+ *   8: full_screen_width
+ *   9: medium_preview_size
+ *   10: fetch_users_separately
+ *   11: include_message_info
+ *   12: msg_count
+ *   13: include_full_user_info
+ *   14: profile_pic_large_size
+ *   15: profile_pic_medium_size
+ *   16: profile_pic_small_size
  */
 #define FB_API_QUERY_THREAD  10153919752036729
 
@@ -179,6 +231,27 @@
  * FB_API_QUERY_THREADS:
  *
  * The query hash for the `ThreadListQuery`.
+ *
+ * Key mapping:
+ *   0: folder_tag
+ *   1: thread_count
+ *   2: include_thread_info
+ *   3: verification_type
+ *   4: hash_key
+ *   5: small_preview_size
+ *   6: large_preview_size
+ *   7: item_count
+ *   8: event_count
+ *   9: full_screen_height
+ *   10: full_screen_width
+ *   11: medium_preview_size
+ *   12: fetch_users_separately
+ *   13: include_message_info
+ *   14: msg_count
+ *   15: <UNKNOWN>
+ *   16: profile_pic_large_size
+ *   17: profile_pic_medium_size
+ *   18: profile_pic_small_size
  */
 #define FB_API_QUERY_THREADS  10153919752026729
 
@@ -186,6 +259,9 @@
  * FB_API_QUERY_XMA:
  *
  * The query hash for the `XMAQuery`.
+ *
+ * Key mapping:
+ *   0: xma_id
  */
 #define FB_API_QUERY_XMA  10153919431161729
 
