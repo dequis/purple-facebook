@@ -1079,7 +1079,6 @@ fb_api_cb_mqtt_connect(FbMqtt *mqtt, gpointer data)
 	fb_mqtt_unsubscribe(mqtt, "/orca_message_notifications", NULL);
 
 	if (priv->sid == 0) {
-		/* See fb_api_thread_list() for key mapping */
 		bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 		fb_json_bldr_add_str(bldr, "1", "0");
 		fb_api_http_query(api, FB_API_QUERY_THREADS, bldr,
@@ -1998,14 +1997,6 @@ fb_api_contact(FbApi *api, FbId uid)
 {
 	JsonBuilder *bldr;
 
-	/* Object key mapping:
-	 *   0: user_fbids
-	 *   1: include_full_user_info
-	 *   2: profile_pic_large_size
-	 *   3: profile_pic_medium_size
-	 *   4: profile_pic_small_size
-	 */
-
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
 	fb_json_bldr_add_strf(bldr, NULL, "%" FB_ID_FORMAT, uid);
@@ -2099,16 +2090,6 @@ fb_api_contacts(FbApi *api)
 {
 	JsonBuilder *bldr;
 
-	/* Object key mapping:
-	 *   0: profile_types
-	 *   1: limit
-	 *   2: big_img_size
-	 *   3: huge_img_size
-	 *   4: small_img_size
-	 *   5: low_res_cover_size
-	 *   6: media_type
-	 */
-
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
 	fb_json_bldr_add_str(bldr, NULL, "user");
@@ -2123,17 +2104,6 @@ static void
 fb_api_contacts_after(FbApi *api, const gchar *writeid)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: profile_types
-	 *   1: after
-	 *   2: limit
-	 *   3: big_img_size
-	 *   4: huge_img_size
-	 *   5: small_img_size
-	 *   6: low_res_cover_size
-	 *   7: media_type
-	 */
 
 	if (g_str_has_prefix(writeid, "contact_")) {
 		writeid += 8;
@@ -2492,7 +2462,6 @@ fb_api_cb_unread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			id = fb_json_values_next_str(values, "0");
 		}
 
-		/* See fb_api_thread_info() for key mapping */
 		bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 		fb_json_bldr_arr_begin(bldr, "0");
 		fb_json_bldr_add_str(bldr, NULL, id);
@@ -2527,7 +2496,6 @@ fb_api_unread(FbApi *api)
 		return;
 	}
 
-	/* See fb_api_thread_list() for key mapping */
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_str(bldr, "2", "true");
 	fb_json_bldr_add_int(bldr, "1", priv->unread);
@@ -2581,14 +2549,6 @@ fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg)
 {
 	JsonBuilder *bldr;
 	PurpleHttpConnection *http;
-
-	/* Object key mapping:
-	 *   0: sticker_ids
-	 *   1: media_type
-	 *   2: preview_size
-	 *   3: scaling_factor
-	 *   4: animated_media_type
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
@@ -2717,26 +2677,6 @@ void
 fb_api_thread(FbApi *api, FbId tid)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: thread_ids
-	 *   1: verification_type
-	 *   2: hash_key
-	 *   3: small_preview_size
-	 *   4: large_preview_size
-	 *   5: item_count
-	 *   6: event_count
-	 *   7: full_screen_height
-	 *   8: full_screen_width
-	 *   9: medium_preview_size
-	 *   10: fetch_users_separately
-	 *   11: include_message_info
-	 *   12: msg_count
-	 *   13: include_full_user_info
-	 *   14: profile_pic_large_size
-	 *   15: profile_pic_medium_size
-	 *   16: profile_pic_small_size
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
@@ -2942,28 +2882,6 @@ void
 fb_api_threads(FbApi *api)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: folder_tag
-	 *   1: thread_count
-	 *   2: include_thread_info
-	 *   3: verification_type
-	 *   4: hash_key
-	 *   5: small_preview_size
-	 *   6: large_preview_size
-	 *   7: item_count
-	 *   8: event_count
-	 *   9: full_screen_height
-	 *   10: full_screen_width
-	 *   11: medium_preview_size
-	 *   12: fetch_users_separately
-	 *   13: include_message_info
-	 *   14: msg_count
-	 *   15: <UNKNOWN>
-	 *   16: profile_pic_large_size
-	 *   17: profile_pic_medium_size
-	 *   18: profile_pic_small_size
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_str(bldr, "2", "true");
