@@ -59,6 +59,7 @@ endif
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
+	-I$(top_srcdir) \
 	$(GLIB_CFLAGS) \
 	$(JSON_CFLAGS) \
 	$(ZLIB_CFLAGS) \
