@@ -67,7 +67,7 @@ struct _FbApiPrivate
 	GQueue *msgs;
 	gboolean invisible;
 	guint unread;
-
+	FbId lastmid;
 };
 
 struct _FbApiData
@@ -1493,6 +1493,8 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.deltaNewMessage.messageMetadata.offlineThreadingId");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
 	                   "$.deltaNewMessage.messageMetadata.actorFbId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
 	                   "$.deltaNewMessage.messageMetadata"
@@ -1511,6 +1513,20 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	fb_json_values_set_array(values, TRUE, "$.deltas");
 
 	while (fb_json_values_update(values, &err)) {
+		id = fb_json_values_next_int(values, 0);
+
+		/* Ignore everything but new messages */
+		if (id == 0) {
+			continue;
+		}
+
+		/* Ignore sequential duplicates */
+		if (id == priv->lastmid) {
+			fb_util_debug_info("Ignoring duplicate %" FB_ID_FORMAT, id);
+			continue;
+		}
+
+		priv->lastmid = id;
 		fb_api_message_reset(&msg, FALSE);
 		msg.uid = fb_json_values_next_int(values, 0);
 		oid = fb_json_values_next_int(values, 0);
@@ -1523,10 +1539,6 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 			if (msg.tid == 0) {
 				msg.uid = oid;
 			}
-		}
-
-		if (msg.uid == 0) {
-			continue;
 		}
 
 		body = fb_json_values_next_str(values, NULL);
