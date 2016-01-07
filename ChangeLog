@@ -1,3 +1,14 @@
+purple-facebook-ad2ee74b913a (2016-01-07):
+  - Added an account option for self messages
+  - Attempt to silently reconnect the MQTT stream
+  - Fixed nonfunctional group chat auto-rejoining
+  - Fixed the self contact being ignored
+  - Fixed the timestamps on incoming messages not being preserved
+  - Ignore messages which are sequentially duplicated
+  - Implemented queued message sending
+  - Minor bug fixes and refactoring
+  - Properly handle optional Thrift fields and scoping
+
 purple-facebook-1852eb9052a0 (2015-12-25):
   - Fixed broken contact counting with non-friends
   - Trivial documentation fixes

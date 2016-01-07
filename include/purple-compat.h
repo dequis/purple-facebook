@@ -68,6 +68,7 @@ struct _PurpleMessage
 #define purple_buddy_set_server_alias  purple_blist_server_alias_buddy
 #define purple_chat_conversation_add_user  purple_conv_chat_add_user
 #define purple_chat_conversation_get_id  purple_conv_chat_get_id
+#define purple_chat_conversation_has_left  purple_conv_chat_has_left
 #define purple_chat_conversation_has_user  purple_conv_chat_find_user
 #define purple_chat_conversation_remove_user  purple_conv_chat_remove_user
 #define purple_chat_conversation_set_topic  purple_conv_chat_set_topic
