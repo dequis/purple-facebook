@@ -1350,9 +1350,9 @@ fb_api_xma_parse(FbApi *api, const gchar *body, JsonNode *root, GError **error)
 	url = fb_json_values_next_str(values, NULL);
 
 	if ((str == NULL) || (url == NULL)) {
-		g_propagate_error(error, err);
+		text = g_strdup(_("<Unsupported Attachment>"));
 		g_object_unref(values);
-		return NULL;
+		return text;
 	}
 
 	if (purple_strequal(str, "ExternalUrl")) {
