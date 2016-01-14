@@ -248,7 +248,7 @@
  *   12: fetch_users_separately
  *   13: include_message_info
  *   14: msg_count
- *   15: <UNKNOWN>
+ *   15: UNKNOWN
  *   16: profile_pic_large_size
  *   17: profile_pic_medium_size
  *   18: profile_pic_small_size
