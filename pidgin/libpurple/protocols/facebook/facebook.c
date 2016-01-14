@@ -663,13 +663,18 @@ fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
 static void
 fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 {
+	const gchar *alias;
 	FbApiUser *user;
 	FbData *fata = data;
 	gchar tid[FB_ID_STRMAX];
+	gchar uid[FB_ID_STRMAX];
 	GSList *l;
 	GSList *m;
 	GString *gstr;
 	FbApiThread *thrd;
+	PurpleAccount *acct;
+	PurpleBuddy *bdy;
+	PurpleConnection *gc;
 	PurpleRoomlist *list;
 	PurpleRoomlistRoom *room;
 
@@ -679,6 +684,8 @@ fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 		return;
 	}
 
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
 	gstr = g_string_new(NULL);
 
 	for (l = thrds; l != NULL; l = l->next) {
@@ -688,12 +695,20 @@ fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 
 		for (m = thrd->users; m != NULL; m = m->next) {
 			user = m->data;
+			FB_ID_TO_STR(user->uid, uid);
+			bdy = purple_blist_find_buddy(acct, uid);
+
+			if (bdy != NULL) {
+				alias = purple_buddy_get_alias(bdy);
+			} else {
+				alias = user->name;
+			}
 
 			if (gstr->len > 0) {
 				g_string_append(gstr, ", ");
 			}
 
-			g_string_append(gstr, user->name);
+			g_string_append(gstr, alias);
 		}
 
 		room = purple_roomlist_room_new(PURPLE_ROOMLIST_ROOMTYPE_ROOM,
