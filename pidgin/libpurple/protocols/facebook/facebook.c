@@ -607,10 +607,17 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 	FB_ID_TO_STR(thrd->tid, tid);
 
 	chat = purple_conversations_find_chat_with_account(tid, acct);
-	active = (chat != NULL) && !purple_chat_conversation_has_left(chat);
 
-	if (!active) {
+	if ((chat == NULL) || purple_chat_conversation_has_left(chat)) {
 		chat = purple_serv_got_joined_chat(gc, id, tid);
+		active = FALSE;
+	} else {
+		/* If there are no users in the group chat, including
+		 * the local user, then the group chat has yet to be
+		 * setup by this function. As a result, any group chat
+		 * without users is inactive.
+		 */
+		active = purple_chat_conversation_get_users_count(chat) > 0;
 	}
 
 	name = purple_account_get_username(acct);
