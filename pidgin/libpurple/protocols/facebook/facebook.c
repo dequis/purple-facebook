@@ -620,8 +620,11 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 		active = purple_chat_conversation_get_users_count(chat) > 0;
 	}
 
-	name = purple_account_get_username(acct);
-	purple_chat_conversation_add_user(chat, name, NULL, 0, FALSE);
+	if (!active) {
+		name = purple_account_get_username(acct);
+		purple_chat_conversation_add_user(chat, name, NULL, 0, FALSE);
+	}
+
 	purple_chat_conversation_set_topic(chat, NULL, thrd->topic);
 
 	for (l = thrd->users; l != NULL; l = l->next) {
