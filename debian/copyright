@@ -3,7 +3,7 @@ Upstream-Name: purple-facebook
 Source: https://github.com/jgeboski/purple-facebook
 
 Files: *
-Copyright: Copyright 2014-2015 James Geboski <jgeboski@gmail.com>
+Copyright: Copyright 2015-2016 James Geboski <jgeboski@gmail.com>
 License: GPL-2+
  This program is free software; you can redistribute it
  and/or modify it under the terms of the GNU General Public
