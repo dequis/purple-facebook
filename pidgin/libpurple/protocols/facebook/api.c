@@ -1995,8 +1995,13 @@ fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	user.icon = fb_json_values_next_str_dup(values, NULL);
 
 	prms = fb_http_params_new_parse(user.icon, TRUE);
-	user.csum = fb_http_params_dup_str(prms, "oh", &err);
+	user.csum = fb_http_params_dup_str(prms, "oh", NULL);
 	fb_http_params_free(prms);
+
+	if (G_UNLIKELY(user.csum == NULL)) {
+		/* Revert to the icon URL as the unique checksum */
+		user.csum = g_strdup(user.icon);
+	}
 
 	g_signal_emit_by_name(api, "contact", &user);
 	fb_api_user_reset(&user, TRUE);
@@ -2075,8 +2080,14 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		user->icon = fb_json_values_next_str_dup(values, NULL);
 
 		prms = fb_http_params_new_parse(user->icon, TRUE);
-		user->csum = fb_http_params_dup_str(prms, "oh", &err);
+		user->csum = fb_http_params_dup_str(prms, "oh", NULL);
 		fb_http_params_free(prms);
+
+		if (G_UNLIKELY(user->csum == NULL)) {
+			/* Revert to the icon URL as the unique checksum */
+			user->csum = g_strdup(user->icon);
+		}
+
 		users = g_slist_prepend(users, user);
 	}
 
