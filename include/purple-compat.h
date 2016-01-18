@@ -90,6 +90,9 @@ struct _PurpleMessage
 #define purple_serv_join_chat  serv_join_chat
 #define purple_status_get_status_type  purple_status_get_type
 
+#define purple_chat_conversation_get_users_count(c) \
+    g_list_length(purple_conv_chat_get_users(c))
+
 #define purple_conversations_find_chat(c, i) \
     purple_conversation_get_chat_data( \
         purple_find_chat(c, i) \

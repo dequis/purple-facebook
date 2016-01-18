@@ -1,6 +1,6 @@
-diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
---- a/libpurple/protocols/facebook/facebook.c	Thu Jan 07 14:06:04 2016 -0500
-+++ b/libpurple/protocols/facebook/facebook.c	Thu Jan 07 16:30:08 2016 -0500
+diff -r 25a255f32eee libpurple/protocols/facebook/facebook.c
+--- a/libpurple/protocols/facebook/facebook.c	Sat Jan 16 10:01:23 2016 -0500
++++ b/libpurple/protocols/facebook/facebook.c	Mon Jan 18 09:39:59 2016 -0500
 @@ -446,7 +446,7 @@
  	id = purple_image_store_add_weak(pimg);
  
@@ -10,7 +10,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  	                            PURPLE_IMAGE_STORE_PROTOCOL
  	                            "%u\">", id);
  	msg->flags |= FB_API_MESSAGE_FLAG_DONE;
-@@ -836,7 +836,7 @@
+@@ -864,7 +864,7 @@
  	GSList *select = NULL;
  	PurpleConnection *gc;
  
@@ -19,7 +19,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  		return;
  	}
  
-@@ -1022,7 +1022,7 @@
+@@ -1050,7 +1050,7 @@
  	PurpleConnection *gc;
  	PurpleMenuAction *act;
  
@@ -28,7 +28,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  		return NULL;
  	}
  
-@@ -1070,7 +1070,8 @@
+@@ -1098,7 +1098,8 @@
  }
  
  static gint
@@ -38,7 +38,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  {
  	const gchar *name;
  	const gchar *text;
-@@ -1079,6 +1080,8 @@
+@@ -1107,6 +1108,8 @@
  	FbId uid;
  	gchar *sext;
  
@@ -47,7 +47,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  	fata = purple_connection_get_protocol_data(gc);
  	api = fb_data_get_api(fata);
  
-@@ -1217,7 +1220,8 @@
+@@ -1245,7 +1248,8 @@
  }
  
  static gint
@@ -57,7 +57,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  {
  	const gchar *name;
  	const gchar *text;
-@@ -1228,6 +1232,8 @@
+@@ -1256,6 +1260,8 @@
  	PurpleAccount *acct;
  	PurpleChatConversation *chat;
  
@@ -66,7 +66,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  	acct = purple_connection_get_account(gc);
  	fata = purple_connection_get_protocol_data(gc);
  	api = fb_data_get_api(fata);
-@@ -1396,14 +1402,119 @@
+@@ -1424,14 +1430,119 @@
  }
  
  static void
@@ -190,7 +190,7 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
  
  	opt = purple_account_option_int_new(_("Buddy list sync interval"),
  	                                    "sync-interval", 30);
-@@ -1425,147 +1536,8 @@
+@@ -1453,147 +1564,8 @@
  	                                       "incoming messages"),
  	                                     "group-chat-open", TRUE);
  	opts = g_list_prepend(opts, opt);
@@ -342,9 +342,9 @@ diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.c
 -}
 -
 -PURPLE_PLUGIN_INIT(facebook, plugin_query, plugin_load, plugin_unload);
-diff -r ad2ee74b913a libpurple/protocols/facebook/facebook.h
---- a/libpurple/protocols/facebook/facebook.h	Thu Jan 07 14:06:04 2016 -0500
-+++ b/libpurple/protocols/facebook/facebook.h	Thu Jan 07 16:30:08 2016 -0500
+diff -r 25a255f32eee libpurple/protocols/facebook/facebook.h
+--- a/libpurple/protocols/facebook/facebook.h	Sat Jan 16 10:01:23 2016 -0500
++++ b/libpurple/protocols/facebook/facebook.h	Mon Jan 18 09:39:59 2016 -0500
 @@ -22,24 +22,7 @@
  #ifndef _FACEBOOK_H_
  #define _FACEBOOK_H_
