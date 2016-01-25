@@ -277,7 +277,8 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 		csum = purple_buddy_icons_get_checksum_for_user(bdy);
 
 		if (!purple_strequal(csum, user->csum)) {
-			fb_data_image_add(fata, user->icon, fb_cb_icon, bdy);
+			fb_data_image_add(fata, user->icon, fb_cb_icon,
+			                  bdy, NULL);
 		}
 	}
 
@@ -431,7 +432,6 @@ fb_cb_image(FbDataImage *img, GError *error)
 
 	fata = fb_data_image_get_fata(img);
 	msg = fb_data_image_get_data(img);
-	fb_data_remove_message(fata, msg);
 
 	if (G_UNLIKELY(error != NULL)) {
 		url = fb_data_image_get_url(img);
@@ -453,7 +453,7 @@ fb_cb_image(FbDataImage *img, GError *error)
 
 	msgs = g_slist_prepend(msgs, msg);
 	fb_cb_api_messages(api, msgs, fata);
-	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+	g_slist_free(msgs);
 }
 
 static void
@@ -506,9 +506,9 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 		if (msg->flags & FB_API_MESSAGE_FLAG_IMAGE) {
 			if (!(msg->flags & FB_API_MESSAGE_FLAG_DONE)) {
 				msg = fb_api_message_dup(msg, TRUE);
-				fb_data_image_add(fata, msg->text,
-				                  fb_cb_image, msg);
-				fb_data_add_message(fata, msg);
+				fb_data_image_add(fata, msg->text, fb_cb_image,
+				                  msg, (GDestroyNotify)
+				                       fb_api_message_free);
 				fb_data_image_queue(fata);
 				continue;
 			}
