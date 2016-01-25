@@ -1,3 +1,6 @@
+purple-facebook-92885e0456ed (2016-01-25):
+  - Fixed a crash with incoming messages from non-friends
+
 purple-facebook-25a255f32eee (2016-01-18):
   - Add the local user to the group chat user list
   - Fixed group chat join messages with incoming messages
