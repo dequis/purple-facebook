@@ -45,6 +45,7 @@ struct _FbDataImagePrivate
 	gchar *url;
 	FbDataImageFunc func;
 	gpointer data;
+	GDestroyNotify dunc;
 
 	gboolean active;
 	const guint8 *image;
@@ -121,6 +122,10 @@ fb_data_image_dispose(GObject *obj)
 	FbDataImage *img = FB_DATA_IMAGE(obj);
 	FbDataImagePrivate *priv = img->priv;
 	FbData *fata = priv->fata;
+
+	if ((priv->dunc != NULL) && (priv->data != NULL)) {
+		priv->dunc(priv->data);
+	}
 
 	g_free(priv->url);
 	g_hash_table_steal(fata->priv->imgs, img);
@@ -428,7 +433,7 @@ fb_data_take_messages(FbData *fata, FbId uid)
 
 FbDataImage *
 fb_data_image_add(FbData *fata, const gchar *url, FbDataImageFunc func,
-                  gpointer data)
+                  gpointer data, GDestroyNotify dunc)
 {
 	FbDataImage *img;
 	FbDataImagePrivate *priv;
@@ -444,6 +449,7 @@ fb_data_image_add(FbData *fata, const gchar *url, FbDataImageFunc func,
 	priv->url = g_strdup(url);
 	priv->func = func;
 	priv->data = data;
+	priv->dunc = dunc;
 
 	g_hash_table_insert(fata->priv->imgs, img, img);
 	return img;

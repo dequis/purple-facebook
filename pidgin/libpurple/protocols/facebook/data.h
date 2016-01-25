@@ -306,6 +306,7 @@ fb_data_take_messages(FbData *fata, FbId uid);
  * @url: The image URL.
  * @func: The #FbDataImageFunc.
  * @data: The user-defined data.
+ * @dunc: The #GDestroyNotify for @data or #NULL.
  *
  * Adds a new #FbDataImage to the #FbData. This is used to fetch images
  * from HTTP sources. After calling this, #fb_data_image_queue() should
@@ -315,7 +316,7 @@ fb_data_take_messages(FbData *fata, FbId uid);
  */
 FbDataImage *
 fb_data_image_add(FbData *fata, const gchar *url, FbDataImageFunc func,
-                  gpointer data);
+                  gpointer data, GDestroyNotify dunc);
 
 /**
  * fb_data_image_get_active:
