@@ -1190,6 +1190,10 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 		const gchar *redirect;
 
 		if (hc->is_chunked && !hc->chunks_done) {
+			if (len == 0) {
+				_purple_http_error(hc, _("Chunked connection terminated"));
+				return FALSE;
+			}
 			if (purple_debug_is_verbose()) {
 				purple_debug_misc("http",
 					"I need the terminating empty chunk\n");
