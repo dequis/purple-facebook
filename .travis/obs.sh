@@ -20,6 +20,11 @@ sed -ri \
 sed -ri \
     -e "s/(^Build-Depends:.*)/\1, libzephyr4/" \
     debian/control
+sed -ri \
+    -e "s/(^%setup -q.*)/\1 -n %\{name\}/" \
+    -e "s/(^Source0:.*)\-(.*)/\1_\2/" \
+    -e "s/(^Version:).*/\1 ${FULLVERS}/" \
+    dist/*.spec
 
 cat <<EOF > debian/changelog
 ${REPONAME} (${FULLVERS}) UNRELEASED; urgency=medium
@@ -44,6 +49,7 @@ osc checkout "home:${OBSUSER}" "${REPONAME}" -o /tmp/obs
     cd /tmp/obs
     rm -f *.{dsc,tar.gz}
     dpkg-source -I -b "${TRAVIS_BUILD_DIR}"
+    cp "${TRAVIS_BUILD_DIR}/dist/_service" .
 
     osc addremove -r
     osc commit -m "Updated to ${FULLVERS}"
