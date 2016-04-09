@@ -23,8 +23,8 @@ export DEFINES = $(AUTOTOOLS_DEFINES) \
 	-DPACKAGE_TARNAME=\"purple-facebook\" \
 	-DPACKAGE_VERSION=\"$(PLUGIN_VERSION)\" \
 	-DPACKAGE_STRING=\"purple-facebook\ $(PLUGIN_VERSION)\" \
-	-DPACKAGE_BUGREPORT=\"https://github.com/jgeboski/purple-facebook/issues\" \
-	-DPACKAGE_URL=\"https://github.com/jgeboski/purple-facebook\" \
+	-DPACKAGE_BUGREPORT=\"https://github.com/dequis/purple-facebook/issues\" \
+	-DPACKAGE_URL=\"https://github.com/dequis/purple-facebook\" \
 	-DPACKAGE=\"purple-facebook\" \
 	-DVERSION=\"$(PLUGIN_VERSION)\" \
 	-DPURPLE_PLUGINS

@@ -10,7 +10,7 @@ Release: 0
 Summary: Facebook protocol plugin for libpurple
 Group: %{_group}
 License: GPL-2.0+
-URL: https://github.com/jgeboski/purple-facebook
+URL: https://github.com/dequis/purple-facebook
 Source0: %{name}-%{version}.tar.gz
 
 BuildRequires: autoconf >= 2.64
