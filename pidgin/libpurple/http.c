@@ -2011,13 +2011,13 @@ void purple_http_cookie_jar_set(PurpleHttpCookieJar *cookie_jar,
 {
 	gchar *escaped_name = g_strdup(purple_url_encode(name));
 	gchar *escaped_value = NULL;
-	
-	if (escaped_value) {
+
+	if (value) {
 		escaped_value = g_strdup(purple_url_encode(value));
 	}
-	
+
 	purple_http_cookie_jar_set_ext(cookie_jar, escaped_name, escaped_value, -1);
-	
+
 	g_free(escaped_name);
 	g_free(escaped_value);
 }
