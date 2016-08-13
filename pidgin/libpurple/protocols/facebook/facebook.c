@@ -24,7 +24,7 @@
 #include "account.h"
 #include "accountopt.h"
 #include "blistnode.h"
-#include "blistnodetypes.h"
+#include "buddy.h"
 #include "buddyicon.h"
 #include "buddylist.h"
 #include "cmds.h"
