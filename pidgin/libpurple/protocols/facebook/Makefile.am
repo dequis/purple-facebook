@@ -1,6 +1,6 @@
 EXTRA_DIST = \
 	Makefile.mingw \
-	marshaller.list
+	marshal.list
 
 pkgdir = @PURPLE_PLUGINDIR@
 
@@ -29,12 +29,12 @@ CLEANFILES = \
 	marshal.c \
 	marshal.h
 
-marshal.c: $(srcdir)/marshaller.list marshal.h
+marshal.c: $(srcdir)/marshal.list marshal.h
 	$(AM_V_GEN)echo "#include \"marshal.h\"" > $@
-	$(AM_V_at)$(GLIB_GENMARSHAL) --prefix=fb_marshal --body $(srcdir)/marshaller.list >> $@
+	$(AM_V_at)$(GLIB_GENMARSHAL) --prefix=fb_marshal --body $(srcdir)/marshal.list >> $@
 
-marshal.h: $(srcdir)/marshaller.list
-	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=fb_marshal --header $(srcdir)/marshaller.list > $@
+marshal.h: $(srcdir)/marshal.list
+	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=fb_marshal --header $(srcdir)/marshal.list > $@
 
 AM_CFLAGS = $(st)
 

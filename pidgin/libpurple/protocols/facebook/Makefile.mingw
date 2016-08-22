@@ -85,12 +85,12 @@ $(OBJECTS): $(PURPLE_CONFIG_H)
 $(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
 
-marshal.c: marshaller.list marshal.h
+marshal.c: marshal.list marshal.h
 	@echo "#include \"marshal.h\"" > $@
-	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --body marshaller.list >> $@
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --body marshal.list >> $@
 
-marshal.h: marshaller.list
-	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --header marshaller.list > $@
+marshal.h: marshal.list
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --header marshal.list > $@
 
 ##
 ## CLEAN RULES
