@@ -26,14 +26,10 @@ FACEBOOKSOURCES += [marshal_c, marshal_h]
 
 if STATIC_FACEBOOK
 	facebook_prpl = static_library('facebook', FACEBOOKSOURCES,
-	    include_directories : [toplevel_inc, libpurple_inc],
 	    c_args : '-DPURPLE_STATIC_PRPL',
-	    link_with : libpurple,
-	    dependencies : [json, gplugin, glib])
+	    dependencies : [json, libpurple_dep, glib])
 elif DYNAMIC_FACEBOOK
 	facebook_prpl = shared_library('facebook', FACEBOOKSOURCES,
-	    include_directories : [toplevel_inc, libpurple_inc],
-	    link_with : libpurple,
-	    dependencies : [json, gplugin, glib],
+	    dependencies : [json, libpurple_dep, glib],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
 endif
