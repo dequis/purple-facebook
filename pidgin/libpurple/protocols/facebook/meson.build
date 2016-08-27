@@ -18,11 +18,10 @@ FACEBOOKSOURCES = [
 	'util.h'
 ]
 
-marshal_h = glib_genmarshal_h.process('marshal.list',
-                                      extra_args : ['--prefix=fb_marshal'])
-marshal_c = glib_genmarshal_c.process('marshal.list',
-                                      extra_args : ['--prefix=fb_marshal'])
-FACEBOOKSOURCES += [marshal_c, marshal_h]
+marshallers = gnome.genmarshal('marshal',
+    sources : 'marshal.list',
+    prefix : 'fb_marshal')
+FACEBOOKSOURCES += marshallers
 
 if STATIC_FACEBOOK
 	facebook_prpl = static_library('facebook', FACEBOOKSOURCES,
