@@ -33,7 +33,6 @@
 
 #include <glib.h>
 
-#include "blistnodetypes.h"
 #include "connection.h"
 #include "roomlist.h"
 
