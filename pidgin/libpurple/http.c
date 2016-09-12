@@ -486,7 +486,11 @@ purple_http_socket_connect_new_cb(GObject *source, GAsyncResult *res,
 	cb_data = g_object_steal_data(source, "cb_data");
 
 	if (conn == NULL) {
-		cb(hs, error->message, cb_data);
+		if (!g_error_matches(error,
+				G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			cb(hs, error->message, cb_data);
+		}
+
 		g_clear_error(&error);
 		return;
 	}
@@ -1158,8 +1162,10 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc)
 				&error);
 	got_anything = (len > 0);
 
-	if (len < 0 && g_error_matches(error,
-			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK)) {
+	if (len < 0 && (g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK) ||
+			g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_CANCELLED))) {
 		g_clear_error(&error);
 		return FALSE;
 	}
@@ -1444,8 +1450,10 @@ static gboolean _purple_http_send(GObject *source, gpointer _hc)
 				&error);
 	}
 
-	if (written < 0 && g_error_matches(error,
-			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK)) {
+	if (written < 0 && (g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK) ||
+			g_error_matches(error,
+			G_IO_ERROR, G_IO_ERROR_CANCELLED))) {
 		g_clear_error(&error);
 		return G_SOURCE_CONTINUE;
 	}
