@@ -34,7 +34,6 @@ make %{?_smp_mflags}
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/purple-2/
-#mv libyahoo-plusplus.so $RPM_BUILD_ROOT/%{_libdir}/purple-2/
 mv pidgin/libpurple/protocols/facebook/.libs/libfacebook.so $RPM_BUILD_ROOT/%{_libdir}/purple-2/
 
 %clean
