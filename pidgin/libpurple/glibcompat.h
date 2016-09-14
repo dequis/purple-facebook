@@ -33,37 +33,6 @@
 
 #include <glib.h>
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-
-#include <errno.h>
-#include <fcntl.h>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
-static inline gboolean g_close(gint fd, GError **error)
-{
-	int res;
-	int errsv;
-
-	res = close(fd);
-
-	if (G_LIKELY(res == 0))
-		return TRUE;
-	if (G_UNLIKELY(errno == EINTR))
-		return TRUE;
-
-	errsv = errno;
-	g_set_error_literal(error, G_FILE_ERROR,
-		g_file_error_from_errno(errsv), g_strerror(errsv));
-	errno = errsv;
-
-	return FALSE;
-}
-
-#endif /* < 2.36.0 */
-
-
 /* glib's definition of g_stat+GStatBuf seems to be broken on mingw64-w32 (and
  * possibly other 32-bit windows), so instead of relying on it,
  * we'll define our own.
