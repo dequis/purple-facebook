@@ -1,3 +1,6 @@
+purple-facebook-2a8f41535c8f (2016-08-12):
+  - Update backport to handle blistnodetypes.[ch] to buddy.[ch] rename
+
 purple-facebook-66ee77378d82 (2016-04-09):
   - Fix contacts pagination (for accounts with >500 friends)
 

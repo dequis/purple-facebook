@@ -1,5 +1,5 @@
 include/blistnode.h
-include/blistnodetypes.h
+include/buddy.h
 include/buddylist.h
 include/conversations.h
 include/conversationtypes.h
