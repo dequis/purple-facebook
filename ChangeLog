@@ -1,3 +1,6 @@
+purple-facebook-56d191003b34 (2016-09-15):
+  - Update backport to handle Gio port
+
 purple-facebook-2a8f41535c8f (2016-08-12):
   - Update backport to handle blistnodetypes.[ch] to buddy.[ch] rename
 
