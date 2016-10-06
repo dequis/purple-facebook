@@ -30,7 +30,6 @@ struct _FbThriftPrivate
 	guint offset;
 	guint pos;
 	guint lastbool;
-	gint16 lastid;
 };
 
 G_DEFINE_TYPE(FbThrift, fb_thrift, G_TYPE_OBJECT);
@@ -334,7 +333,8 @@ fb_thrift_read_str(FbThrift *thft, gchar **value)
 }
 
 gboolean
-fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id)
+fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id,
+					 gint16 lastid)
 {
 	FbThriftPrivate *priv;
 	gint16 i16;
@@ -342,6 +342,7 @@ fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id)
 
 	g_return_val_if_fail(FB_IS_THRIFT(thft), FALSE);
 	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(id != NULL, FALSE);
 	priv = thft->priv;
 
 	if (!fb_thrift_read_byte(thft, &byte)) {
@@ -356,29 +357,22 @@ fb_thrift_read_field(FbThrift *thft, FbThriftType *type, gint16 *id)
 	*type = fb_thrift_ct2t(byte & 0x0F);
 	i16 = (byte & 0xF0) >> 4;
 
+	if (i16 == 0) {
+		if (!fb_thrift_read_i16(thft, id)) {
+			return FALSE;
+		}
+	} else {
+		*id = lastid + i16;
+	}
+
 	if (*type == FB_THRIFT_TYPE_BOOL) {
 		priv->lastbool = 0x01;
 
 		if ((byte & 0x0F) == 0x01) {
 			priv->lastbool |= 0x01 << 2;
 		}
-
-		return TRUE;
 	}
 
-	if (i16 == 0) {
-		if (!fb_thrift_read_i16(thft, &i16)) {
-			return FALSE;
-		}
-	} else {
-		i16 = priv->lastid + i16;
-	}
-
-	if (id != NULL) {
-		*id = i16;
-	}
-
-	priv->lastid = i16;
 	return TRUE;
 }
 
@@ -589,7 +583,8 @@ fb_thrift_write_str(FbThrift *thft, const gchar *value)
 }
 
 void
-fb_thrift_write_field(FbThrift *thft, FbThriftType type, gint16 id)
+fb_thrift_write_field(FbThrift *thft, FbThriftType type, gint16 id,
+					  gint16 lastid)
 {
 	FbThriftPrivate *priv;
 	gint16 diff;
@@ -602,16 +597,14 @@ fb_thrift_write_field(FbThrift *thft, FbThriftType type, gint16 id)
 	}
 
 	type = fb_thrift_t2ct(type);
-	diff = id - priv->lastid;
+	diff = id - lastid;
 
-	if ((id <= priv->lastid) || (diff > 0x0F)) {
+	if ((id <= lastid) || (diff > 0x0F)) {
 		fb_thrift_write_byte(thft, type);
 		fb_thrift_write_i16(thft, id);
 	} else {
 		fb_thrift_write_byte(thft, (diff << 4) | type);
 	}
-
-	priv->lastid = id;
 }
 
 void

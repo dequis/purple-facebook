@@ -25,7 +25,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "blistnodetypes.h"
 #include "buddylist.h"
 #include "conversations.h"
 #include "glibcompat.h"

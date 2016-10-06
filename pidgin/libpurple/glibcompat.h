@@ -33,37 +33,6 @@
 
 #include <glib.h>
 
-#if !GLIB_CHECK_VERSION(2, 36, 0)
-
-#include <errno.h>
-#include <fcntl.h>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
-static inline gboolean g_close(gint fd, GError **error)
-{
-	int res;
-	int errsv;
-
-	res = close(fd);
-
-	if (G_LIKELY(res == 0))
-		return TRUE;
-	if (G_UNLIKELY(errno == EINTR))
-		return TRUE;
-
-	errsv = errno;
-	g_set_error_literal(error, G_FILE_ERROR,
-		g_file_error_from_errno(errsv), g_strerror(errsv));
-	errno = errsv;
-
-	return FALSE;
-}
-
-#endif /* < 2.36.0 */
-
-
 /* glib's definition of g_stat+GStatBuf seems to be broken on mingw64-w32 (and
  * possibly other 32-bit windows), so instead of relying on it,
  * we'll define our own.
@@ -93,5 +62,46 @@ purple_g_stat(const gchar *filename, GStatBufW32 *buf)
 	_Pragma ("clang diagnostic pop")
 
 #endif /* __clang__ */
+
+/******************************************************************************
+ * g_assert_* macros
+ *****************************************************************************/
+#if !GLIB_CHECK_VERSION(2, 38, 0)
+#define g_assert_true(expr)             G_STMT_START { \
+                                             if G_LIKELY (expr) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should be TRUE"); \
+                                        } G_STMT_END
+#define g_assert_false(expr)            G_STMT_START { \
+                                             if G_LIKELY (!(expr)) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should be FALSE"); \
+                                        } G_STMT_END
+#define g_assert_null(expr)             G_STMT_START { if G_LIKELY ((expr) == NULL) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should be NULL"); \
+                                        } G_STMT_END
+#endif
+
+#if !GLIB_CHECK_VERSION(2, 40, 0)
+#define g_assert_nonnull(expr)          G_STMT_START { \
+                                             if G_LIKELY ((expr) != NULL) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should not be NULL"); \
+                                        } G_STMT_END
+#endif
+                                        
+#if !GLIB_CHECK_VERSION(2, 46, 0)
+#define g_assert_cmpmem(m1, l1, m2, l2) G_STMT_START {\
+                                             gconstpointer __m1 = m1, __m2 = m2; \
+                                             int __l1 = l1, __l2 = l2; \
+                                             if (__l1 != __l2) \
+                                               g_assertion_message_cmpnum (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                           #l1 " (len(" #m1 ")) == " #l2 " (len(" #m2 "))", __l1, "==", __l2, 'i'); \
+                                             else if (memcmp (__m1, __m2, __l1) != 0) \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "assertion failed (" #m1 " == " #m2 ")"); \
+                                        } G_STMT_END
+#endif
 
 #endif /* _GLIBCOMPAT_H_ */

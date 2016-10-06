@@ -24,7 +24,7 @@
 #include "account.h"
 #include "accountopt.h"
 #include "blistnode.h"
-#include "blistnodetypes.h"
+#include "buddy.h"
 #include "buddyicon.h"
 #include "buddylist.h"
 #include "cmds.h"
@@ -277,7 +277,8 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 		csum = purple_buddy_icons_get_checksum_for_user(bdy);
 
 		if (!purple_strequal(csum, user->csum)) {
-			fb_data_image_add(fata, user->icon, fb_cb_icon, bdy);
+			fb_data_image_add(fata, user->icon, fb_cb_icon,
+			                  bdy, NULL);
 		}
 	}
 
@@ -331,8 +332,8 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 
 	gc = fb_data_get_connection(fata);
 
-	if (error->domain == FB_MQTT_SSL_ERROR) {
-		purple_connection_ssl_error(gc, error->code);
+	if (error->domain == G_IO_ERROR) {
+		purple_connection_g_error(gc, error);
 		return;
 	}
 
@@ -431,7 +432,6 @@ fb_cb_image(FbDataImage *img, GError *error)
 
 	fata = fb_data_image_get_fata(img);
 	msg = fb_data_image_get_data(img);
-	fb_data_remove_message(fata, msg);
 
 	if (G_UNLIKELY(error != NULL)) {
 		url = fb_data_image_get_url(img);
@@ -453,7 +453,7 @@ fb_cb_image(FbDataImage *img, GError *error)
 
 	msgs = g_slist_prepend(msgs, msg);
 	fb_cb_api_messages(api, msgs, fata);
-	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+	g_slist_free(msgs);
 }
 
 static void
@@ -506,9 +506,9 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 		if (msg->flags & FB_API_MESSAGE_FLAG_IMAGE) {
 			if (!(msg->flags & FB_API_MESSAGE_FLAG_DONE)) {
 				msg = fb_api_message_dup(msg, TRUE);
-				fb_data_image_add(fata, msg->text,
-				                  fb_cb_image, msg);
-				fb_data_add_message(fata, msg);
+				fb_data_image_add(fata, msg->text, fb_cb_image,
+				                  msg, (GDestroyNotify)
+				                       fb_api_message_free);
 				fb_data_image_queue(fata);
 				continue;
 			}
@@ -589,6 +589,7 @@ fb_cb_api_presences(FbApi *api, GSList *press, gpointer data)
 static void
 fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 {
+	const gchar *name;
 	FbApiUser *user;
 	FbData *fata = data;
 	gboolean active;
@@ -606,10 +607,22 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 	FB_ID_TO_STR(thrd->tid, tid);
 
 	chat = purple_conversations_find_chat_with_account(tid, acct);
-	active = (chat != NULL) && !purple_chat_conversation_has_left(chat);
+
+	if ((chat == NULL) || purple_chat_conversation_has_left(chat)) {
+		chat = purple_serv_got_joined_chat(gc, id, tid);
+		active = FALSE;
+	} else {
+		/* If there are no users in the group chat, including
+		 * the local user, then the group chat has yet to be
+		 * setup by this function. As a result, any group chat
+		 * without users is inactive.
+		 */
+		active = purple_chat_conversation_get_users_count(chat) > 0;
+	}
 
 	if (!active) {
-		chat = purple_serv_got_joined_chat(gc, id, tid);
+		name = purple_account_get_username(acct);
+		purple_chat_conversation_add_user(chat, name, NULL, 0, FALSE);
 	}
 
 	purple_chat_conversation_set_topic(chat, NULL, thrd->topic);
@@ -650,13 +663,18 @@ fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
 static void
 fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 {
+	const gchar *alias;
 	FbApiUser *user;
 	FbData *fata = data;
 	gchar tid[FB_ID_STRMAX];
+	gchar uid[FB_ID_STRMAX];
 	GSList *l;
 	GSList *m;
 	GString *gstr;
 	FbApiThread *thrd;
+	PurpleAccount *acct;
+	PurpleBuddy *bdy;
+	PurpleConnection *gc;
 	PurpleRoomlist *list;
 	PurpleRoomlistRoom *room;
 
@@ -666,6 +684,8 @@ fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 		return;
 	}
 
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
 	gstr = g_string_new(NULL);
 
 	for (l = thrds; l != NULL; l = l->next) {
@@ -675,12 +695,20 @@ fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 
 		for (m = thrd->users; m != NULL; m = m->next) {
 			user = m->data;
+			FB_ID_TO_STR(user->uid, uid);
+			bdy = purple_blist_find_buddy(acct, uid);
+
+			if (bdy != NULL) {
+				alias = purple_buddy_get_alias(bdy);
+			} else {
+				alias = user->name;
+			}
 
 			if (gstr->len > 0) {
 				g_string_append(gstr, ", ");
 			}
 
-			g_string_append(gstr, user->name);
+			g_string_append(gstr, alias);
 		}
 
 		room = purple_roomlist_room_new(PURPLE_ROOMLIST_ROOMTYPE_ROOM,

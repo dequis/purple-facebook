@@ -54,6 +54,7 @@ struct _FbApiPrivate
 	FbHttpConns *cons;
 	PurpleConnection *gc;
 	GHashTable *data;
+	gboolean retrying;
 
 	FbId uid;
 	gint64 sid;
@@ -63,10 +64,10 @@ struct _FbApiPrivate
 	gchar *stoken;
 	gchar *token;
 
-	GHashTable *mids;
+	GQueue *msgs;
 	gboolean invisible;
 	guint unread;
-
+	FbId lastmid;
 };
 
 struct _FbApiData
@@ -79,7 +80,10 @@ static void
 fb_api_attach(FbApi *api, FbId aid, const gchar *msgid, FbApiMessage *msg);
 
 static void
-fb_api_contacts_after(FbApi *api, const gchar *writeid);
+fb_api_contacts_after(FbApi *api, const gchar *cursor);
+
+static void
+fb_api_message_send(FbApi *api, FbApiMessage *msg);
 
 static void
 fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg);
@@ -175,7 +179,7 @@ fb_api_dispose(GObject *obj)
 
 	fb_http_conns_free(priv->cons);
 	g_hash_table_destroy(priv->data);
-	g_hash_table_destroy(priv->mids);
+	g_queue_free_full(priv->msgs, (GDestroyNotify) fb_api_message_free);
 
 	g_free(priv->cid);
 	g_free(priv->did);
@@ -485,10 +489,9 @@ fb_api_init(FbApi *api)
 	api->priv = priv;
 
 	priv->cons = fb_http_conns_new();
+	priv->msgs = g_queue_new();
 	priv->data = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                   NULL, NULL);
-	priv->mids = g_hash_table_new_full(g_int64_hash, g_int64_equal,
-	                                   g_free, NULL);
 }
 
 GQuark
@@ -835,7 +838,15 @@ static void
 fb_api_cb_mqtt_error(FbMqtt *mqtt, GError *error, gpointer data)
 {
 	FbApi *api = data;
-	g_signal_emit_by_name(api, "error", error);
+	FbApiPrivate *priv = api->priv;
+
+	if (!priv->retrying) {
+		priv->retrying = TRUE;
+		fb_util_debug_info("Attempting to reconnect the MQTT stream...");
+		fb_api_connect(api, priv->invisible);
+	} else {
+		g_signal_emit_by_name(api, "error", error);
+	}
 }
 
 static void
@@ -855,66 +866,66 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 	thft = fb_thrift_new(NULL, 0);
 
 	/* Write the client identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 1);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 1, 0);
 	fb_thrift_write_str(thft, priv->cid);
 
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRUCT, 4);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRUCT, 4, 1);
 
 	/* Write the user identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 5);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 1, 0);
 	fb_thrift_write_i64(thft, priv->uid);
 
 	/* Write the information string */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 6);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 2, 1);
 	fb_thrift_write_str(thft, "");
 
 	/* Write the UNKNOWN ("cp"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 7);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 3, 2);
 	fb_thrift_write_i64(thft, 23);
 
 	/* Write the UNKNOWN ("ecp"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 8);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 4, 3);
 	fb_thrift_write_i64(thft, 26);
 
 	/* Write the UNKNOWN */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 9);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 5, 4);
 	fb_thrift_write_i32(thft, 1);
 
 	/* Write the UNKNOWN ("no_auto_fg"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 10);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 6, 5);
 	fb_thrift_write_bool(thft, TRUE);
 
 	/* Write the visibility state */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 11);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 7, 6);
 	fb_thrift_write_bool(thft, !priv->invisible);
 
 	/* Write the device identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 12);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 8, 7);
 	fb_thrift_write_str(thft, priv->did);
 
 	/* Write the UNKNOWN ("fg"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 13);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_BOOL, 9, 8);
 	fb_thrift_write_bool(thft, TRUE);
 
 	/* Write the UNKNOWN ("nwt"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 14);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 10, 9);
 	fb_thrift_write_i32(thft, 1);
 
 	/* Write the UNKNOWN ("nwst"?) */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 15);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I32, 11, 10);
 	fb_thrift_write_i32(thft, 0);
 
 	/* Write the MQTT identifier */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 16);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 12, 11);
 	fb_thrift_write_i64(thft, priv->mid);
 
 	/* Write the UNKNOWN */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_LIST, 18);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_LIST, 14, 12);
 	fb_thrift_write_list(thft, FB_THRIFT_TYPE_I32, 0);
 	fb_thrift_write_stop(thft);
 
 	/* Write the token */
-	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 19);
+	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 15, 14);
 	fb_thrift_write_str(thft, priv->token);
 
 	/* Write the STOP for the struct */
@@ -938,6 +949,7 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 static void
 fb_api_connect_queue(FbApi *api)
 {
+	FbApiMessage *msg;
 	FbApiPrivate *priv = api->priv;
 	gchar *json;
 	JsonBuilder *bldr;
@@ -984,6 +996,15 @@ fb_api_connect_queue(FbApi *api)
 	g_signal_emit_by_name(api, "connect");
 	g_free(json);
 
+	if (!g_queue_is_empty(priv->msgs)) {
+		msg = g_queue_peek_head(priv->msgs);
+		fb_api_message_send(api, msg);
+	}
+
+	if (priv->retrying) {
+		priv->retrying = FALSE;
+		fb_util_debug_info("Reconnected the MQTT stream");
+	}
 }
 
 static void
@@ -1058,7 +1079,6 @@ fb_api_cb_mqtt_connect(FbMqtt *mqtt, gpointer data)
 	fb_mqtt_unsubscribe(mqtt, "/orca_message_notifications", NULL);
 
 	if (priv->sid == 0) {
-		/* See fb_api_thread_list() for key mapping */
 		bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 		fb_json_bldr_add_str(bldr, "1", "0");
 		fb_api_http_query(api, FB_API_QUERY_THREADS, bldr,
@@ -1262,6 +1282,47 @@ fb_api_cb_publish_typing(FbApi *api, GByteArray *pload)
 	json_node_free(root);
 }
 
+static void
+fb_api_cb_publish_ms_r(FbApi *api, GByteArray *pload)
+{
+	FbApiMessage *msg;
+	FbApiPrivate *priv = api->priv;
+	FbJsonValues *values;
+	GError *err = NULL;
+	JsonNode *root;
+
+	if (!fb_api_json_chk(api, pload->data, pload->len, &root)) {
+		return;
+	}
+
+	values = fb_json_values_new(root);
+	fb_json_values_add(values, FB_JSON_TYPE_BOOL, TRUE, "$.succeeded");
+	fb_json_values_update(values, &err);
+
+	FB_API_ERROR_EMIT(api, err,
+		g_object_unref(values);
+		json_node_free(root);
+		return;
+	);
+
+	if (fb_json_values_next_bool(values, TRUE)) {
+		/* Pop and free the successful message */
+		msg = g_queue_pop_head(priv->msgs);
+		fb_api_message_free(msg);
+
+		if (!g_queue_is_empty(priv->msgs)) {
+			msg = g_queue_peek_head(priv->msgs);
+			fb_api_message_send(api, msg);
+		}
+	} else {
+		fb_api_error(api, FB_API_ERROR_GENERAL,
+					 "Failed to send message");
+	}
+
+	g_object_unref(values);
+	json_node_free(root);
+}
+
 static gchar *
 fb_api_xma_parse(FbApi *api, const gchar *body, JsonNode *root, GError **error)
 {
@@ -1289,9 +1350,9 @@ fb_api_xma_parse(FbApi *api, const gchar *body, JsonNode *root, GError **error)
 	url = fb_json_values_next_str(values, NULL);
 
 	if ((str == NULL) || (url == NULL)) {
-		g_propagate_error(error, err);
+		text = g_strdup(_("<Unsupported Attachment>"));
 		g_object_unref(values);
-		return NULL;
+		return text;
 	}
 
 	if (purple_strequal(str, "ExternalUrl")) {
@@ -1392,6 +1453,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	JsonNode *root;
 	JsonNode *node;
 
+	/* Read identifier string (for Facebook employees) */
 	thft = fb_thrift_new(pload, 0);
 	fb_thrift_read_str(thft, NULL);
 	size = fb_thrift_get_pos(thft);
@@ -1431,8 +1493,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
-	                   "$.deltaNewMessage.messageMetadata"
-			    ".offlineThreadingId");
+	                   "$.deltaNewMessage.messageMetadata.offlineThreadingId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
 	                   "$.deltaNewMessage.messageMetadata.actorFbId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
@@ -1454,10 +1515,18 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	while (fb_json_values_update(values, &err)) {
 		id = fb_json_values_next_int(values, 0);
 
-		if (g_hash_table_remove(priv->mids, &id)) {
+		/* Ignore everything but new messages */
+		if (id == 0) {
 			continue;
 		}
 
+		/* Ignore sequential duplicates */
+		if (id == priv->lastmid) {
+			fb_util_debug_info("Ignoring duplicate %" FB_ID_FORMAT, id);
+			continue;
+		}
+
+		priv->lastmid = id;
 		fb_api_message_reset(&msg, FALSE);
 		msg.uid = fb_json_values_next_int(values, 0);
 		oid = fb_json_values_next_int(values, 0);
@@ -1470,10 +1539,6 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 			if (msg.tid == 0) {
 				msg.uid = oid;
 			}
-		}
-
-		if (msg.uid == 0) {
-			continue;
 		}
 
 		body = fb_json_values_next_str(values, NULL);
@@ -1519,87 +1584,112 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 }
 
 static void
-fb_api_cb_publish_p(FbApi *api, GByteArray *pload)
+fb_api_cb_publish_pt(FbThrift *thft, GSList **press, GError **error)
 {
 	FbApiPresence *pres;
-	FbThrift *thft;
 	FbThriftType type;
+	gint16 id;
 	gint32 i32;
 	gint64 i64;
-	GSList *press;
 	guint i;
-	guint size;
+	guint size = 0;
 
-	/* Start at 1 to skip the NULL byte */
-	thft  = fb_thrift_new(pload, 1);
-	press = NULL;
+	/* Read identifier string (for Facebook employees) */
+	FB_API_TCHK(fb_thrift_read_str(thft, NULL));
 
-	/* Skip the full list boolean field */
-	fb_thrift_read_field(thft, &type, NULL);
-	g_warn_if_fail(type == FB_THRIFT_TYPE_BOOL);
-	fb_thrift_read_bool(thft, NULL);
+	/* Read the full list boolean field */
+	FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, 0));
+	FB_API_TCHK(type == FB_THRIFT_TYPE_BOOL);
+	FB_API_TCHK(id == 1);
+	FB_API_TCHK(fb_thrift_read_bool(thft, NULL));
 
 	/* Read the list field */
-	fb_thrift_read_field(thft, &type, NULL);
-	g_warn_if_fail(type == FB_THRIFT_TYPE_LIST);
+	FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, id));
+	FB_API_TCHK(type == FB_THRIFT_TYPE_LIST);
+	FB_API_TCHK(id == 2);
 
 	/* Read the list */
-	fb_thrift_read_list(thft, &type, &size);
-	g_warn_if_fail(type == FB_THRIFT_TYPE_STRUCT);
+	FB_API_TCHK(fb_thrift_read_list(thft, &type, &size));
+	FB_API_TCHK(type == FB_THRIFT_TYPE_STRUCT);
 
 	for (i = 0; i < size; i++) {
 		/* Read the user identifier field */
-		fb_thrift_read_field(thft, &type, NULL);
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I64);
-		fb_thrift_read_i64(thft, &i64);
+		FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, 0));
+		FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
+		FB_API_TCHK(id == 1);
+		FB_API_TCHK(fb_thrift_read_i64(thft, &i64));
 
 		/* Read the active field */
-		fb_thrift_read_field(thft, &type, NULL);
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I32);
-		fb_thrift_read_i32(thft, &i32);
+		FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, id));
+		FB_API_TCHK(type == FB_THRIFT_TYPE_I32);
+		FB_API_TCHK(id == 2);
+		FB_API_TCHK(fb_thrift_read_i32(thft, &i32));
 
 		pres = fb_api_presence_dup(NULL);
 		pres->uid = i64;
 		pres->active = i32 != 0;
-		press = g_slist_prepend(press, pres);
+		*press = g_slist_prepend(*press, pres);
 
 		fb_util_debug_info("Presence: %" FB_ID_FORMAT " (%d)",
 		                   i64, i32 != 0);
 
-		/* Skip the last active timestamp field */
-		if (!fb_thrift_read_field(thft, &type, NULL)) {
-			continue;
+		while (id <= 5) {
+			if (fb_thrift_read_isstop(thft)) {
+				break;
+			}
+
+			FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, id));
+
+			switch (id) {
+			case 3:
+				/* Read the last active timestamp field */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
+				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+				break;
+
+			case 4:
+				/* Read the active client bits field */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I16);
+				FB_API_TCHK(fb_thrift_read_i16(thft, NULL));
+				break;
+
+			case 5:
+				/* Read the VoIP compatibility bits field */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
+				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+				break;
+
+			default:
+				FB_API_TCHK(FALSE);
+				break;
+			}
 		}
-
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I64);
-		fb_thrift_read_i64(thft, NULL);
-
-		/* Skip the active client bits field */
-		if (!fb_thrift_read_field(thft, &type, NULL)) {
-			continue;
-		}
-
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I16);
-		fb_thrift_read_i16(thft, NULL);
-
-		/* Skip the VoIP compatibility bits field */
-		if (!fb_thrift_read_field(thft, &type, NULL)) {
-			continue;
-		}
-
-		g_warn_if_fail(type == FB_THRIFT_TYPE_I64);
-		fb_thrift_read_i64(thft, NULL);
 
 		/* Read the field stop */
-		fb_thrift_read_stop(thft);
+		FB_API_TCHK(fb_thrift_read_stop(thft));
 	}
 
 	/* Read the field stop */
-	fb_thrift_read_stop(thft);
+	FB_API_TCHK(fb_thrift_read_stop(thft));
+}
+
+static void
+fb_api_cb_publish_p(FbApi *api, GByteArray *pload)
+{
+	FbThrift *thft;
+	GError *err = NULL;
+	GSList *press = NULL;
+
+	thft = fb_thrift_new(pload, 0);
+	fb_api_cb_publish_pt(thft, &press, &err);
 	g_object_unref(thft);
 
-	press = g_slist_reverse(press);
-	g_signal_emit_by_name(api, "presences", press);
+	if (G_LIKELY(err == NULL)) {
+		g_signal_emit_by_name(api, "presences", press);
+	} else {
+		fb_api_error_emit(api, err);
+	}
+
 	g_slist_free_full(press, (GDestroyNotify) fb_api_presence_free);
 }
 
@@ -1620,6 +1710,7 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 		{"/mark_thread_response", fb_api_cb_publish_mark},
 		{"/mercury", fb_api_cb_publish_mercury},
 		{"/orca_typing_notifications", fb_api_cb_publish_typing},
+		{"/send_message_response", fb_api_cb_publish_ms_r},
 		{"/t_ms", fb_api_cb_publish_ms},
 		{"/t_p", fb_api_cb_publish_p}
 	};
@@ -1904,8 +1995,13 @@ fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	user.icon = fb_json_values_next_str_dup(values, NULL);
 
 	prms = fb_http_params_new_parse(user.icon, TRUE);
-	user.csum = fb_http_params_dup_str(prms, "oh", &err);
+	user.csum = fb_http_params_dup_str(prms, "oh", NULL);
 	fb_http_params_free(prms);
+
+	if (G_UNLIKELY(user.csum == NULL)) {
+		/* Revert to the icon URL as the unique checksum */
+		user.csum = g_strdup(user.icon);
+	}
 
 	g_signal_emit_by_name(api, "contact", &user);
 	fb_api_user_reset(&user, TRUE);
@@ -1917,14 +2013,6 @@ void
 fb_api_contact(FbApi *api, FbId uid)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: user_fbids
-	 *   1: include_full_user_info
-	 *   2: profile_pic_large_size
-	 *   3: profile_pic_medium_size
-	 *   4: profile_pic_small_size
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
@@ -1939,6 +2027,7 @@ static void
 fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
                    gpointer data)
 {
+	const gchar *cursor;
 	const gchar *str;
 	FbApi *api = data;
 	FbApiPrivate *priv = api->priv;
@@ -1947,10 +2036,8 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbId uid;
 	FbJsonValues *values;
 	gboolean complete;
-	gchar *writeid = NULL;
 	GError *err = NULL;
 	GSList *users = NULL;
-	guint count = 0;
 	JsonNode *root;
 
 	if (!fb_api_http_chk(api, con, res, &root)) {
@@ -1958,8 +2045,6 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	}
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
-	                   "$.graph_api_write_id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
 	                   "$.represented_profile.id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
@@ -1972,10 +2057,6 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	                                         ".nodes");
 
 	while (fb_json_values_update(values, &err)) {
-		g_free(writeid);
-		writeid = fb_json_values_next_str_dup(values, NULL);
-		count++;
-
 		str = fb_json_values_next_str(values, "0");
 		uid = FB_ID_FROM_STR(str);
 		str = fb_json_values_next_str(values, NULL);
@@ -1992,23 +2073,37 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		user->icon = fb_json_values_next_str_dup(values, NULL);
 
 		prms = fb_http_params_new_parse(user->icon, TRUE);
-		user->csum = fb_http_params_dup_str(prms, "oh", &err);
+		user->csum = fb_http_params_dup_str(prms, "oh", NULL);
 		fb_http_params_free(prms);
+
+		if (G_UNLIKELY(user->csum == NULL)) {
+			/* Revert to the icon URL as the unique checksum */
+			user->csum = g_strdup(user->icon);
+		}
+
 		users = g_slist_prepend(users, user);
 	}
 
+	g_object_unref(values);
+
+	values = fb_json_values_new(root);
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+                       "$.viewer.messenger_contacts.page_info.end_cursor");
+	fb_json_values_update(values, NULL);
+
+	cursor = fb_json_values_next_str(values, NULL);
+
 	if (G_UNLIKELY(err == NULL)) {
-		complete = (writeid == NULL) || (count < FB_API_CONTACTS_COUNT);
+		complete = (cursor == NULL);
 		g_signal_emit_by_name(api, "contacts", users, complete);
 
 		if (!complete) {
-			fb_api_contacts_after(api, writeid);
+			fb_api_contacts_after(api, cursor);
 		}
 	} else {
 		fb_api_error_emit(api, err);
 	}
 
-	g_free(writeid);
 	g_slist_free_full(users, (GDestroyNotify) fb_api_user_free);
 	g_object_unref(values);
 	json_node_free(root);
@@ -2018,16 +2113,6 @@ void
 fb_api_contacts(FbApi *api)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: profile_types
-	 *   1: limit
-	 *   2: big_img_size
-	 *   3: huge_img_size
-	 *   4: small_img_size
-	 *   5: low_res_cover_size
-	 *   6: media_type
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
@@ -2040,31 +2125,16 @@ fb_api_contacts(FbApi *api)
 }
 
 static void
-fb_api_contacts_after(FbApi *api, const gchar *writeid)
+fb_api_contacts_after(FbApi *api, const gchar *cursor)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: profile_types
-	 *   1: after
-	 *   2: limit
-	 *   3: big_img_size
-	 *   4: huge_img_size
-	 *   5: small_img_size
-	 *   6: low_res_cover_size
-	 *   7: media_type
-	 */
-
-	if (g_str_has_prefix(writeid, "contact_")) {
-		writeid += 8;
-	}
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
 	fb_json_bldr_add_str(bldr, NULL, "user");
 	fb_json_bldr_arr_end(bldr);
 
-	fb_json_bldr_add_str(bldr, "1", writeid);
+	fb_json_bldr_add_str(bldr, "1", cursor);
 	fb_json_bldr_add_str(bldr, "2", G_STRINGIFY(FB_API_CONTACTS_COUNT));
 	fb_api_http_query(api, FB_API_QUERY_CONTACTS_AFTER, bldr,
 	                  fb_api_cb_contacts);
@@ -2093,28 +2163,28 @@ fb_api_disconnect(FbApi *api)
 	fb_mqtt_disconnect(priv->mqtt);
 }
 
-void
-fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *text)
+static void
+fb_api_message_send(FbApi *api, FbApiMessage *msg)
 {
 	const gchar *tpfx;
-	FbApiPrivate *priv;
-	FbId *dmid;
+	FbApiPrivate *priv = api->priv;
+	FbId id;
 	FbId mid;
 	gchar *json;
 	JsonBuilder *bldr;
 
-	g_return_if_fail(FB_IS_API(api));
-	g_return_if_fail(text != NULL);
-	priv = api->priv;
-
 	mid = FB_API_MSGID(g_get_real_time() / 1000, g_random_int());
-	tpfx = thread ? "tfbid_" : "";
 
-	dmid = g_memdup(&mid, sizeof mid);
-	g_hash_table_replace(priv->mids, dmid, dmid);
+	if (msg->tid != 0) {
+		tpfx = "tfbid_";
+		id = msg->tid;
+	} else {
+		tpfx = "";
+		id = msg->uid;
+	}
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
-	fb_json_bldr_add_str(bldr, "body", text);
+	fb_json_bldr_add_str(bldr, "body", msg->text);
 	fb_json_bldr_add_strf(bldr, "msgid", "%" FB_ID_FORMAT, mid);
 	fb_json_bldr_add_strf(bldr, "sender_fbid", "%" FB_ID_FORMAT, priv->uid);
 	fb_json_bldr_add_strf(bldr, "to", "%s%" FB_ID_FORMAT, tpfx, id);
@@ -2122,6 +2192,34 @@ fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *text)
 	json = fb_json_bldr_close(bldr, JSON_NODE_OBJECT, NULL);
 	fb_api_publish(api, "/send_message2", "%s", json);
 	g_free(json);
+}
+
+void
+fb_api_message(FbApi *api, FbId id, gboolean thread, const gchar *text)
+{
+	FbApiMessage *msg;
+	FbApiPrivate *priv;
+	gboolean empty;
+
+	g_return_if_fail(FB_IS_API(api));
+	g_return_if_fail(text != NULL);
+	priv = api->priv;
+
+	msg = fb_api_message_dup(NULL, FALSE);
+	msg->text = g_strdup(text);
+
+	if (thread) {
+		msg->tid = id;
+	} else {
+		msg->uid = id;
+	}
+
+	empty = g_queue_is_empty(priv->msgs);
+	g_queue_push_tail(priv->msgs, msg);
+
+	if (empty && fb_mqtt_connected(priv->mqtt, FALSE)) {
+		fb_api_message_send(api, msg);
+	}
 }
 
 void
@@ -2384,7 +2482,6 @@ fb_api_cb_unread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			id = fb_json_values_next_str(values, "0");
 		}
 
-		/* See fb_api_thread_info() for key mapping */
 		bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 		fb_json_bldr_arr_begin(bldr, "0");
 		fb_json_bldr_add_str(bldr, NULL, id);
@@ -2419,7 +2516,6 @@ fb_api_unread(FbApi *api)
 		return;
 	}
 
-	/* See fb_api_thread_list() for key mapping */
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_str(bldr, "2", "true");
 	fb_json_bldr_add_int(bldr, "1", priv->unread);
@@ -2473,14 +2569,6 @@ fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg)
 {
 	JsonBuilder *bldr;
 	PurpleHttpConnection *http;
-
-	/* Object key mapping:
-	 *   0: sticker_ids
-	 *   1: media_type
-	 *   2: preview_size
-	 *   3: scaling_factor
-	 *   4: animated_media_type
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
@@ -2609,26 +2697,6 @@ void
 fb_api_thread(FbApi *api, FbId tid)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: thread_ids
-	 *   1: verification_type
-	 *   2: hash_key
-	 *   3: small_preview_size
-	 *   4: large_preview_size
-	 *   5: item_count
-	 *   6: event_count
-	 *   7: full_screen_height
-	 *   8: full_screen_width
-	 *   9: medium_preview_size
-	 *   10: fetch_users_separately
-	 *   11: include_message_info
-	 *   12: msg_count
-	 *   13: include_full_user_info
-	 *   14: profile_pic_large_size
-	 *   15: profile_pic_medium_size
-	 *   16: profile_pic_small_size
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
@@ -2834,28 +2902,6 @@ void
 fb_api_threads(FbApi *api)
 {
 	JsonBuilder *bldr;
-
-	/* Object key mapping:
-	 *   0: folder_tag
-	 *   1: thread_count
-	 *   2: include_thread_info
-	 *   3: verification_type
-	 *   4: hash_key
-	 *   5: small_preview_size
-	 *   6: large_preview_size
-	 *   7: item_count
-	 *   8: event_count
-	 *   9: full_screen_height
-	 *   10: full_screen_width
-	 *   11: medium_preview_size
-	 *   12: fetch_users_separately
-	 *   13: include_message_info
-	 *   14: msg_count
-	 *   15: <UNKNOWN>
-	 *   16: profile_pic_large_size
-	 *   17: profile_pic_medium_size
-	 *   18: profile_pic_small_size
-	 */
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_add_str(bldr, "2", "true");

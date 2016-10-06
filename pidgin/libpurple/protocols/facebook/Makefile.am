@@ -52,13 +52,14 @@ else
 st =
 pkg_LTLIBRARIES        = libfacebook.la
 libfacebook_la_SOURCES = $(FACEBOOKSOURCES)
-libfacebook_la_LIBADD  = @PURPLE_LIBS@
+libfacebook_la_LIBADD  = @PURPLE_LIBS@ $(JSON_LIBS)
 
 endif
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_builddir)/libpurple \
+	-I$(top_srcdir) \
 	$(GLIB_CFLAGS) \
 	$(JSON_CFLAGS) \
 	$(ZLIB_CFLAGS) \
