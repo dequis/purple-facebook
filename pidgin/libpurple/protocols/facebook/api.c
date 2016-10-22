@@ -2174,6 +2174,7 @@ fb_api_message_send(FbApi *api, FbApiMessage *msg)
 	JsonBuilder *bldr;
 
 	mid = FB_API_MSGID(g_get_real_time() / 1000, g_random_int());
+	priv->lastmid = mid;
 
 	if (msg->tid != 0) {
 		tpfx = "tfbid_";
