@@ -2064,11 +2064,11 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	}
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.represented_profile.id");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.represented_profile.friendship_status");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.structured_name.text");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.hugePictureUrl.uri");
@@ -2080,8 +2080,8 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		uid = FB_ID_FROM_STR(str);
 		str = fb_json_values_next_str(values, NULL);
 
-		if (!purple_strequal(str, "ARE_FRIENDS") &&
-		    (uid != priv->uid))
+		if ((!purple_strequal(str, "ARE_FRIENDS") &&
+		    (uid != priv->uid)) || (uid == 0))
 		{
 			continue;
 		}
