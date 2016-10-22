@@ -353,7 +353,10 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 		errc = PURPLE_CONNECTION_ERROR_NETWORK_ERROR;
 	}
 
-	purple_connection_error(gc, errc, error->message);
+
+	if (!g_error_matches(error, FB_API_ERROR, FB_API_ERROR_NONFATAL)) {
+		purple_connection_error(gc, errc, error->message);
+	}
 }
 
 static void
