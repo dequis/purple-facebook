@@ -26,4 +26,3 @@ libpurple/protocols/facebook/util.c
 libpurple/protocols/facebook/util.h
 libpurple/purple-socket.c
 libpurple/purple-socket.h
-share/ca-certs/GTE_CyberTrust_Global_Root.pem

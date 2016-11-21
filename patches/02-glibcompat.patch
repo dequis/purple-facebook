@@ -1,12 +1,11 @@
-diff -r 1852eb9052a0 libpurple/glibcompat.h
---- a/libpurple/glibcompat.h	Fri Dec 25 15:20:41 2015 -0500
-+++ b/libpurple/glibcompat.h	Fri Dec 25 15:49:07 2015 -0500
-@@ -61,6 +61,33 @@
- 	return FALSE;
- }
- 
-+#if !GLIB_CHECK_VERSION(2, 32, 0)
+--- a/libpurple/glibcompat.h	2016-11-21 09:38:39.250858177 -0300
++++ b/libpurple/glibcompat.h	2016-11-21 09:39:44.789845560 -0300
+@@ -66,6 +66,30 @@
+ /******************************************************************************
+  * g_assert_* macros
+  *****************************************************************************/
 +
++#if !GLIB_CHECK_VERSION(2, 32, 0)
 +static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
 +{
 +	GByteArray *array;
@@ -23,15 +22,12 @@ diff -r 1852eb9052a0 libpurple/glibcompat.h
 +	g_queue_foreach(queue, (GFunc)free_func, NULL);
 +	g_queue_free(queue);
 +}
++#endif
 +
 +#if !GLIB_CHECK_VERSION(2, 30, 0)
-+
 +#define G_VALUE_INIT {0, {{0}}}
++#endif
 +
-+#endif /* < 2.30.0 */
-+
-+#endif /* < 2.32.0 */
-+
- #endif /* < 2.36.0 */
- 
- 
+ #if !GLIB_CHECK_VERSION(2, 38, 0)
+ #define g_assert_true(expr)             G_STMT_START { \
+                                              if G_LIKELY (expr) ; else \

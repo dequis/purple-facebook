@@ -1,0 +1,42 @@
+diff --git a/libpurple/http.c b/libpurple/http.c
+--- a/libpurple/http.c
++++ b/libpurple/http.c
+@@ -486,11 +486,7 @@ purple_http_socket_connect_new_cb(GObjec
+ 	cb_data = g_object_steal_data(source, "cb_data");
+ 
+ 	if (conn == NULL) {
+-		if (!g_error_matches(error,
+-				G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+-			cb(hs, error->message, cb_data);
+-		}
+-
++		cb(hs, error->message, cb_data);
+ 		g_clear_error(&error);
+ 		return;
+ 	}
+@@ -1162,10 +1158,8 @@ static gboolean _purple_http_recv_loopbo
+ 				&error);
+ 	got_anything = (len > 0);
+ 
+-	if (len < 0 && (g_error_matches(error,
+-			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK) ||
+-			g_error_matches(error,
+-			G_IO_ERROR, G_IO_ERROR_CANCELLED))) {
++	if (len < 0 && g_error_matches(error,
++			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK)) {
+ 		g_clear_error(&error);
+ 		return FALSE;
+ 	}
+@@ -1450,10 +1444,8 @@ static gboolean _purple_http_send(GObjec
+ 				&error);
+ 	}
+ 
+-	if (written < 0 && (g_error_matches(error,
+-			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK) ||
+-			g_error_matches(error,
+-			G_IO_ERROR, G_IO_ERROR_CANCELLED))) {
++	if (written < 0 && g_error_matches(error,
++			G_IO_ERROR, G_IO_ERROR_WOULD_BLOCK)) {
+ 		g_clear_error(&error);
+ 		return G_SOURCE_CONTINUE;
+ 	}
