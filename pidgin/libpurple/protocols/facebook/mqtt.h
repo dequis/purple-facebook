@@ -107,13 +107,6 @@
  */
 #define FB_MQTT_ERROR  fb_mqtt_error_quark()
 
-/**
- * FB_MQTT_SSL_ERROR:
- *
- * The #GQuark of the domain of MQTT SSL errors.
- */
-#define FB_MQTT_SSL_ERROR  fb_mqtt_ssl_error_quark()
-
 typedef struct _FbMqtt FbMqtt;
 typedef struct _FbMqttClass FbMqttClass;
 typedef struct _FbMqttPrivate FbMqttPrivate;
@@ -296,16 +289,6 @@ fb_mqtt_message_get_type(void);
  */
 GQuark
 fb_mqtt_error_quark(void);
-
-/**
- * fb_mqtt_ssl_error_quark:
- *
- * Gets the #GQuark of the domain of MQTT SSL errors.
- *
- * Returns: The #GQuark of the domain.
- */
-GQuark
-fb_mqtt_ssl_error_quark(void);
 
 /**
  * fb_mqtt_new:
