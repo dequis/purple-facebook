@@ -52,7 +52,7 @@ else
 st =
 pkg_LTLIBRARIES        = libfacebook.la
 libfacebook_la_SOURCES = $(FACEBOOKSOURCES)
-libfacebook_la_LIBADD  = @PURPLE_LIBS@
+libfacebook_la_LIBADD  = @PURPLE_LIBS@ $(JSON_LIBS)
 
 endif
 

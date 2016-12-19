@@ -600,6 +600,12 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 		priv->token = NULL;
 	}
 
+	/* 509 is used for "invalid attachment id" */
+	if (code == 509) {
+		errc = FB_API_ERROR_NONFATAL;
+		success = FALSE;
+	}
+
 	str = fb_json_values_next_str(values, NULL);
 
 	if (purple_strequal(str, "ERROR_QUEUE_NOT_FOUND") ||
@@ -1949,6 +1955,28 @@ fb_api_auth(FbApi *api, const gchar *user, const gchar *pass)
 	                prms, fb_api_cb_auth);
 }
 
+static gchar *
+fb_api_user_icon_checksum(gchar *icon)
+{
+	gchar *csum;
+	FbHttpParams *prms;
+
+	if (G_UNLIKELY(icon == NULL)) {
+		return NULL;
+	}
+
+	prms = fb_http_params_new_parse(icon, TRUE);
+	csum = fb_http_params_dup_str(prms, "oh", NULL);
+	fb_http_params_free(prms);
+
+	if (G_UNLIKELY(csum == NULL)) {
+		/* Revert to the icon URL as the unique checksum */
+		csum = g_strdup(icon);
+	}
+
+	return csum;
+}
+
 static void
 fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
                   gpointer data)
@@ -1956,7 +1984,6 @@ fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	const gchar *str;
 	FbApi *api = data;
 	FbApiUser user;
-	FbHttpParams *prms;
 	FbJsonValues *values;
 	GError *err = NULL;
 	JsonNode *node;
@@ -1978,7 +2005,7 @@ fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	values = fb_json_values_new(node);
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.id");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.name");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.profile_pic_large.uri");
 	fb_json_values_update(values, &err);
 
@@ -1994,14 +2021,7 @@ fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	user.name = fb_json_values_next_str_dup(values, NULL);
 	user.icon = fb_json_values_next_str_dup(values, NULL);
 
-	prms = fb_http_params_new_parse(user.icon, TRUE);
-	user.csum = fb_http_params_dup_str(prms, "oh", NULL);
-	fb_http_params_free(prms);
-
-	if (G_UNLIKELY(user.csum == NULL)) {
-		/* Revert to the icon URL as the unique checksum */
-		user.csum = g_strdup(user.icon);
-	}
+	user.csum = fb_api_user_icon_checksum(user.icon);
 
 	g_signal_emit_by_name(api, "contact", &user);
 	fb_api_user_reset(&user, TRUE);
@@ -2032,7 +2052,6 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	FbApi *api = data;
 	FbApiPrivate *priv = api->priv;
 	FbApiUser *user;
-	FbHttpParams *prms;
 	FbId uid;
 	FbJsonValues *values;
 	gboolean complete;
@@ -2045,13 +2064,13 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	}
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.represented_profile.id");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.represented_profile.friendship_status");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.structured_name.text");
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.hugePictureUrl.uri");
 	fb_json_values_set_array(values, FALSE, "$.viewer.messenger_contacts"
 	                                         ".nodes");
@@ -2061,8 +2080,8 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		uid = FB_ID_FROM_STR(str);
 		str = fb_json_values_next_str(values, NULL);
 
-		if (!purple_strequal(str, "ARE_FRIENDS") &&
-		    (uid != priv->uid))
+		if ((!purple_strequal(str, "ARE_FRIENDS") &&
+		    (uid != priv->uid)) || (uid == 0))
 		{
 			continue;
 		}
@@ -2072,14 +2091,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		user->name = fb_json_values_next_str_dup(values, NULL);
 		user->icon = fb_json_values_next_str_dup(values, NULL);
 
-		prms = fb_http_params_new_parse(user->icon, TRUE);
-		user->csum = fb_http_params_dup_str(prms, "oh", NULL);
-		fb_http_params_free(prms);
-
-		if (G_UNLIKELY(user->csum == NULL)) {
-			/* Revert to the icon URL as the unique checksum */
-			user->csum = g_strdup(user->icon);
-		}
+		user->csum = fb_api_user_icon_checksum(user->icon);
 
 		users = g_slist_prepend(users, user);
 	}
@@ -2174,6 +2186,7 @@ fb_api_message_send(FbApi *api, FbApiMessage *msg)
 	JsonBuilder *bldr;
 
 	mid = FB_API_MSGID(g_get_real_time() / 1000, g_random_int());
+	priv->lastmid = mid;
 
 	if (msg->tid != 0) {
 		tpfx = "tfbid_";
