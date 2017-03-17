@@ -9,6 +9,7 @@ if test "$HASHG" != "0"; then
     HASGIT=$(_TMP_=$(type git 2>&1); echo $?)
     if test "HASGIT" != "0"; then
         echo "git not found in PATH" >&2
+        exit $HASGIT
     else
         URL="https://github.com/tieto/pidgin.git"
         CMD=git
