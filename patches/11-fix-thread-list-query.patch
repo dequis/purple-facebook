@@ -1,0 +1,40 @@
+--- a/libpurple/protocols/facebook/api.c	2017-03-29 09:55:50.024456518 -0300
++++ b/libpurple/protocols/facebook/api.c	2017-03-29 09:59:36.546399711 -0300
+@@ -802,6 +802,7 @@
+ 	case FB_API_QUERY_THREAD:
+ 		name = "ThreadQuery";
+ 		break;
++	case FB_API_QUERY_SEQ_ID:
+ 	case FB_API_QUERY_THREADS:
+ 		name = "ThreadListQuery";
+ 		break;
+@@ -1089,7 +1090,7 @@
+ 	if (priv->sid == 0) {
+ 		bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
+ 		fb_json_bldr_add_str(bldr, "1", "0");
+-		fb_api_http_query(api, FB_API_QUERY_THREADS, bldr,
++		fb_api_http_query(api, FB_API_QUERY_SEQ_ID, bldr,
+ 		                  fb_api_cb_seqid);
+ 	} else {
+ 		fb_api_connect_queue(api);
+--- a/libpurple/protocols/facebook/api.h	2017-03-29 09:55:50.024456518 -0300
++++ b/libpurple/protocols/facebook/api.h	2017-03-29 09:57:34.278827392 -0300
+@@ -275,7 +275,17 @@
+  *   17: profile_pic_medium_size
+  *   18: profile_pic_small_size
+  */
+-#define FB_API_QUERY_THREADS  10155268192741729
++#define FB_API_QUERY_THREADS  10153919752026729
++
++/**
++ * FB_API_QUERY_SEQ_ID:
++ *
++ * A variant of ThreadListQuery with sequence ID
++ *
++ * TODO: parameters.
++ */
++
++#define FB_API_QUERY_SEQ_ID  10155268192741729
+ 
+ /**
+  * FB_API_QUERY_XMA:
