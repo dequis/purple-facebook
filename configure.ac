@@ -17,7 +17,7 @@ AC_PREREQ([2.64])
 
 AC_INIT(
     [purple-facebook],
-    m4_join([-], [0.9.1], m4_esyscmd_s([cat VERSION])),
+    m4_join([-], [0.9.2], m4_esyscmd_s([cat VERSION])),
     [https://github.com/dequis/purple-facebook/issues],
     [purple-facebook],
     [https://github.com/dequis/purple-facebook],
