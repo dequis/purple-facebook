@@ -396,6 +396,10 @@ fb_http_urlcmp(const gchar *url1, const gchar *url2, gboolean protocol)
 		return url1 == url2;
 	}
 
+	if (strstr(url1, url2) != NULL || strstr(url2, url1) != NULL) {
+		return TRUE;
+	}
+
 	purl1 = purple_http_url_parse(url1);
 
 	if (purl1 == NULL) {
