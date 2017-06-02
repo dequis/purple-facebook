@@ -859,7 +859,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 
 		tmp = g_strdup_printf("%s:%s", proxy_username, proxy_password);
 		len = strlen(tmp);
-		proxy_auth = purple_base64_encode((const guchar *)tmp, len);
+		proxy_auth = g_base64_encode((const guchar *)tmp, len);
 		memset(tmp, 0, len);
 		g_free(tmp);
 
