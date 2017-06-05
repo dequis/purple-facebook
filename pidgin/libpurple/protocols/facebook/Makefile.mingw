@@ -42,7 +42,6 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##  SOURCES, OBJECTS
 ##
 C_SRC =	\
-			marshal.c \
 			api.c \
 			data.c \
 			facebook.c \
@@ -85,18 +84,11 @@ $(OBJECTS): $(PURPLE_CONFIG_H)
 $(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
 
-marshal.c: marshaller.list marshal.h
-	@echo "#include \"marshal.h\"" > $@
-	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --body marshaller.list >> $@
-
-marshal.h: marshaller.list
-	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --header marshaller.list > $@
-
 ##
 ## CLEAN RULES
 ##
 clean:
-	rm -f $(OBJECTS) marshal.c marshal.h
+	rm -f $(OBJECTS)
 	rm -f $(TARGET).dll
 
 include $(PIDGIN_COMMON_TARGETS)
