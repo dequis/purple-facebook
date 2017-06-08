@@ -1,0 +1,26 @@
+--- a/libpurple/protocols/facebook/api.c	2017-06-08 15:02:12.965124587 -0300
++++ b/libpurple/protocols/facebook/api.c	2017-06-08 15:14:32.217748548 -0300
+@@ -1033,7 +1033,7 @@
+ 	}
+ 
+ 	values = fb_json_values_new(root);
+-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
++	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+ 	                   "$.viewer.message_threads.sync_sequence_id");
+ 	fb_json_values_add(values, FB_JSON_TYPE_INT, TRUE,
+ 	                   "$.viewer.message_threads.unread_count");
+@@ -1049,7 +1049,13 @@
+ 	priv->sid = g_ascii_strtoll(str, NULL, 10);
+ 	priv->unread = fb_json_values_next_int(values, 0);
+ 
+-	fb_api_connect_queue(api);
++	if (priv->sid == 0) {
++		fb_api_error(api, FB_API_ERROR_GENERAL,
++		             _("Failed to get sync_sequence_id"));
++	} else {
++		fb_api_connect_queue(api);
++	}
++
+ 	g_object_unref(values);
+ 	json_node_free(root);
+ }
