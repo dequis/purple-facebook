@@ -26,7 +26,7 @@
   * The HTTP User-Agent header.
   */
 -#define FB_API_AGENT  "Facebook plugin / Purple / 0.9"
-+#define FB_API_AGENT  "Facebook plugin / Purple / 0.9.3 " FB_ORCA_AGENT
++#define FB_API_AGENT  "Facebook plugin / Purple / 0.9.4 " FB_ORCA_AGENT
  
  /**
   * FB_API_MQTT_AGENT
