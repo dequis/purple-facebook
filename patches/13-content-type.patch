@@ -1,0 +1,10 @@
+--- a/libpurple/protocols/facebook/api.c	2017-06-08 13:50:51.660801537 -0300
++++ b/libpurple/protocols/facebook/api.c	2017-06-08 13:50:48.960852585 -0300
+@@ -763,6 +763,7 @@
+ 	}
+ 
+ 	purple_http_request_header_set(req, "User-Agent", FB_API_AGENT);
++	purple_http_request_header_set(req, "Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
+ 
+ 	data = fb_http_params_close(params, NULL);
+ 	purple_http_request_set_contents(req, data, -1);
