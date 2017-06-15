@@ -26,7 +26,6 @@
 
 
 #include "debug.h"
-#include "ntlm.h"
 #include "proxy.h"
 #include "purple-gio.h"
 
@@ -228,6 +227,25 @@ struct _PurpleHttpGzStream
 	gsize max_output;
 	gsize decompressed;
 	GString *pending;
+};
+
+struct _ntlm_type1_message {
+	guint8  protocol[8];     /* 'N', 'T', 'L', 'M', 'S', 'S', 'P', '\0' */
+	guint32 type;            /* 0x00000001 */
+	guint32 flags;           /* 0x0000b203 */
+
+	guint16 dom_len1;        /* domain string length */
+	guint16 dom_len2;        /* domain string length */
+	guint32 dom_off;         /* domain string offset */
+
+	guint16 host_len1;       /* host string length */
+	guint16 host_len2;       /* host string length */
+	guint32 host_off;        /* host string offset (always 0x00000020) */
+
+#if 0
+	guint8  host[*];         /* host string (ASCII) */
+	guint8  dom[*];          /* domain string (ASCII) */
+#endif
 };
 
 static time_t purple_http_rfc1123_to_time(const gchar *str);
@@ -459,6 +477,56 @@ purple_http_gz_free(PurpleHttpGzStream *gzs)
 	if (gzs->pending)
 		g_string_free(gzs->pending, TRUE);
 	g_free(gzs);
+}
+
+/*** NTLM *********************************************************************/
+
+/**
+ * purple_ntlm_gen_type1:
+ * @hostname: Your hostname
+ * @domain: The domain to authenticate to
+ *
+ * Generates the base64 encoded type 1 message needed for NTLM authentication
+ *
+ * Returns: base64 encoded string to send to the server.  This should
+ *         be g_free'd by the caller.
+ */
+static gchar *
+purple_http_ntlm_gen_type1(const gchar *hostname, const gchar *domain)
+{
+	int hostnamelen,host_off;
+	int domainlen,dom_off;
+	unsigned char *msg;
+	struct _ntlm_type1_message *tmsg;
+	gchar *tmp;
+
+	hostnamelen = strlen(hostname);
+	domainlen = strlen(domain);
+	host_off = sizeof(struct _ntlm_type1_message);
+	dom_off = sizeof(struct _ntlm_type1_message) + hostnamelen;
+	msg = g_malloc0(sizeof(struct _ntlm_type1_message) + hostnamelen + domainlen);
+	tmsg = (struct _ntlm_type1_message*)(gpointer)msg;
+	tmsg->protocol[0] = 'N';
+	tmsg->protocol[1] = 'T';
+	tmsg->protocol[2] = 'L';
+	tmsg->protocol[3] = 'M';
+	tmsg->protocol[4] = 'S';
+	tmsg->protocol[5] = 'S';
+	tmsg->protocol[6] = 'P';
+	tmsg->protocol[7] = '\0';
+	tmsg->type      = GUINT32_TO_LE(0x00000001);
+	tmsg->flags     = GUINT32_TO_LE(0x0000b203);
+	tmsg->dom_len1  = tmsg->dom_len2 = GUINT16_TO_LE(domainlen);
+	tmsg->dom_off   = GUINT32_TO_LE(dom_off);
+	tmsg->host_len1 = tmsg->host_len2 = GUINT16_TO_LE(hostnamelen);
+	tmsg->host_off  = GUINT32_TO_LE(host_off);
+	memcpy(msg + host_off, hostname, hostnamelen);
+	memcpy(msg + dom_off, domain, domainlen);
+
+	tmp = g_base64_encode(msg, sizeof(struct _ntlm_type1_message) + hostnamelen + domainlen);
+	g_free(msg);
+
+	return tmp;
 }
 
 /*** HTTP Sockets *************************************************************/
@@ -863,7 +931,8 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 		memset(tmp, 0, len);
 		g_free(tmp);
 
-		ntlm_type1 = purple_ntlm_gen_type1(purple_get_host_name(), "");
+		ntlm_type1 = purple_http_ntlm_gen_type1(purple_get_host_name(),
+			"");
 
 		g_string_append_printf(h, "Proxy-Authorization: Basic %s\r\n",
 			proxy_auth);
