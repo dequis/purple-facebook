@@ -225,7 +225,7 @@ fb_mqtt_close(FbMqtt *mqtt)
 	priv = mqtt->priv;
 
 	if (priv->tev > 0) {
-		purple_timeout_remove(priv->tev);
+		g_source_remove(priv->tev);
 		priv->tev = 0;
 	}
 
@@ -300,7 +300,7 @@ fb_mqtt_timeout_clear(FbMqtt *mqtt)
 	FbMqttPrivate *priv = mqtt->priv;
 
 	if (priv->tev > 0) {
-		purple_timeout_remove(priv->tev);
+		g_source_remove(priv->tev);
 		priv->tev = 0;
 	}
 }
@@ -311,7 +311,7 @@ fb_mqtt_timeout(FbMqtt *mqtt)
 	FbMqttPrivate *priv = mqtt->priv;
 
 	fb_mqtt_timeout_clear(mqtt);
-	priv->tev = purple_timeout_add(FB_MQTT_TIMEOUT_CONN,
+	priv->tev = g_timeout_add(FB_MQTT_TIMEOUT_CONN,
 	                               fb_mqtt_cb_timeout, mqtt);
 }
 
@@ -337,7 +337,7 @@ fb_mqtt_ping(FbMqtt *mqtt)
 	FbMqttPrivate *priv = mqtt->priv;
 
 	fb_mqtt_timeout_clear(mqtt);
-	priv->tev = purple_timeout_add(FB_MQTT_TIMEOUT_PING,
+	priv->tev = g_timeout_add(FB_MQTT_TIMEOUT_PING,
 	                               fb_mqtt_cb_ping, mqtt);
 }
 

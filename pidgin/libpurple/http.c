@@ -1782,7 +1782,7 @@ PurpleHttpConnection * purple_http_request(PurpleConnection *gc,
 
 	_purple_http_reconnect(hc);
 
-	hc->timeout_handle = purple_timeout_add_seconds(request->timeout,
+	hc->timeout_handle = g_timeout_add_seconds(request->timeout,
 		purple_http_request_timeout, hc);
 
 	return hc;
@@ -1822,9 +1822,9 @@ static PurpleHttpConnection * purple_http_connection_new(
 static void purple_http_connection_free(PurpleHttpConnection *hc)
 {
 	if (hc->timeout_handle)
-		purple_timeout_remove(hc->timeout_handle);
+		g_source_remove(hc->timeout_handle);
 	if (hc->watcher_delayed_handle)
-		purple_timeout_remove(hc->watcher_delayed_handle);
+		g_source_remove(hc->watcher_delayed_handle);
 
 	if (hc->connection_set != NULL)
 		purple_http_connection_set_remove(hc->connection_set, hc);
@@ -2011,14 +2011,14 @@ static void purple_http_conn_notify_progress_watcher(
 	{
 		if (hc->watcher_delayed_handle)
 			return;
-		hc->watcher_delayed_handle = purple_timeout_add_seconds(
+		hc->watcher_delayed_handle = g_timeout_add_seconds(
 			1 + hc->watcher_interval_threshold / 1000000,
 			purple_http_conn_notify_progress_watcher_timeout, hc);
 		return;
 	}
 
 	if (hc->watcher_delayed_handle)
-		purple_timeout_remove(hc->watcher_delayed_handle);
+		g_source_remove(hc->watcher_delayed_handle);
 	hc->watcher_delayed_handle = 0;
 
 	hc->watcher_last_call = now;
@@ -2275,7 +2275,7 @@ purple_http_keepalive_host_free(gpointer _host)
 		(GDestroyNotify)purple_http_socket_close_free);
 
 	if (host->process_queue_timeout > 0) {
-		purple_timeout_remove(host->process_queue_timeout);
+		g_source_remove(host->process_queue_timeout);
 		host->process_queue_timeout = 0;
 	}
 
@@ -2475,7 +2475,7 @@ purple_http_keepalive_host_process_queue(PurpleHttpKeepaliveHost *host)
 	if (host->process_queue_timeout > 0)
 		return;
 
-	host->process_queue_timeout = purple_timeout_add(0,
+	host->process_queue_timeout = g_timeout_add(0,
 		_purple_http_keepalive_host_process_queue_cb, host);
 }
 
