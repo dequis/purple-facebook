@@ -31,7 +31,6 @@
 #include "purple-gio.h"
 #include "queuedoutputstream.h"
 
-#include "marshal.h"
 #include "mqtt.h"
 #include "util.h"
 
@@ -97,8 +96,7 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__VOID,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             0);
 
@@ -114,8 +112,7 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__OBJECT,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_ERROR);
 
@@ -131,8 +128,7 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__VOID,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             0);
 
@@ -148,8 +144,7 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__STRING_BOXED,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             2, G_TYPE_STRING, G_TYPE_BYTE_ARRAY);
 }
