@@ -28,7 +28,6 @@
 #include "api.h"
 #include "http.h"
 #include "json.h"
-#include "marshal.h"
 #include "thrift.h"
 #include "util.h"
 
@@ -287,8 +286,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__VOID,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             0);
 
@@ -303,8 +301,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__VOID,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             0);
 
@@ -320,8 +317,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -341,8 +337,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER_BOOLEAN,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             2, G_TYPE_POINTER, G_TYPE_BOOLEAN);
 
@@ -358,8 +353,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__OBJECT,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_ERROR);
 
@@ -374,8 +368,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -390,8 +383,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -406,8 +398,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -423,8 +414,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -441,8 +431,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__INT64,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, FB_TYPE_ID);
 
@@ -458,8 +447,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -474,8 +462,7 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL,
-	             fb_marshal_VOID__POINTER,
+	             NULL, NULL, NULL,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 }
