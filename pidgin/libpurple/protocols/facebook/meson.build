@@ -18,11 +18,6 @@ FACEBOOKSOURCES = [
 	'util.h'
 ]
 
-marshallers = gnome.genmarshal('marshal',
-    sources : 'marshal.list',
-    prefix : 'fb_marshal')
-FACEBOOKSOURCES += marshallers
-
 if STATIC_FACEBOOK
 	facebook_prpl = static_library('facebook', FACEBOOKSOURCES,
 	    c_args : '-DPURPLE_STATIC_PRPL',

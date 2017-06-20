@@ -63,6 +63,11 @@ purple_g_stat(const gchar *filename, GStatBufW32 *buf)
 
 #endif /* __clang__ */
 
+
+#if !GLIB_CHECK_VERSION(2, 44, 0)
+#define G_IO_ERROR_CONNECTION_CLOSED G_IO_ERROR_BROKEN_PIPE
+#endif
+
 /******************************************************************************
  * g_assert_* macros
  *****************************************************************************/
