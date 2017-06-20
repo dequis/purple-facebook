@@ -1,12 +1,9 @@
 EXTRA_DIST = \
-	Makefile.mingw \
-	marshal.list
+	Makefile.mingw
 
 pkgdir = @PURPLE_PLUGINDIR@
 
 FACEBOOKSOURCES = \
-	marshal.c \
-	marshal.h \
 	api.c \
 	api.h \
 	data.c \
@@ -24,17 +21,6 @@ FACEBOOKSOURCES = \
 	thrift.h \
 	util.c \
 	util.h
-
-CLEANFILES = \
-	marshal.c \
-	marshal.h
-
-marshal.c: $(srcdir)/marshal.list marshal.h
-	$(AM_V_GEN)echo "#include \"marshal.h\"" > $@
-	$(AM_V_at)$(GLIB_GENMARSHAL) --prefix=fb_marshal --body $(srcdir)/marshal.list >> $@
-
-marshal.h: $(srcdir)/marshal.list
-	$(AM_V_GEN)$(GLIB_GENMARSHAL) --prefix=fb_marshal --header $(srcdir)/marshal.list > $@
 
 AM_CFLAGS = $(st)
 
