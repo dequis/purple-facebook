@@ -3067,7 +3067,7 @@ fb_api_cb_thread_create(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	}
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.thread_fbid");
+	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.id");
 	fb_json_values_update(values, &err);
 
 	FB_API_ERROR_EMIT(api, err,
@@ -3114,8 +3114,8 @@ fb_api_thread_create(FbApi *api, GSList *uids)
 
 	json = fb_json_bldr_close(bldr, JSON_NODE_ARRAY, NULL);
 	prms = fb_http_params_new();
-	fb_http_params_set_str(prms, "to", json);
-	fb_api_http_req(api, FB_API_URL_THREADS, "createThread", "POST",
+	fb_http_params_set_str(prms, "recipients", json);
+	fb_api_http_req(api, FB_API_URL_THREADS, "createGroup", "POST",
 	                prms, fb_api_cb_thread_create);
 	g_free(json);
 }
@@ -3136,7 +3136,7 @@ fb_api_thread_invite(FbApi *api, FbId tid, FbId uid)
 
 	prms = fb_http_params_new();
 	fb_http_params_set_str(prms, "to", json);
-	fb_http_params_set_strf(prms, "id", "t_id.%" FB_ID_FORMAT, tid);
+	fb_http_params_set_strf(prms, "id", "t_%" FB_ID_FORMAT, tid);
 	fb_api_http_req(api, FB_API_URL_PARTS, "addMembers", "POST",
 	                prms, fb_api_cb_http_bool);
 	g_free(json);
@@ -3154,7 +3154,7 @@ fb_api_thread_remove(FbApi *api, FbId tid, FbId uid)
 	priv = api->priv;
 
 	prms = fb_http_params_new();
-	fb_http_params_set_strf(prms, "id", "t_id.%" FB_ID_FORMAT, tid);
+	fb_http_params_set_strf(prms, "id", "t_%" FB_ID_FORMAT, tid);
 
 	if (uid == 0) {
 		uid = priv->uid;

@@ -162,7 +162,7 @@
  *
  * The URL for thread management requests.
  */
-#define FB_API_URL_THREADS  FB_API_GHOST "/me/threads"
+#define FB_API_URL_THREADS  FB_API_GHOST "/me/group_threads"
 
 /**
  * FB_API_URL_TOPIC:
