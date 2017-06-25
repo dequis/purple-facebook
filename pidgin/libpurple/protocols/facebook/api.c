@@ -1437,8 +1437,7 @@ fb_api_message_parse_attach(FbApi *api, const gchar *mid, FbApiMessage *msg,
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE, "$.xmaGraphQL");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE, "$.fbid");
-	fb_json_values_set_array(values, FALSE, "$.deltaNewMessage"
-	                                         ".attachments");
+	fb_json_values_set_array(values, FALSE, "$.attachments");
 
 	while (fb_json_values_update(values, &err)) {
 		str = fb_json_values_next_str(values, NULL);
