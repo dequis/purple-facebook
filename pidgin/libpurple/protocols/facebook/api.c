@@ -750,6 +750,7 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	}
 
 	purple_http_request_header_set(req, "User-Agent", FB_API_AGENT);
+	purple_http_request_header_set(req, "Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
 
 	data = fb_http_params_close(params, NULL);
 	purple_http_request_set_contents(req, data, -1);
