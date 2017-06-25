@@ -1400,7 +1400,11 @@ fb_api_xma_parse(FbApi *api, const gchar *body, JsonNode *root, GError **error)
 
 	if (purple_strequal(str, "ExternalUrl")) {
 		params = fb_http_params_new_parse(url, TRUE);
-		text = fb_http_params_dup_str(params, "u", NULL);
+		if (g_str_has_prefix(url, FB_API_FBRPC_PREFIX)) {
+			text = fb_http_params_dup_str(params, "target_url", NULL);
+		} else {
+			text = fb_http_params_dup_str(params, "u", NULL);
+		}
 		fb_http_params_free(params);
 	} else {
 		text = g_strdup(url);
