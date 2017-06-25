@@ -212,6 +212,28 @@ fb_cb_icon(FbDataImage *img, GError *error)
 }
 
 static void
+fb_sync_contacts_add_timeout(FbData *fata)
+{
+	gint sync;
+	PurpleConnection *gc;
+	PurpleAccount *acct;
+
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
+
+	sync = purple_account_get_int(acct, "sync-interval", 30);
+
+	if (sync < 5) {
+		purple_account_set_int(acct, "sync-interval", 5);
+		sync = 5;
+	}
+
+	sync *= 60 * 1000;
+	fb_data_add_timeout(fata, "sync-contacts", sync, fb_cb_sync_contacts,
+	                    fata);
+}
+
+static void
 fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 {
 	const gchar *alias;
@@ -220,7 +242,6 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 	FbData *fata = data;
 	FbId muid;
 	gchar uid[FB_ID_STRMAX];
-	gint sync;
 	gpointer bata;
 	GSList *buddies;
 	GSList *l;
@@ -311,16 +332,7 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 		fb_api_connect(api, pstat == PURPLE_STATUS_INVISIBLE);
 	}
 
-	sync = purple_account_get_int(acct, "sync-interval", 30);
-
-	if (sync < 5) {
-		purple_account_set_int(acct, "sync-interval", 5);
-		sync = 5;
-	}
-
-	sync *= 60 * 1000;
-	fb_data_add_timeout(fata, "sync-contacts", sync, fb_cb_sync_contacts,
-	                    fata);
+	fb_sync_contacts_add_timeout(fata);
 }
 
 static void
