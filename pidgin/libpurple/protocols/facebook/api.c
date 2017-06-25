@@ -749,6 +749,8 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 		g_free(data);
 	}
 
+	purple_http_request_header_set(req, "User-Agent", FB_API_AGENT);
+
 	data = fb_http_params_close(params, NULL);
 	purple_http_request_set_contents(req, data, -1);
 	ret = purple_http_request(priv->gc, req, callback, api);
@@ -870,7 +872,7 @@ fb_api_cb_mqtt_open(FbMqtt *mqtt, gpointer data)
 
 	/* Write the information string */
 	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 2, 1);
-	fb_thrift_write_str(thft, "");
+	fb_thrift_write_str(thft, FB_API_MQTT_AGENT);
 
 	/* Write the UNKNOWN ("cp"?) */
 	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 3, 2);

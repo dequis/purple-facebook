@@ -91,6 +91,30 @@
 #define FB_API_SECRET  "374e60f8b9bb6b8cbb30f78030438895"
 
 /**
+ * FB_ORCA_AGENT
+ *
+ * The part of the user agent that looks like the official client, since the
+ * server started checking this.
+ */
+
+#define FB_ORCA_AGENT "[FBAN/Orca-Android;FBAV/109.0.0.17.70;FBPN/com.facebook.orca;FBLC/en_US;FBBV/52182662]"
+
+/**
+ * FB_API_AGENT:
+ *
+ * The HTTP User-Agent header.
+ */
+#define FB_API_AGENT  "Facebook plugin / Purple / 0.9.5 " FB_ORCA_AGENT
+
+/**
+ * FB_API_MQTT_AGENT
+ *
+ * The client information string sent in the MQTT CONNECT message
+ */
+
+#define FB_API_MQTT_AGENT FB_API_AGENT
+
+/**
  * FB_API_URL_ATTACH:
  *
  * The URL for attachment URL requests.
