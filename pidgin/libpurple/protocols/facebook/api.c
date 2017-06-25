@@ -1480,25 +1480,25 @@ fb_api_message_parse_attach(FbApi *api, const gchar *mid, FbApiMessage *msg,
 	return msgs;
 }
 
+
+static GSList *
+fb_api_cb_publish_ms_new_message(FbApi *api, JsonNode *root, GSList *msgs, GError **error);
+
 static void
 fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 {
-	const gchar *body;
 	const gchar *data;
-	const gchar *str;
-	FbApiMessage *dmsg;
-	FbApiMessage msg;
 	FbApiPrivate *priv = api->priv;
-	FbId id;
-	FbId oid;
 	FbJsonValues *values;
 	FbThrift *thft;
 	gchar *stoken;
 	GError *err = NULL;
+	GList *elms, *l;
 	GSList *msgs = NULL;
 	guint size;
 	JsonNode *root;
 	JsonNode *node;
+	JsonArray *arr;
 
 	/* Read identifier string (for Facebook employees) */
 	thft = fb_thrift_new(pload, 0);
@@ -1538,39 +1538,79 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 		return;
 	}
 
+	arr = fb_json_node_get_arr(root, "$.deltas", NULL);
+	elms = json_array_get_elements(arr);
+
+	for (l = elms; l != NULL; l = l->next) {
+		JsonObject *o = json_node_get_object(l->data);
+		if ((node = json_object_get_member(o, "deltaNewMessage"))) {
+			msgs = fb_api_cb_publish_ms_new_message(api, node, msgs, &err);
+		}
+		if (G_UNLIKELY(err != NULL)) {
+			break;
+		}
+	}
+
+	g_list_free(elms);
+	json_array_unref(arr);
+
+	if (G_LIKELY(err == NULL)) {
+		msgs = g_slist_reverse(msgs);
+		g_signal_emit_by_name(api, "messages", msgs);
+	} else {
+		fb_api_error_emit(api, err);
+	}
+
+	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+	json_node_free(root);
+}
+
+static GSList *
+fb_api_cb_publish_ms_new_message(FbApi *api, JsonNode *root, GSList *msgs, GError **error)
+{
+	const gchar *body;
+	const gchar *str;
+	GError *err = NULL;
+	FbApiPrivate *priv = api->priv;
+	FbApiMessage *dmsg;
+	FbApiMessage msg;
+	FbId id;
+	FbId oid;
+	FbJsonValues *values;
+	JsonNode *node;
+
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
-	                   "$.deltaNewMessage.messageMetadata.offlineThreadingId");
+	                   "$.messageMetadata.offlineThreadingId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
-	                   "$.deltaNewMessage.messageMetadata.actorFbId");
+	                   "$.messageMetadata.actorFbId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
-	                   "$.deltaNewMessage.messageMetadata"
+	                   "$.messageMetadata"
 	                    ".threadKey.otherUserFbId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
-	                   "$.deltaNewMessage.messageMetadata"
+	                   "$.messageMetadata"
 	                    ".threadKey.threadFbId");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
-	                   "$.deltaNewMessage.messageMetadata.timestamp");
+	                   "$.messageMetadata.timestamp");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
-	                   "$.deltaNewMessage.body");
+	                   "$.body");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
-	                   "$.deltaNewMessage.stickerId");
+	                   "$.stickerId");
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
-	                   "$.deltaNewMessage.messageMetadata.messageId");
-	fb_json_values_set_array(values, TRUE, "$.deltas");
+	                   "$.messageMetadata.messageId");
 
-	while (fb_json_values_update(values, &err)) {
+	if (fb_json_values_update(values, &err)) {
 		id = fb_json_values_next_int(values, 0);
 
 		/* Ignore everything but new messages */
 		if (id == 0) {
-			continue;
+			goto beach;
 		}
 
 		/* Ignore sequential duplicates */
 		if (id == priv->lastmid) {
 			fb_util_debug_info("Ignoring duplicate %" FB_ID_FORMAT, id);
-			continue;
+			goto beach;
 		}
 
 		priv->lastmid = id;
@@ -1606,7 +1646,7 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 		str = fb_json_values_next_str(values, NULL);
 
 		if (str == NULL) {
-			continue;
+			goto beach;
 		}
 
 		node = fb_json_values_get_root(values);
@@ -1614,20 +1654,14 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 		                                   node, &err);
 
 		if (G_UNLIKELY(err != NULL)) {
-			break;
+			g_propagate_error(error, err);
+			goto beach;
 		}
 	}
 
-	if (G_LIKELY(err == NULL)) {
-		msgs = g_slist_reverse(msgs);
-		g_signal_emit_by_name(api, "messages", msgs);
-	} else {
-		fb_api_error_emit(api, err);
-	}
-
-	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+beach:
 	g_object_unref(values);
-	json_node_free(root);
+	return msgs;
 }
 
 static void
