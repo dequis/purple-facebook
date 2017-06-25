@@ -2056,25 +2056,15 @@ fb_api_contact(FbApi *api, FbId uid)
 	fb_api_http_query(api, FB_API_QUERY_CONTACT, bldr, fb_api_cb_contact);
 }
 
-static void
-fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
-                   gpointer data)
+static GSList *
+fb_api_cb_contacts_nodes(FbApi *api, JsonNode *root, GSList *users)
 {
-	const gchar *cursor;
 	const gchar *str;
-	FbApi *api = data;
 	FbApiPrivate *priv = api->priv;
 	FbApiUser *user;
 	FbId uid;
 	FbJsonValues *values;
-	gboolean complete;
 	GError *err = NULL;
-	GSList *users = NULL;
-	JsonNode *root;
-
-	if (!fb_api_http_chk(api, con, res, &root)) {
-		return;
-	}
 
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
@@ -2110,6 +2100,28 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	}
 
 	g_object_unref(values);
+
+	return users;
+}
+
+static void
+fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                   gpointer data)
+{
+	//XXX
+	const gchar *cursor;
+	FbApi *api = data;
+	FbJsonValues *values;
+	gboolean complete;
+	GError *err = NULL;
+	GSList *users = NULL;
+	JsonNode *root;
+
+	if (!fb_api_http_chk(api, con, res, &root)) {
+		return;
+	}
+
+	users = fb_api_cb_contacts_nodes(api, root, users);
 
 	values = fb_json_values_new(root);
 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
