@@ -800,6 +800,9 @@ fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
 	case FB_API_QUERY_CONTACTS_AFTER:
 		name = "FetchContactsFullWithAfterQuery";
 		break;
+	case FB_API_QUERY_CONTACTS_DELTA:
+		name = "FetchContactsDeltaQuery";
+		break;
 	case FB_API_QUERY_STICKER:
 		name = "FetchStickersWithPreviewsQuery";
 		break;

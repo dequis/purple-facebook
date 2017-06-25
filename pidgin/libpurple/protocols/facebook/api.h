@@ -189,10 +189,8 @@
  *   2: big_img_size
  *   3: huge_img_size
  *   4: small_img_size
- *   5: low_res_cover_size
- *   6: media_type
  */
-#define FB_API_QUERY_CONTACTS  10153856456271729
+#define FB_API_QUERY_CONTACTS  10154444360806729
 
 /**
  * FB_API_QUERY_CONTACTS_AFTER:
@@ -206,10 +204,24 @@
  *   3: big_img_size
  *   4: huge_img_size
  *   5: small_img_size
- *   6: low_res_cover_size
- *   7: media_type
  */
-#define FB_API_QUERY_CONTACTS_AFTER  10153856456281729
+#define FB_API_QUERY_CONTACTS_AFTER  10154444360816729
+
+
+/**
+ * FB_API_QUERY_CONTACTS_DELTA:
+ *
+ * The query hash for the `FetchContactsDeltaQuery`.
+ *
+ * Key mapping:
+ *   0: after
+ *   1: profile_types
+ *   2: limit
+ *   3: big_img_size
+ *   4: huge_img_size
+ *   5: small_img_size
+ */
+#define FB_API_QUERY_CONTACTS_DELTA  10154444360801729
 
 /**
  * FB_API_QUERY_STICKER:
