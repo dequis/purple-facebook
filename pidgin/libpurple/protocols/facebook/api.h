@@ -280,6 +280,16 @@
 #define FB_API_QUERY_THREADS  10153919752026729
 
 /**
+ * FB_API_QUERY_SEQ_ID:
+ *
+ * A variant of ThreadListQuery with sequence ID
+ *
+ * TODO: parameters.
+ */
+
+#define FB_API_QUERY_SEQ_ID  10155268192741729
+
+/**
  * FB_API_QUERY_XMA:
  *
  * The query hash for the `XMAQuery`.

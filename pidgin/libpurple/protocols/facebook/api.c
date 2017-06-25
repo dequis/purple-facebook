@@ -789,6 +789,7 @@ fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
 	case FB_API_QUERY_THREAD:
 		name = "ThreadQuery";
 		break;
+	case FB_API_QUERY_SEQ_ID:
 	case FB_API_QUERY_THREADS:
 		name = "ThreadListQuery";
 		break;
@@ -1076,7 +1077,7 @@ fb_api_cb_mqtt_connect(FbMqtt *mqtt, gpointer data)
 	if (priv->sid == 0) {
 		bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 		fb_json_bldr_add_str(bldr, "1", "0");
-		fb_api_http_query(api, FB_API_QUERY_THREADS, bldr,
+		fb_api_http_query(api, FB_API_QUERY_SEQ_ID, bldr,
 		                  fb_api_cb_seqid);
 	} else {
 		fb_api_connect_queue(api);
