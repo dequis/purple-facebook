@@ -3179,7 +3179,7 @@ fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic)
 
 	prms = fb_http_params_new();
 	fb_http_params_set_str(prms, "name", topic);
-	fb_http_params_set_strf(prms, "tid", "t_id.%" FB_ID_FORMAT, tid);
+	fb_http_params_set_int(prms, "tid", tid);
 	fb_api_http_req(api, FB_API_URL_TOPIC, "setThreadName",
 	                "messaging.setthreadname", prms,
 			fb_api_cb_http_bool);
