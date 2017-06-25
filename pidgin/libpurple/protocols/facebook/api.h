@@ -77,6 +77,13 @@
 #define FB_API_WHOST  "https://www.facebook.com"
 
 /**
+ * FB_API_FBRPC_PREFIX
+ *
+ * The fbrpc URL prefix used in links shared from the mobile app.
+ */
+#define FB_API_FBRPC_PREFIX "fbrpc://facebook/nativethirdparty"
+
+/**
  * FB_API_KEY:
  *
  * The Facebook API key.
