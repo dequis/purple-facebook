@@ -1020,7 +1020,7 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	}
 
 	values = fb_json_values_new(root);
-	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE,
+	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
 	                   "$.viewer.message_threads.sync_sequence_id");
 	fb_json_values_add(values, FB_JSON_TYPE_INT, TRUE,
 	                   "$.viewer.message_threads.unread_count");
@@ -1036,7 +1036,13 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	priv->sid = g_ascii_strtoll(str, NULL, 10);
 	priv->unread = fb_json_values_next_int(values, 0);
 
-	fb_api_connect_queue(api);
+	if (priv->sid == 0) {
+		fb_api_error(api, FB_API_ERROR_GENERAL,
+		             _("Failed to get sync_sequence_id"));
+	} else {
+		fb_api_connect_queue(api);
+	}
+
 	g_object_unref(values);
 	json_node_free(root);
 }
