@@ -664,6 +664,39 @@ fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
 }
 
 static void
+fb_cb_api_thread_kicked(FbApi *api, FbApiThread *thrd, gpointer data)
+{
+	FbData *fata = data;
+	gchar tid[FB_ID_STRMAX];
+	PurpleAccount *acct;
+	PurpleConnection *gc;
+	PurpleChatConversation *chat;
+
+	FB_ID_TO_STR(thrd->tid, tid);
+
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
+	chat = purple_conversations_find_chat_with_account(tid, acct);
+
+	if (chat == NULL) {
+		PurpleRequestCommonParameters *cpar;
+
+		cpar = purple_request_cpar_from_connection(gc);
+		purple_notify_error(gc,
+				    _("Join a Chat"),
+				    _("Failed to Join Chat"),
+				    _("You have been removed from this chat"),
+				    cpar);
+		return;
+	}
+
+	purple_conversation_write_system_message(PURPLE_CONVERSATION(chat),
+		_("You have been removed from this chat"), 0);
+
+	purple_serv_got_chat_left(gc, purple_chat_conversation_get_id(chat));
+}
+
+static void
 fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 {
 	const gchar *alias;
@@ -940,6 +973,10 @@ fb_login(PurpleAccount *acct)
 	g_signal_connect(api,
 	                 "thread-create",
 	                 G_CALLBACK(fb_cb_api_thread_create),
+	                 fata);
+	g_signal_connect(api,
+	                 "thread-kicked",
+	                 G_CALLBACK(fb_cb_api_thread_kicked),
 	                 fata);
 	g_signal_connect(api,
 	                 "threads",
