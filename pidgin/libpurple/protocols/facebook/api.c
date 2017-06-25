@@ -2600,6 +2600,7 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
 	FbId uid;
 	FbJsonValues *values;
 	gboolean haself = FALSE;
+	guint num_users = 0;
 	GError *err = NULL;
 
 	values = fb_json_values_new(root);
@@ -2635,6 +2636,7 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
 	while (fb_json_values_update(values, &err)) {
 		str = fb_json_values_next_str(values, "0");
 		uid = FB_ID_FROM_STR(str);
+		num_users++;
 
 		if (uid != priv->uid) {
 			user = fb_api_user_dup(NULL, FALSE);
@@ -2653,7 +2655,7 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
 		return FALSE;
 	}
 
-	if ((g_slist_length(thrd->users) < 2) || !haself) {
+	if (num_users < 2 || !haself) {
 		fb_api_thread_reset(thrd, TRUE);
 		g_object_unref(values);
 		return FALSE;
