@@ -1484,6 +1484,9 @@ fb_api_message_parse_attach(FbApi *api, const gchar *mid, FbApiMessage *msg,
 static GSList *
 fb_api_cb_publish_ms_new_message(FbApi *api, JsonNode *root, GSList *msgs, GError **error);
 
+static GSList *
+fb_api_cb_publish_ms_event(FbApi *api, JsonNode *root, GSList *events, FbApiEventType type, GError **error);
+
 static void
 fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 {
@@ -1495,10 +1498,22 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	GError *err = NULL;
 	GList *elms, *l;
 	GSList *msgs = NULL;
+	GSList *events = NULL;
 	guint size;
 	JsonNode *root;
 	JsonNode *node;
 	JsonArray *arr;
+
+	static const struct {
+		const gchar *member;
+		FbApiEventType type;
+		gboolean is_message;
+	} event_types[] = {
+		{"deltaNewMessage", 0, 1},
+		{"deltaThreadName", FB_API_EVENT_TYPE_THREAD_TOPIC, 0},
+		{"deltaParticipantsAddedToGroupThread", FB_API_EVENT_TYPE_THREAD_USER_ADDED, 0},
+		{"deltaParticipantLeftGroupThread", FB_API_EVENT_TYPE_THREAD_USER_REMOVED, 0},
+	};
 
 	/* Read identifier string (for Facebook employees) */
 	thft = fb_thrift_new(pload, 0);
@@ -1542,10 +1557,23 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	elms = json_array_get_elements(arr);
 
 	for (l = elms; l != NULL; l = l->next) {
+		guint i = 0;
 		JsonObject *o = json_node_get_object(l->data);
-		if ((node = json_object_get_member(o, "deltaNewMessage"))) {
-			msgs = fb_api_cb_publish_ms_new_message(api, node, msgs, &err);
+
+		for (i = 0; i < G_N_ELEMENTS(event_types); i++) {
+			if ((node = json_object_get_member(o, event_types[i].member))) {
+				if (event_types[i].is_message) {
+					msgs = fb_api_cb_publish_ms_new_message(
+						api, node, msgs, &err
+					);
+				} else {
+					events = fb_api_cb_publish_ms_event(
+						api, node, events, event_types[i].type, &err
+					);
+				}
+			}
 		}
+
 		if (G_UNLIKELY(err != NULL)) {
 			break;
 		}
@@ -1555,13 +1583,21 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 	json_array_unref(arr);
 
 	if (G_LIKELY(err == NULL)) {
-		msgs = g_slist_reverse(msgs);
-		g_signal_emit_by_name(api, "messages", msgs);
+		if (msgs) {
+			msgs = g_slist_reverse(msgs);
+			g_signal_emit_by_name(api, "messages", msgs);
+		}
+
+		if (events) {
+			events = g_slist_reverse(events);
+			g_signal_emit_by_name(api, "events", events);
+		}
 	} else {
 		fb_api_error_emit(api, err);
 	}
 
 	g_slist_free_full(msgs, (GDestroyNotify) fb_api_message_free);
+	g_slist_free_full(events, (GDestroyNotify) fb_api_event_free);
 	json_node_free(root);
 }
 
@@ -1662,6 +1698,89 @@ fb_api_cb_publish_ms_new_message(FbApi *api, JsonNode *root, GSList *msgs, GErro
 beach:
 	g_object_unref(values);
 	return msgs;
+}
+
+static GSList *
+fb_api_cb_publish_ms_event(FbApi *api, JsonNode *root, GSList *events, FbApiEventType type, GError **error)
+{
+	FbApiEvent *event;
+	FbJsonValues *values = NULL;
+	FbJsonValues *values_inner = NULL;
+	GError *err = NULL;
+
+	values = fb_json_values_new(root);
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.messageMetadata.threadKey.threadFbId");
+	fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+	                   "$.messageMetadata.actorFbId");
+
+	switch (type) {
+	case FB_API_EVENT_TYPE_THREAD_TOPIC:
+		fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+		                   "$.name");
+		break;
+
+	case FB_API_EVENT_TYPE_THREAD_USER_ADDED:
+		values_inner = fb_json_values_new(root);
+
+		fb_json_values_add(values_inner, FB_JSON_TYPE_INT, FALSE,
+		                   "$.userFbId");
+
+		/* use the text field for the full name */
+		fb_json_values_add(values_inner, FB_JSON_TYPE_STR, FALSE,
+		                   "$.fullName");
+
+		fb_json_values_set_array(values_inner, FALSE,
+		                         "$.addedParticipants");
+		break;
+
+	case FB_API_EVENT_TYPE_THREAD_USER_REMOVED:
+		fb_json_values_add(values, FB_JSON_TYPE_INT, FALSE,
+		                   "$.leftParticipantFbId");
+
+		/* use the text field for the kick message */
+		fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+		                   "$.messageMetadata.adminText");
+		break;
+	}
+
+	fb_json_values_update(values, &err);
+
+	event = fb_api_event_dup(NULL, FALSE);
+	event->type = type;
+	event->tid = fb_json_values_next_int(values, 0);
+	event->uid = fb_json_values_next_int(values, 0);
+
+	if (type == FB_API_EVENT_TYPE_THREAD_TOPIC) {
+		event->text = fb_json_values_next_str_dup(values, NULL);
+	} else if (type == FB_API_EVENT_TYPE_THREAD_USER_REMOVED) {
+		/* overwrite actor with subject */
+		event->uid = fb_json_values_next_int(values, 0);
+		event->text = fb_json_values_next_str_dup(values, NULL);
+	} else if (type == FB_API_EVENT_TYPE_THREAD_USER_ADDED) {
+
+		while (fb_json_values_update(values_inner, &err)) {
+			FbApiEvent *devent = fb_api_event_dup(event, FALSE);
+
+			devent->uid = fb_json_values_next_int(values_inner, 0);
+			devent->text = fb_json_values_next_str_dup(values_inner, NULL);
+
+			events = g_slist_prepend(events, devent);
+		}
+		fb_api_event_free(event);
+		event = NULL;
+		g_object_unref(values_inner);
+	}
+
+	g_object_unref(values);
+
+	if (G_UNLIKELY(err != NULL)) {
+		g_propagate_error(error, err);
+	} else if (event) {
+		events = g_slist_prepend(events, event);
+	}
+
+	return events;
 }
 
 static void

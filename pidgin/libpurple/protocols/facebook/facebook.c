@@ -437,8 +437,18 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 
 		case FB_API_EVENT_TYPE_THREAD_USER_ADDED:
 			if (purple_blist_find_buddy(acct, uid) == NULL) {
-				g_hash_table_insert(fetch, &event->tid, event);
-				break;
+				if (event->text) {
+					FbApiUser *user = fb_api_user_dup(NULL, FALSE);
+					user->uid = event->uid;
+					user->name = g_strdup(event->text);
+
+					fb_buddy_add_nonfriend(acct, user);
+
+					fb_api_user_free(user);
+				} else {
+					g_hash_table_insert(fetch, &event->tid, event);
+					break;
+				}
 			}
 
 			purple_chat_conversation_add_user(chat, uid, NULL, 0,
@@ -446,7 +456,7 @@ fb_cb_api_events(FbApi *api, GSList *events, gpointer data)
 			break;
 
 		case FB_API_EVENT_TYPE_THREAD_USER_REMOVED:
-			purple_chat_conversation_remove_user(chat, uid, NULL);
+			purple_chat_conversation_remove_user(chat, uid, event->text);
 			break;
 		}
 	}
