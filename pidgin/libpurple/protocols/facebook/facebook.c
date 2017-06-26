@@ -1053,7 +1053,7 @@ fb_login(PurpleAccount *acct)
 	                      G_CALLBACK(fb_cb_conv_deleting),
 	                      fata);
 
-	if (!fb_data_load(fata)) {
+	if (!fb_data_load(fata) || !purple_account_get_remember_password(acct)) {
 		user = purple_account_get_username(acct);
 		pass = purple_connection_get_password(gc);
 		purple_connection_update_progress(gc, _("Authenticating"),
