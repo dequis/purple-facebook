@@ -243,6 +243,10 @@ fb_data_save(FbData *fata)
 		g_object_get_property(G_OBJECT(priv->api), fb_props_strs[i],
 		                      &val);
 		str = g_value_get_string(&val);
+
+		if (purple_strequal(fb_props_strs[i], "token") && !purple_account_get_remember_password(acct)) {
+			str = "";
+		}
 		purple_account_set_string(acct, fb_props_strs[i], str);
 		g_value_unset(&val);
 	}
