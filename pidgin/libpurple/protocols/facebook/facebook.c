@@ -827,11 +827,32 @@ fb_cb_api_typing(FbApi *api, FbApiTyping *typg, gpointer data)
 	}
 }
 
+static void
+fb_mark_read(FbData *fata, FbId id, gboolean thread)
+{
+	FbApi *api;
+	PurpleAccount *acct;
+	PurpleConnection *gc;
+
+	gc = fb_data_get_connection(fata);
+	acct = purple_connection_get_account(gc);
+	api = fb_data_get_api(fata);
+
+	if (!fb_data_get_unread(fata, id) ||
+	    (purple_account_get_bool(acct, "mark-read-available", FALSE) &&
+	     fb_api_is_invisible(api)))
+	{
+		return;
+	}
+
+	fb_data_set_unread(fata, id, FALSE);
+	fb_api_read(api, id, thread);
+}
+
 static gboolean
 fb_cb_conv_read(gpointer data)
 {
 	const gchar *name;
-	FbApi *api;
 	FbData *fata;
 	FbId id;
 	gchar *tname;
@@ -847,15 +868,9 @@ fb_cb_conv_read(gpointer data)
 	fb_data_clear_timeout(fata, tname, FALSE);
 	g_free(tname);
 
-	if (!purple_conversation_has_focus(conv) ||
-	    !fb_data_get_unread(fata, id))
-	{
-		return FALSE;
+	if (purple_conversation_has_focus(conv)) {
+		fb_mark_read(fata, id, PURPLE_IS_CHAT_CONVERSATION(conv));
 	}
-
-	api = fb_data_get_api(fata);
-	fb_data_set_unread(fata, id, FALSE);
-	fb_api_read(api, id, PURPLE_IS_CHAT_CONVERSATION(conv));
 	return FALSE;
 }
 
@@ -1532,8 +1547,12 @@ facebook_protocol_init(PurpleProtocol *protocol)
 	                                    "sync-interval", 5);
 	opts = g_list_prepend(opts, opt);
 
-	opt = purple_account_option_bool_new(_("Mark messages as read"),
+	opt = purple_account_option_bool_new(_("Mark messages as read on focus"),
 	                                     "mark-read", TRUE);
+	opts = g_list_prepend(opts, opt);
+
+	opt = purple_account_option_bool_new(_("Mark messages as read only when available"),
+	                                     "mark-read-available", FALSE);
 	opts = g_list_prepend(opts, opt);
 
 	opt = purple_account_option_bool_new(_("Show self messages"),
