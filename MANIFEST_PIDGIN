@@ -17,12 +17,9 @@ libpurple/protocols/facebook/json.c
 libpurple/protocols/facebook/json.h
 libpurple/protocols/facebook/Makefile.am
 libpurple/protocols/facebook/Makefile.mingw
-libpurple/protocols/facebook/marshaller.list
 libpurple/protocols/facebook/mqtt.c
 libpurple/protocols/facebook/mqtt.h
 libpurple/protocols/facebook/thrift.c
 libpurple/protocols/facebook/thrift.h
 libpurple/protocols/facebook/util.c
 libpurple/protocols/facebook/util.h
-libpurple/purple-socket.c
-libpurple/purple-socket.h
