@@ -154,4 +154,6 @@ purple_blist_node_set_transient(PurpleBlistNode *node, gboolean transient)
     }
 }
 
+#define purple_conversation_write_system_message(conv, msg, flags)  purple_conversation_write((conv), NULL, (msg), (flags) | PURPLE_MESSAGE_SYSTEM, time(NULL));
+
 #endif /* _PURPLE_COMPAT_H_ */
