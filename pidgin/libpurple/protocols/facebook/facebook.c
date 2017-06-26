@@ -68,15 +68,18 @@ fb_get_group(gboolean friend)
 	PurpleBlistNode *n;
 	PurpleBlistNode *node;
 	PurpleGroup *grp;
+	const gchar *title;
 
 	if (friend) {
-		return purple_blist_get_default_group();
+		title = _("Facebook Friends");
+	} else {
+		title = _("Facebook Non-Friends");
 	}
 
-	grp = purple_blist_find_group(_("Facebook Non-Friends"));
+	grp = purple_blist_find_group(title);
 
 	if (G_UNLIKELY(grp == NULL)) {
-		grp = purple_group_new(_("Facebook Non-Friends"));
+		grp = purple_group_new(title);
 		node = NULL;
 
 		for (n = purple_blist_get_root(); n != NULL; n = n->next) {
@@ -86,9 +89,10 @@ fb_get_group(gboolean friend)
 		/* Append to the end of the buddy list */
 		purple_blist_add_group(grp, node);
 
-		node = PURPLE_BLIST_NODE(grp);
-		purple_blist_node_set_transient(node, TRUE);
-		purple_blist_node_set_bool(node, "collapsed", TRUE);
+		if (!friend) {
+			node = PURPLE_BLIST_NODE(grp);
+			purple_blist_node_set_bool(node, "collapsed", TRUE);
+		}
 	}
 
 	return grp;
@@ -98,16 +102,13 @@ static void
 fb_buddy_add_nonfriend(PurpleAccount *acct, FbApiUser *user)
 {
 	gchar uid[FB_ID_STRMAX];
-	PurpleBlistNode *node;
 	PurpleBuddy *bdy;
 	PurpleGroup *grp;
 
 	FB_ID_TO_STR(user->uid, uid);
 	bdy = purple_buddy_new(acct, uid, NULL);
 	grp = fb_get_group(FALSE);
-	node = PURPLE_BLIST_NODE(bdy);
 
-	purple_blist_node_set_transient(node, TRUE);
 	purple_buddy_set_server_alias(bdy, user->name);
 	purple_blist_add_buddy(bdy, NULL, grp, NULL);
 }
