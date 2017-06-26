@@ -106,7 +106,7 @@ fb_buddy_add_nonfriend(PurpleAccount *acct, FbApiUser *user)
 	PurpleGroup *grp;
 
 	FB_ID_TO_STR(user->uid, uid);
-	bdy = purple_buddy_new(acct, uid, NULL);
+	bdy = purple_buddy_new(acct, uid, user->name);
 	grp = fb_get_group(FALSE);
 
 	purple_buddy_set_server_alias(bdy, user->name);
