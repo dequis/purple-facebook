@@ -435,8 +435,10 @@ fb_mqtt_read_packet(FbMqtt *mqtt)
 	do {
 		if (pos >= count) {
 			/* Not enough data yet, try again later */
-			size = 0;
-			break;
+			g_buffered_input_stream_fill_async(priv->input, -1,
+					G_PRIORITY_DEFAULT, priv->cancellable,
+					fb_mqtt_cb_fill, mqtt);
+			return;
 		}
 
 		byte = *(buf + pos++);
@@ -445,28 +447,22 @@ fb_mqtt_read_packet(FbMqtt *mqtt)
 		mult *= 128;
 	} while ((byte & 128) != 0);
 
-	if (size > 0) {
-		/* Add header to size */
-		size += pos;
+	/* Add header to size */
+	size += pos;
 
-		g_byte_array_set_size(priv->rbuf, size);
-		priv->remz = size;
+	g_byte_array_set_size(priv->rbuf, size);
+	priv->remz = size;
 
-		/* TODO: Use g_input_stream_read_all_async() when available. */
-		/* TODO: Alternately, it would be nice to let the
-		 * FbMqttMessage directly use the GBufferedInputStream
-		 * buffer instead of copying it, provided it's consumed
-		 * before the next read.
-		 */
-		g_input_stream_read_async(G_INPUT_STREAM(priv->input),
-				priv->rbuf->data, priv->rbuf->len,
-				G_PRIORITY_DEFAULT, priv->cancellable,
-				fb_mqtt_cb_read_packet, mqtt);
-	} else {
-		g_buffered_input_stream_fill_async(priv->input, -1,
-				G_PRIORITY_DEFAULT, priv->cancellable,
-				fb_mqtt_cb_fill, mqtt);
-	}
+	/* TODO: Use g_input_stream_read_all_async() when available. */
+	/* TODO: Alternately, it would be nice to let the
+	 * FbMqttMessage directly use the GBufferedInputStream
+	 * buffer instead of copying it, provided it's consumed
+	 * before the next read.
+	 */
+	g_input_stream_read_async(G_INPUT_STREAM(priv->input),
+			priv->rbuf->data, priv->rbuf->len,
+			G_PRIORITY_DEFAULT, priv->cancellable,
+			fb_mqtt_cb_read_packet, mqtt);
 }
 
 void
