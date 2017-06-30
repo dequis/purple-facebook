@@ -77,6 +77,13 @@
 #define FB_API_WHOST  "https://www.facebook.com"
 
 /**
+ * FB_API_FBRPC_PREFIX
+ *
+ * The fbrpc URL prefix used in links shared from the mobile app.
+ */
+#define FB_API_FBRPC_PREFIX "fbrpc://facebook/nativethirdparty"
+
+/**
  * FB_API_KEY:
  *
  * The Facebook API key.
@@ -89,6 +96,30 @@
  * The Facebook API secret.
  */
 #define FB_API_SECRET  "374e60f8b9bb6b8cbb30f78030438895"
+
+/**
+ * FB_ORCA_AGENT
+ *
+ * The part of the user agent that looks like the official client, since the
+ * server started checking this.
+ */
+
+#define FB_ORCA_AGENT "[FBAN/Orca-Android;FBAV/109.0.0.17.70;FBPN/com.facebook.orca;FBLC/en_US;FBBV/52182662]"
+
+/**
+ * FB_API_AGENT:
+ *
+ * The HTTP User-Agent header.
+ */
+#define FB_API_AGENT  "Facebook plugin / Purple / 0.9.5 " FB_ORCA_AGENT
+
+/**
+ * FB_API_MQTT_AGENT
+ *
+ * The client information string sent in the MQTT CONNECT message
+ */
+
+#define FB_API_MQTT_AGENT FB_API_AGENT
 
 /**
  * FB_API_URL_ATTACH:
@@ -131,7 +162,7 @@
  *
  * The URL for thread management requests.
  */
-#define FB_API_URL_THREADS  FB_API_GHOST "/me/threads"
+#define FB_API_URL_THREADS  FB_API_GHOST "/me/group_threads"
 
 /**
  * FB_API_URL_TOPIC:
@@ -165,10 +196,8 @@
  *   2: big_img_size
  *   3: huge_img_size
  *   4: small_img_size
- *   5: low_res_cover_size
- *   6: media_type
  */
-#define FB_API_QUERY_CONTACTS  10153856456271729
+#define FB_API_QUERY_CONTACTS  10154444360806729
 
 /**
  * FB_API_QUERY_CONTACTS_AFTER:
@@ -182,10 +211,24 @@
  *   3: big_img_size
  *   4: huge_img_size
  *   5: small_img_size
- *   6: low_res_cover_size
- *   7: media_type
  */
-#define FB_API_QUERY_CONTACTS_AFTER  10153856456281729
+#define FB_API_QUERY_CONTACTS_AFTER  10154444360816729
+
+
+/**
+ * FB_API_QUERY_CONTACTS_DELTA:
+ *
+ * The query hash for the `FetchContactsDeltaQuery`.
+ *
+ * Key mapping:
+ *   0: after
+ *   1: profile_types
+ *   2: limit
+ *   3: big_img_size
+ *   4: huge_img_size
+ *   5: small_img_size
+ */
+#define FB_API_QUERY_CONTACTS_DELTA  10154444360801729
 
 /**
  * FB_API_QUERY_STICKER:
@@ -254,6 +297,16 @@
  *   18: profile_pic_small_size
  */
 #define FB_API_QUERY_THREADS  10153919752026729
+
+/**
+ * FB_API_QUERY_SEQ_ID:
+ *
+ * A variant of ThreadListQuery with sequence ID
+ *
+ * TODO: parameters.
+ */
+
+#define FB_API_QUERY_SEQ_ID  10155268192741729
 
 /**
  * FB_API_QUERY_XMA:
