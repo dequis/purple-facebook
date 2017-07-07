@@ -73,7 +73,7 @@ fb_data_dispose(GObject *obj)
 	g_hash_table_iter_init(&iter, priv->evs);
 
 	while (g_hash_table_iter_next(&iter, NULL, &ptr)) {
-		purple_timeout_remove(GPOINTER_TO_UINT(ptr));
+		g_source_remove(GPOINTER_TO_UINT(ptr));
 	}
 
 	if (G_LIKELY(priv->api != NULL)) {
@@ -284,7 +284,7 @@ fb_data_add_timeout(FbData *fata, const gchar *name, guint interval,
 	fb_data_clear_timeout(fata, name, TRUE);
 
 	key = g_strdup(name);
-	id = purple_timeout_add(interval, func, data);
+	id = g_timeout_add(interval, func, data);
 	g_hash_table_replace(priv->evs, key, GUINT_TO_POINTER(id));
 }
 
@@ -302,7 +302,7 @@ fb_data_clear_timeout(FbData *fata, const gchar *name, gboolean remove)
 	id = GPOINTER_TO_UINT(ptr);
 
 	if ((id > 0) && remove) {
-		purple_timeout_remove(id);
+		g_source_remove(id);
 	}
 
 	g_hash_table_remove(priv->evs, name);
