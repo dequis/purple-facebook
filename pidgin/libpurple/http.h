@@ -174,6 +174,7 @@ PurpleHttpConnection * purple_http_get(PurpleConnection *gc,
  * @callback:  (scope call): The callback function.
  * @user_data: The user data to pass to the callback function.
  * @format:    The format string.
+ * @...:       The parameters to insert into the format string.
  *
  * Constructs an URL and fetches the data from it with GET request, then passes
  * it to a callback function.
@@ -529,6 +530,7 @@ void purple_http_request_set_url(PurpleHttpRequest *request, const gchar *url);
  * purple_http_request_set_url_printf:
  * @request: The request.
  * @format:  The format string.
+ * @...:       The parameters to insert into the format string.
  *
  * Constructs and sets an URL for HTTP request.
  */
@@ -756,6 +758,7 @@ void purple_http_request_header_set_printf(PurpleHttpRequest *request,
 
 /**
  * purple_http_request_header_add:
+ * @request: The request.
  * @key:   A header to be set.
  * @value: A value to set.
  *
