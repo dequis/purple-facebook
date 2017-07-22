@@ -1,0 +1,17 @@
+--- a/libpurple/protocols/facebook/api.c	2017-07-22 01:53:30.927778155 -0300
++++ b/libpurple/protocols/facebook/api.c	2017-07-22 02:00:46.598640341 -0300
+@@ -1894,6 +1894,14 @@
+ 
+ 	g_free(name);
+ 	msg->text = fb_json_values_next_str_dup(values, NULL);
++
++	if (g_str_has_prefix(msg->text, "http:")) {
++		char *orig = msg->text;
++		msg->text = g_strconcat("https", orig + 4, NULL);
++		g_free(orig);
++	}
++
++	fb_util_debug(FB_UTIL_DEBUG_INFO, "Attachment url: %s", msg->text);
+ 	msgs = g_slist_prepend(msgs, msg);
+ 
+ 	g_signal_emit_by_name(api, "messages", msgs);
