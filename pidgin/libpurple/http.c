@@ -29,11 +29,6 @@
 #include "proxy.h"
 #include "purple-gio.h"
 
-#include <zlib.h>
-#ifndef z_const
-#define z_const
-#endif
-
 #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
 #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
 #define PURPLE_HTTP_MAX_READ_BUFFER_LEN 10240
@@ -223,7 +218,7 @@ struct _PurpleHttpConnectionSet
 struct _PurpleHttpGzStream
 {
 	gboolean failed;
-	z_stream zs;
+	GZlibDecompressor *decompressor;
 	gsize max_output;
 	gsize decompressed;
 	GString *pending;
@@ -371,19 +366,14 @@ static PurpleHttpGzStream *
 purple_http_gz_new(gsize max_output, gboolean is_deflate)
 {
 	PurpleHttpGzStream *gzs = g_new0(PurpleHttpGzStream, 1);
-	int windowBits;
+	GZlibCompressorFormat format;
 
 	if (is_deflate)
-		windowBits = -MAX_WBITS;
+		format = G_ZLIB_COMPRESSOR_FORMAT_RAW;
 	else /* is gzip */
-		windowBits = MAX_WBITS + 32;
+		format = G_ZLIB_COMPRESSOR_FORMAT_GZIP;
 
-	if (inflateInit2(&gzs->zs, windowBits) != Z_OK) {
-		purple_debug_error("http", "Cannot initialize zlib stream\n");
-		g_free(gzs);
-		return NULL;
-	}
-
+	gzs->decompressor = g_zlib_decompressor_new(format);
 	gzs->max_output = max_output;
 
 	return gzs;
@@ -395,15 +385,12 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 	const gchar *compressed_buff;
 	gsize compressed_len;
 	GString *ret;
-	z_stream *zs;
 
 	g_return_val_if_fail(gzs != NULL, NULL);
 	g_return_val_if_fail(buf != NULL, NULL);
 
 	if (gzs->failed)
 		return NULL;
-
-	zs = &gzs->zs;
 
 	if (gzs->pending) {
 		g_string_append_len(gzs->pending, buf, len);
@@ -414,22 +401,26 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 		compressed_len = len;
 	}
 
-	zs->next_in = (z_const Bytef*)compressed_buff;
-	zs->avail_in = compressed_len;
-
 	ret = g_string_new(NULL);
-	while (zs->avail_in > 0) {
-		int gzres;
+	while (compressed_len > 0) {
+		GConverterResult gzres;
 		gchar decompressed_buff[PURPLE_HTTP_GZ_BUFF_LEN];
-		gsize decompressed_len;
+		gsize decompressed_len = 0;
+		gsize bytes_read = 0;
+		GError *error = NULL;
 
-		zs->next_out = (Bytef*)decompressed_buff;
-		zs->avail_out = sizeof(decompressed_buff);
-		decompressed_len = zs->avail_out = sizeof(decompressed_buff);
-		gzres = inflate(zs, Z_FULL_FLUSH);
-		decompressed_len -= zs->avail_out;
+		gzres = g_converter_convert(G_CONVERTER(gzs->decompressor),
+			       compressed_buff, compressed_len,
+		       	       decompressed_buff, sizeof(decompressed_buff),
+			       G_CONVERTER_NO_FLAGS,
+			       &bytes_read,
+			       &decompressed_len,
+			       &error);
 
-		if (gzres == Z_OK || gzres == Z_STREAM_END) {
+		compressed_buff += bytes_read;
+		compressed_len -= bytes_read;
+
+		if (gzres == G_CONVERTER_CONVERTED || G_CONVERTER_FINISHED) {
 			if (decompressed_len == 0)
 				break;
 			if (gzs->decompressed + decompressed_len >=
@@ -439,17 +430,18 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 					" decompressed data is reached\n");
 				decompressed_len = gzs->max_output -
 					gzs->decompressed;
-				gzres = Z_STREAM_END;
+				gzres = G_CONVERTER_FINISHED;
 			}
 			gzs->decompressed += decompressed_len;
 			g_string_append_len(ret, decompressed_buff,
 				decompressed_len);
-			if (gzres == Z_STREAM_END)
+			if (gzres == G_CONVERTER_FINISHED)
 				break;
 		} else {
 			purple_debug_error("http",
 				"Decompression failed (%d): %s\n", gzres,
-				zs->msg);
+				error->message);
+			g_clear_error(&error);
 			gzs->failed = TRUE;
 			return NULL;
 		}
@@ -460,9 +452,9 @@ purple_http_gz_put(PurpleHttpGzStream *gzs, const gchar *buf, gsize len)
 		gzs->pending = NULL;
 	}
 
-	if (zs->avail_in > 0) {
-		gzs->pending = g_string_new_len((gchar*)zs->next_in,
-			zs->avail_in);
+	if (compressed_len > 0) {
+		gzs->pending = g_string_new_len(compressed_buff,
+			compressed_len);
 	}
 
 	return ret;
@@ -473,7 +465,7 @@ purple_http_gz_free(PurpleHttpGzStream *gzs)
 {
 	if (gzs == NULL)
 		return;
-	inflateEnd(&gzs->zs);
+	g_object_unref(gzs->decompressor);
 	if (gzs->pending)
 		g_string_free(gzs->pending, TRUE);
 	g_free(gzs);
