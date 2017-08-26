@@ -1,0 +1,22 @@
+--- a/libpurple/protocols/facebook/api.c	2017-08-26 17:54:32.513800944 -0300
++++ b/libpurple/protocols/facebook/api.c	2017-08-26 16:11:12.821137020 -0300
+@@ -1675,8 +1675,18 @@
+ 				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+ 				break;
+ 
++			case 6:
++				/* Unknown new field */
++				FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
++				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
++				break;
++
+ 			default:
+-				FB_API_TCHK(FALSE);
++				/* Try to read unknown fields as varint */
++				FB_API_TCHK(type == FB_THRIFT_TYPE_I16 ||
++				            type == FB_THRIFT_TYPE_I32 ||
++				            type == FB_THRIFT_TYPE_I64);
++				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+ 				break;
+ 			}
+ 		}
