@@ -1858,8 +1858,18 @@ fb_api_cb_publish_pt(FbThrift *thft, GSList **press, GError **error)
 				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
 				break;
 
+			case 6:
+				/* Unknown new field */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
+				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+				break;
+
 			default:
-				FB_API_TCHK(FALSE);
+				/* Try to read unknown fields as varint */
+				FB_API_TCHK(type == FB_THRIFT_TYPE_I16 ||
+				            type == FB_THRIFT_TYPE_I32 ||
+				            type == FB_THRIFT_TYPE_I64);
+				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
 				break;
 			}
 		}
