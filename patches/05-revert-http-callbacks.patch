@@ -1,7 +1,7 @@
 diff --git a/libpurple/http.c b/libpurple/http.c
 --- a/libpurple/http.c
 +++ b/libpurple/http.c
-@@ -486,11 +486,7 @@ purple_http_socket_connect_new_cb(GObjec
+@@ -546,11 +546,7 @@
  	cb_data = g_object_steal_data(source, "cb_data");
  
  	if (conn == NULL) {
@@ -14,7 +14,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  		g_clear_error(&error);
  		return;
  	}
-@@ -1162,10 +1158,8 @@ static gboolean _purple_http_recv_loopbo
+@@ -1223,10 +1219,8 @@
  				&error);
  	got_anything = (len > 0);
  
@@ -27,7 +27,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  		g_clear_error(&error);
  		return FALSE;
  	}
-@@ -1450,10 +1444,8 @@ static gboolean _purple_http_send(GObjec
+@@ -1511,10 +1505,8 @@
  				&error);
  	}
  

@@ -1,16 +1,16 @@
 diff --git a/libpurple/http.c b/libpurple/http.c
 --- a/libpurple/http.c
 +++ b/libpurple/http.c
-@@ -28,7 +28,7 @@
+@@ -27,7 +27,7 @@
+ 
  #include "debug.h"
- #include "ntlm.h"
  #include "proxy.h"
 -#include "purple-gio.h"
 +#include "purple-socket.h"
  
- #include <zlib.h>
- #ifndef z_const
-@@ -57,15 +57,9 @@ typedef struct _PurpleHttpKeepaliveReque
+ #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
+ #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
+@@ -51,15 +51,9 @@
  
  typedef struct _PurpleHttpGzStream PurpleHttpGzStream;
  
@@ -27,7 +27,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  
  	gboolean is_busy;
  	guint use_count;
-@@ -181,7 +175,7 @@ struct _PurpleHttpCookieJar
+@@ -175,7 +169,7 @@
  struct _PurpleHttpKeepaliveRequest
  {
  	PurpleConnection *gc;
@@ -36,7 +36,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  	gpointer user_data;
  
  	PurpleHttpKeepaliveHost *host;
-@@ -253,7 +247,7 @@ gchar * purple_http_cookie_jar_dump(Purp
+@@ -266,7 +260,7 @@
  static PurpleHttpKeepaliveRequest *
  purple_http_keepalive_pool_request(PurpleHttpKeepalivePool *pool,
  	PurpleConnection *gc, const gchar *host, int port, gboolean is_ssl,
@@ -45,7 +45,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  static void
  purple_http_keepalive_pool_request_cancel(PurpleHttpKeepaliveRequest *req);
  static void
-@@ -469,65 +463,23 @@ purple_http_socket_hash(const gchar *hos
+@@ -529,65 +523,23 @@
  	return g_strdup_printf("%c:%s:%d", (is_ssl ? 'S' : 'R'), host, port);
  }
  
@@ -88,13 +88,12 @@ diff --git a/libpurple/http.c b/libpurple/http.c
 -
 -	client = purple_gio_socket_client_new(
 -			purple_connection_get_account(gc), &error);
--
++	PurpleHttpSocket *hs = g_new0(PurpleHttpSocket, 1);
+ 
 -	if (client == NULL) {
 -		purple_debug_error("http", "Error connecting to '%s:%d': %s",
 -				host, port, error->message);
 -		g_clear_error(&error);
-+	PurpleHttpSocket *hs = g_new0(PurpleHttpSocket, 1);
-+
 +	hs->ps = purple_socket_new(gc);
 +	purple_socket_set_data(hs->ps, "hs", hs);
 +	purple_socket_set_tls(hs->ps, is_ssl);
@@ -122,7 +121,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  	if (purple_debug_is_verbose())
  		purple_debug_misc("http", "new socket created: %p\n", hs);
  
-@@ -543,26 +495,7 @@ purple_http_socket_close_free(PurpleHttp
+@@ -603,26 +555,7 @@
  	if (purple_debug_is_verbose())
  		purple_debug_misc("http", "destroying socket: %p\n", hs);
  
@@ -150,7 +149,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  	g_free(hs);
  }
  
-@@ -749,9 +682,10 @@ static void _purple_http_disconnect(Purp
+@@ -809,9 +742,10 @@
  	gboolean is_graceful);
  
  static void _purple_http_gen_headers(PurpleHttpConnection *hc);
@@ -164,7 +163,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  
  /* closes current connection (if exists), estabilishes one and proceeds with
   * request */
-@@ -1143,31 +1077,21 @@ static gboolean _purple_http_recv_body(P
+@@ -1204,31 +1138,21 @@
  	return _purple_http_recv_body_data(hc, buf, len);
  }
  
@@ -175,14 +174,13 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  	gchar buf[4096];
  	gboolean got_anything;
 -	GError *error = NULL;
--
+ 
 -	len = g_pollable_input_stream_read_nonblocking(
 -				G_POLLABLE_INPUT_STREAM(
 -				g_io_stream_get_input_stream(
 -				G_IO_STREAM(hc->socket->conn))),
 -				buf, sizeof(buf), hc->socket->cancellable,
 -				&error);
-+
 +	len = purple_socket_read(hc->socket->ps, (guchar*)buf, sizeof(buf));
  	got_anything = (len > 0);
  
@@ -201,7 +199,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  		return FALSE;
  	}
  
-@@ -1346,13 +1270,11 @@ static gboolean _purple_http_recv_loopbo
+@@ -1407,13 +1331,11 @@
  	return got_anything;
  }
  
@@ -217,7 +215,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  }
  
  static void _purple_http_send_got_data(PurpleHttpConnection *hc,
-@@ -1383,19 +1305,17 @@ static void _purple_http_send_got_data(P
+@@ -1444,19 +1366,17 @@
  	hc->request->contents_length = estimated_length;
  }
  
@@ -239,7 +237,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  
  	_purple_http_gen_headers(hc);
  
-@@ -1408,7 +1328,7 @@ static gboolean _purple_http_send(GObjec
+@@ -1469,7 +1389,7 @@
  			hc->request_header_written;
  	} else if (hc->request->contents_reader) {
  		if (hc->contents_reader_requested)
@@ -248,7 +246,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  		if (!hc->contents_reader_buffer)
  			hc->contents_reader_buffer = g_string_new("");
  		if (hc->contents_reader_buffer->len == 0) {
-@@ -1421,7 +1341,7 @@ static gboolean _purple_http_send(GObjec
+@@ -1482,7 +1402,7 @@
  				PURPLE_HTTP_MAX_READ_BUFFER_LEN,
  				hc->request->contents_reader_data,
  				_purple_http_send_got_data);
@@ -257,7 +255,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  		}
  		write_from = hc->contents_reader_buffer->str;
  		write_len = hc->contents_reader_buffer->len;
-@@ -1436,19 +1356,12 @@ static gboolean _purple_http_send(GObjec
+@@ -1497,19 +1417,12 @@
  		purple_debug_warning("http", "Nothing to write\n");
  		written = 0;
  	} else {
@@ -281,7 +279,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  
  	if (written < 0) {
  		if (hc->request_header_written == 0 &&
-@@ -1457,22 +1370,21 @@ static gboolean _purple_http_send(GObjec
+@@ -1518,22 +1431,21 @@
  			purple_debug_info("http", "Keep-alive connection "
  				"expired (when writing), retrying...\n");
  			purple_http_conn_retry(hc);
@@ -310,7 +308,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  	} else {
  		hc->request_contents_written += written;
  		purple_http_conn_notify_progress_watcher(hc);
-@@ -1482,24 +1394,14 @@ static gboolean _purple_http_send(GObjec
+@@ -1543,24 +1455,14 @@
  			hc->request_contents_written <
  			(guint)hc->request->contents_length)
  		{
@@ -338,7 +336,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  }
  
  static void _purple_http_disconnect(PurpleHttpConnection *hc,
-@@ -1524,10 +1426,13 @@ static void _purple_http_disconnect(Purp
+@@ -1585,10 +1487,13 @@
  }
  
  static void
@@ -354,7 +352,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  
  	hc->socket_request = NULL;
  	hc->socket = hs;
-@@ -1538,14 +1443,7 @@ static void
+@@ -1599,14 +1504,7 @@
  		return;
  	}
  
@@ -370,7 +368,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  }
  
  static gboolean _purple_http_reconnect(PurpleHttpConnection *hc)
-@@ -2257,7 +2155,7 @@ purple_http_keepalive_pool_unref(PurpleH
+@@ -2318,7 +2216,7 @@
  static PurpleHttpKeepaliveRequest *
  purple_http_keepalive_pool_request(PurpleHttpKeepalivePool *pool,
  	PurpleConnection *gc, const gchar *host, int port, gboolean is_ssl,
@@ -379,7 +377,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  {
  	PurpleHttpKeepaliveRequest *req;
  	PurpleHttpKeepaliveHost *kahost;
-@@ -2300,15 +2198,19 @@ purple_http_keepalive_pool_request(Purpl
+@@ -2361,15 +2259,19 @@
  }
  
  static void
@@ -401,7 +399,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  	g_free(req);
  }
  
-@@ -2364,7 +2266,7 @@ static gboolean
+@@ -2425,7 +2327,7 @@
  
  		purple_http_keepalive_host_process_queue(host);
  
@@ -410,7 +408,7 @@ diff --git a/libpurple/http.c b/libpurple/http.c
  		g_free(req);
  
  		return FALSE;
-@@ -2435,16 +2337,7 @@ purple_http_keepalive_pool_release(Purpl
+@@ -2496,16 +2398,7 @@
  	if (purple_debug_is_verbose())
  		purple_debug_misc("http", "releasing a socket: %p\n", hs);
  

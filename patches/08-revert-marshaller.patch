@@ -17,7 +17,9 @@ diff --git a/libpurple/protocols/facebook/Makefile.am b/libpurple/protocols/face
  	data.c \
  	data.h \
  	facebook.h \
-@@ -30,6 +30,17 @@
+@@ -25,10 +28,21 @@
+ 	../../http.c \
+ 	../../http.h \
  	../../purple-socket.h \
  	../../purple-socket.c
  
@@ -35,6 +37,8 @@ diff --git a/libpurple/protocols/facebook/Makefile.am b/libpurple/protocols/face
  AM_CFLAGS = $(st)
  
  libfacebook_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
+ 
+ if STATIC_FACEBOOK
 diff --git a/libpurple/protocols/facebook/api.c b/libpurple/protocols/facebook/api.c
 --- a/libpurple/protocols/facebook/api.c
 +++ b/libpurple/protocols/facebook/api.c
@@ -261,7 +265,9 @@ new file mode 100644
 diff --git a/libpurple/protocols/facebook/mqtt.c b/libpurple/protocols/facebook/mqtt.c
 --- a/libpurple/protocols/facebook/mqtt.c
 +++ b/libpurple/protocols/facebook/mqtt.c
-@@ -30,6 +30,7 @@
+@@ -28,10 +28,11 @@
+ #include "account.h"
+ #include "eventloop.h"
  #include "glibcompat.h"
  #include "sslconn.h"
  
@@ -269,7 +275,9 @@ diff --git a/libpurple/protocols/facebook/mqtt.c b/libpurple/protocols/facebook/
  #include "mqtt.h"
  #include "util.h"
  
-@@ -94,11 +95,12 @@ fb_mqtt_class_init(FbMqttClass *klass)
+ struct _FbMqttPrivate
+ {
+@@ -92,11 +93,12 @@
  	 */
  	g_signal_new("connect",
  	             G_TYPE_FROM_CLASS(klass),
@@ -283,7 +291,7 @@ diff --git a/libpurple/protocols/facebook/mqtt.c b/libpurple/protocols/facebook/
  
  	/**
  	 * FbMqtt::error:
-@@ -110,11 +112,12 @@ fb_mqtt_class_init(FbMqttClass *klass)
+@@ -108,11 +110,12 @@
  	 */
  	g_signal_new("error",
  	             G_TYPE_FROM_CLASS(klass),
@@ -297,7 +305,7 @@ diff --git a/libpurple/protocols/facebook/mqtt.c b/libpurple/protocols/facebook/
  
  	/**
  	 * FbMqtt::open:
-@@ -126,11 +129,12 @@ fb_mqtt_class_init(FbMqttClass *klass)
+@@ -124,11 +127,12 @@
  	 */
  	g_signal_new("open",
  	             G_TYPE_FROM_CLASS(klass),
@@ -311,7 +319,7 @@ diff --git a/libpurple/protocols/facebook/mqtt.c b/libpurple/protocols/facebook/
  
  	/**
  	 * FbMqtt::publish:
-@@ -142,11 +146,12 @@ fb_mqtt_class_init(FbMqttClass *klass)
+@@ -140,11 +144,12 @@
  	 */
  	g_signal_new("publish",
  	             G_TYPE_FROM_CLASS(klass),
