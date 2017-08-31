@@ -39,6 +39,38 @@ diff --git a/libpurple/protocols/facebook/Makefile.am b/libpurple/protocols/face
  libfacebook_la_LDFLAGS = -module @PLUGIN_LDFLAGS@
  
  if STATIC_FACEBOOK
+diff --git a/libpurple/protocols/facebook/Makefile.mingw b/libpurple/protocols/facebook/Makefile.mingw
+--- a/libpurple/protocols/facebook/Makefile.mingw
++++ b/libpurple/protocols/facebook/Makefile.mingw
+@@ -42,6 +42,7 @@
+ ##  SOURCES, OBJECTS
+ ##
+ C_SRC =	\
++			marshal.c \
+ 			api.c \
+ 			data.c \
+ 			facebook.c \
+@@ -85,11 +86,19 @@
+ $(TARGET).dll: $(OBJECTS)
+ 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+ 
++marshal.c: marshaller.list marshal.h
++	@echo "#include \"marshal.h\"" > $@
++	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --body marshaller.list >> $@
++
++marshal.h: marshaller.list
++	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --header marshaller.list > $@
++
++
+ ##
+ ## CLEAN RULES
+ ##
+ clean:
+-	rm -f $(OBJECTS)
++	rm -f $(OBJECTS) marshal.c marshal.h
+ 	rm -f $(TARGET).dll
+ 
+ include $(PIDGIN_COMMON_TARGETS)
 diff --git a/libpurple/protocols/facebook/api.c b/libpurple/protocols/facebook/api.c
 --- a/libpurple/protocols/facebook/api.c
 +++ b/libpurple/protocols/facebook/api.c
