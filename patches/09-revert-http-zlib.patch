@@ -1,0 +1,148 @@
+diff -Naur a/libpurple/http.c b/libpurple/http.c
+--- a/libpurple/http.c
++++ b/libpurple/http.c
+@@ -29,6 +29,11 @@
+ #include "proxy.h"
+ #include "purple-socket.h"
+ 
++#include <zlib.h>
++#ifndef z_const
++#define z_const
++#endif
++
+ #define PURPLE_HTTP_URL_CREDENTIALS_CHARS "a-z0-9.,~_/*!&%?=+\\^-"
+ #define PURPLE_HTTP_MAX_RECV_BUFFER_LEN 10240
+ #define PURPLE_HTTP_MAX_READ_BUFFER_LEN 10240
+@@ -212,7 +217,7 @@
+ struct _PurpleHttpGzStream
+ {
+ 	gboolean failed;
+-	GZlibDecompressor *decompressor;
++	z_stream zs;
+ 	gsize max_output;
+ 	gsize decompressed;
+ 	GString *pending;
+@@ -360,14 +365,19 @@
+ purple_http_gz_new(gsize max_output, gboolean is_deflate)
+ {
+ 	PurpleHttpGzStream *gzs = g_new0(PurpleHttpGzStream, 1);
+-	GZlibCompressorFormat format;
++	int windowBits;
+ 
+ 	if (is_deflate)
+-		format = G_ZLIB_COMPRESSOR_FORMAT_RAW;
++		windowBits = -MAX_WBITS;
+ 	else /* is gzip */
+-		format = G_ZLIB_COMPRESSOR_FORMAT_GZIP;
++		windowBits = MAX_WBITS + 32;
++
++	if (inflateInit2(&gzs->zs, windowBits) != Z_OK) {
++		purple_debug_error("http", "Cannot initialize zlib stream\n");
++		g_free(gzs);
++		return NULL;
++	}
+ 
+-	gzs->decompressor = g_zlib_decompressor_new(format);
+ 	gzs->max_output = max_output;
+ 
+ 	return gzs;
+@@ -379,6 +389,7 @@
+ 	const gchar *compressed_buff;
+ 	gsize compressed_len;
+ 	GString *ret;
++	z_stream *zs;
+ 
+ 	g_return_val_if_fail(gzs != NULL, NULL);
+ 	g_return_val_if_fail(buf != NULL, NULL);
+@@ -386,6 +397,8 @@
+ 	if (gzs->failed)
+ 		return NULL;
+ 
++	zs = &gzs->zs;
++
+ 	if (gzs->pending) {
+ 		g_string_append_len(gzs->pending, buf, len);
+ 		compressed_buff = gzs->pending->str;
+@@ -395,26 +408,22 @@
+ 		compressed_len = len;
+ 	}
+ 
++	zs->next_in = (z_const Bytef*)compressed_buff;
++	zs->avail_in = compressed_len;
++
+ 	ret = g_string_new(NULL);
+-	while (compressed_len > 0) {
+-		GConverterResult gzres;
++	while (zs->avail_in > 0) {
++		int gzres;
+ 		gchar decompressed_buff[PURPLE_HTTP_GZ_BUFF_LEN];
+-		gsize decompressed_len = 0;
+-		gsize bytes_read = 0;
+-		GError *error = NULL;
+-
+-		gzres = g_converter_convert(G_CONVERTER(gzs->decompressor),
+-			       compressed_buff, compressed_len,
+-		       	       decompressed_buff, sizeof(decompressed_buff),
+-			       G_CONVERTER_NO_FLAGS,
+-			       &bytes_read,
+-			       &decompressed_len,
+-			       &error);
++		gsize decompressed_len;
+ 
+-		compressed_buff += bytes_read;
+-		compressed_len -= bytes_read;
++		zs->next_out = (Bytef*)decompressed_buff;
++		zs->avail_out = sizeof(decompressed_buff);
++		decompressed_len = zs->avail_out = sizeof(decompressed_buff);
++		gzres = inflate(zs, Z_FULL_FLUSH);
++		decompressed_len -= zs->avail_out;
+ 
+-		if (gzres == G_CONVERTER_CONVERTED || G_CONVERTER_FINISHED) {
++		if (gzres == Z_OK || gzres == Z_STREAM_END) {
+ 			if (decompressed_len == 0)
+ 				break;
+ 			if (gzs->decompressed + decompressed_len >=
+@@ -424,18 +433,17 @@
+ 					" decompressed data is reached\n");
+ 				decompressed_len = gzs->max_output -
+ 					gzs->decompressed;
+-				gzres = G_CONVERTER_FINISHED;
++				gzres = Z_STREAM_END;
+ 			}
+ 			gzs->decompressed += decompressed_len;
+ 			g_string_append_len(ret, decompressed_buff,
+ 				decompressed_len);
+-			if (gzres == G_CONVERTER_FINISHED)
++			if (gzres == Z_STREAM_END)
+ 				break;
+ 		} else {
+ 			purple_debug_error("http",
+ 				"Decompression failed (%d): %s\n", gzres,
+-				error->message);
+-			g_clear_error(&error);
++				zs->msg);
+ 			gzs->failed = TRUE;
+ 			return NULL;
+ 		}
+@@ -446,9 +454,9 @@
+ 		gzs->pending = NULL;
+ 	}
+ 
+-	if (compressed_len > 0) {
+-		gzs->pending = g_string_new_len(compressed_buff,
+-			compressed_len);
++	if (zs->avail_in > 0) {
++		gzs->pending = g_string_new_len((gchar*)zs->next_in,
++			zs->avail_in);
+ 	}
+ 
+ 	return ret;
+@@ -459,7 +467,7 @@
+ {
+ 	if (gzs == NULL)
+ 		return;
+-	g_object_unref(gzs->decompressor);
++	inflateEnd(&gzs->zs);
+ 	if (gzs->pending)
+ 		g_string_free(gzs->pending, TRUE);
+ 	g_free(gzs);
