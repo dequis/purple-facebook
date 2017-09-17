@@ -1,0 +1,34 @@
+# HG changeset patch
+# User dx <dx@dxzone.com.ar>
+# Date 1504135981 10800
+#      Wed Aug 30 20:33:01 2017 -0300
+# Node ID 9ff9acf9fa1486a13be913eb4229242eb3d04496
+# Parent  4fe93b8bdcb43a2d00d80ed62f5454a69bf48c54
+facebook: Fix "Failed to read thrift" with unknown fields in /t_p payload
+
+>Login error: Failed to read thrift: facebook-api.c:1815
+>fb_api_cb_publish_pt: assertion 'FALSE' failed
+
+diff --git a/libpurple/protocols/facebook/api.c b/libpurple/protocols/facebook/api.c
+--- a/libpurple/protocols/facebook/api.c
++++ b/libpurple/protocols/facebook/api.c
+@@ -1858,8 +1858,18 @@ fb_api_cb_publish_pt(FbThrift *thft, GSL
+ 				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+ 				break;
+ 
++			case 6:
++				/* Unknown new field */
++				FB_API_TCHK(type == FB_THRIFT_TYPE_I64);
++				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
++				break;
++
+ 			default:
+-				FB_API_TCHK(FALSE);
++				/* Try to read unknown fields as varint */
++				FB_API_TCHK(type == FB_THRIFT_TYPE_I16 ||
++				            type == FB_THRIFT_TYPE_I32 ||
++				            type == FB_THRIFT_TYPE_I64);
++				FB_API_TCHK(fb_thrift_read_i64(thft, NULL));
+ 				break;
+ 			}
+ 		}
