@@ -1,0 +1,43 @@
+From 99e31624bf9e88b3002e05514db904d5aad35db6 Mon Sep 17 00:00:00 2001
+From: dequis <dx@dxzone.com.ar>
+Date: Sat, 25 Feb 2017 03:14:57 -0300
+Subject: [PATCH] Fix crash when the error signal is raised and glib has
+ G_ENABLE_DEBUG
+
+If glib is built with --enable-debug=yes, it will have G_ENABLE_DEBUG
+set internally
+
+This flag changes the g_marshal_value_peek_object() macro to use
+g_value_get_object(), which performs sanity checks, instead of doing a
+direct offset access.
+
+The definition of our error signal was wrong, using a marshaller with
+a GObject in the first parameter but setting the type of the GValue to
+G_TYPE_ERROR. Since we have no marshaller for G_TYPE_ERROR, and that all
+of those are functionally equivalent (and in fact use the exact same
+code in non-debug builds), I went with POINTER for both sides.
+
+The actual crash happened because of a g_return_val_if_fail() in the
+sanity checks which made it return NULL after throwing a warning like
+this:
+
+    g_value_get_object: assertion 'G_VALUE_HOLDS_OBJECT (value)' failed
+
+This was reported by a gentoo user who had the debug use flag. Thanks!
+---
+ facebook/facebook-api.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libpurple/protocols/facebook/api.c b/libpurple/protocols/facebook/api.c
+index a94f9af..eb0e8b4 100644
+--- a/libpurple/protocols/facebook/api.c
++++ b/libpurple/protocols/facebook/api.c
+@@ -381,7 +381,7 @@
+ 	             G_SIGNAL_ACTION,
+ 	             0,
+ 	             NULL, NULL,
+-	             fb_marshal_VOID__OBJECT,
++	             fb_marshal_VOID__POINTER,
+ 	             G_TYPE_NONE,
+ 	             1, G_TYPE_POINTER);
+ 
