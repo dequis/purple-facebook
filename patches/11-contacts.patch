@@ -1,0 +1,11 @@
+--- a/libpurple/protocols/facebook/api.c
++++ b/libpurple/protocols/facebook/api.c
+@@ -2424,7 +2424,7 @@
+ 			priv->contacts_delta = g_strdup(is_delta ? cursor : delta_cursor);
+ 		}
+ 
+-		if (users) {
++		if (users || (complete && !is_delta)) {
+ 			g_signal_emit_by_name(api, "contacts", users, complete);
+ 		}
+ 
