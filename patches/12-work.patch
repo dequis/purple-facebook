@@ -1,0 +1,822 @@
+diff -aur pidgin/libpurple/protocols/facebook/api.c pidgin3/libpurple/protocols/facebook/api.c
+--- a/libpurple/protocols/facebook/api.c
++++ b/libpurple/protocols/facebook/api.c
+@@ -33,6 +33,7 @@
+ #include "util.h"
+ 
+ typedef struct _FbApiData FbApiData;
++typedef struct _FbApiPreloginData FbApiPreloginData;
+ 
+ enum
+ {
+@@ -44,6 +45,8 @@
+ 	PROP_STOKEN,
+ 	PROP_TOKEN,
+ 	PROP_UID,
++	PROP_TWEAK,
++	PROP_WORK,
+ 
+ 	PROP_N
+ };
+@@ -69,6 +72,11 @@
+ 	guint unread;
+ 	FbId lastmid;
+ 	gchar *contacts_delta;
++	int tweak;
++	gboolean is_work;
++	gboolean need_work_switch;
++	gchar *sso_verifier;
++	FbId work_community_id;
+ };
+ 
+ struct _FbApiData
+@@ -77,6 +85,13 @@
+ 	GDestroyNotify func;
+ };
+ 
++struct _FbApiPreloginData
++{
++	FbApi *api;
++	gchar *user;
++	gchar *pass;
++};
++
+ static void
+ fb_api_attach(FbApi *api, FbId aid, const gchar *msgid, FbApiMessage *msg);
+ 
+@@ -94,6 +109,24 @@
+ 
+ G_DEFINE_TYPE(FbApi, fb_api, G_TYPE_OBJECT);
+ 
++static const gchar *agents[] = {
++	FB_API_AGENT,
++	NULL,
++};
++
++static const gchar *
++fb_api_get_agent_string(int tweak, gboolean mqtt)
++{
++	gboolean http_only = tweak & 4;
++	gboolean mqtt_only = tweak & 8;
++
++	if (tweak <= 0 || tweak > 15 || (http_only && mqtt) || (mqtt_only && !mqtt)) {
++		return agents[0];
++	}
++
++	return agents[tweak & 3];
++}
++
+ static void
+ fb_api_set_property(GObject *obj, guint prop, const GValue *val,
+                     GParamSpec *pspec)
+@@ -123,6 +156,12 @@
+ 	case PROP_UID:
+ 		priv->uid = g_value_get_int64(val);
+ 		break;
++	case PROP_TWEAK:
++		priv->tweak = g_value_get_int(val);
++		break;
++	case PROP_WORK:
++		priv->is_work = g_value_get_boolean(val);
++		break;
+ 
+ 	default:
+ 		G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop, pspec);
+@@ -154,6 +193,12 @@
+ 	case PROP_UID:
+ 		g_value_set_int64(val, priv->uid);
+ 		break;
++	case PROP_TWEAK:
++		g_value_set_int(val, priv->tweak);
++		break;
++	case PROP_WORK:
++		g_value_set_boolean(val, priv->is_work);
++		break;
+ 
+ 	default:
+ 		G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop, pspec);
+@@ -190,6 +235,7 @@
+ 	g_free(priv->stoken);
+ 	g_free(priv->token);
+ 	g_free(priv->contacts_delta);
++	g_free(priv->sso_verifier);
+ }
+ 
+ static void
+@@ -279,6 +325,26 @@
+ 		"User identifier",
+ 		0, G_MAXINT64, 0,
+ 		G_PARAM_READWRITE);
++
++	/**
++	 * FbApi:tweak:
++	 */
++	props[PROP_TWEAK] = g_param_spec_int(
++		"tweak",
++		"Tweak",
++		"",
++		0, G_MAXINT, 0,
++		G_PARAM_READWRITE);
++
++	/**
++	 * FbApi:work:
++	 */
++	props[PROP_WORK] = g_param_spec_boolean(
++		"work",
++		"Work",
++		"",
++		FALSE,
++		G_PARAM_READWRITE);
+ 	g_object_class_install_properties(gklass, PROP_N, props);
+ 
+ 	/**
+@@ -517,6 +583,22 @@
+ 	             fb_marshal_VOID__POINTER,
+ 	             G_TYPE_NONE,
+ 	             1, G_TYPE_POINTER);
++
++	/**
++	 * FbApi::work-sso-login:
++	 * @api: The #FbApi.
++	 *
++	 * Emitted when user interaction is required to continue SAML SSO login
++	 */
++
++	g_signal_new("work-sso-login",
++	             G_TYPE_FROM_CLASS(klass),
++	             G_SIGNAL_ACTION,
++	             0,
++	             NULL, NULL,
++	             fb_marshal_VOID__VOID,
++	             G_TYPE_NONE,
++	             0);
+ }
+ 
+ static void
+@@ -760,7 +842,8 @@
+ 	PurpleHttpConnection *ret;
+ 	PurpleHttpRequest *req;
+ 
+-	fb_http_params_set_str(params, "api_key", FB_API_KEY);
++	fb_http_params_set_str(params, "api_key",
++	                       priv->is_work ? FB_WORK_API_KEY : FB_API_KEY);
+ 	fb_http_params_set_str(params, "device_id", priv->did);
+ 	fb_http_params_set_str(params, "fb_api_req_friendly_name", name);
+ 	fb_http_params_set_str(params, "format", "json");
+@@ -787,7 +870,7 @@
+ 		g_string_append_printf(gstr, "%s=%s", key, val);
+ 	}
+ 
+-	g_string_append(gstr, FB_API_SECRET);
++	g_string_append(gstr, priv->is_work ? FB_WORK_API_SECRET : FB_API_SECRET);
+ 	data = g_compute_checksum_for_string(G_CHECKSUM_MD5, gstr->str,
+ 	                                     gstr->len);
+ 	fb_http_params_set_str(params, "sig", data);
+@@ -929,7 +1012,9 @@
+ 
+ 	/* Write the information string */
+ 	fb_thrift_write_field(thft, FB_THRIFT_TYPE_STRING, 2, 1);
+-	fb_thrift_write_str(thft, FB_API_MQTT_AGENT);
++	fb_thrift_write_str(thft, (priv->tweak != 0)
++	                    ? fb_api_get_agent_string(priv->tweak, 1)
++	                    : FB_API_MQTT_AGENT);
+ 
+ 	/* Write the UNKNOWN ("cp"?) */
+ 	fb_thrift_write_field(thft, FB_THRIFT_TYPE_I64, 3, 2);
+@@ -2128,6 +2213,54 @@
+ }
+ 
+ static void
++fb_api_cb_work_peek(PurpleHttpConnection *con, PurpleHttpResponse *res, gpointer data)
++{
++	FbApi *api = data;
++	FbApiPrivate *priv = api->priv;
++	GError *err = NULL;
++	JsonNode *root;
++	gchar *community = NULL;
++
++	if (!fb_api_http_chk(api, con, res, &root)) {
++		return;
++	}
++
++	/* The work_users[0] explicitly only handles the first user.
++	 * If more than one user is ever needed, this is what you want to change,
++	 * but as far as I know this feature (linked work accounts) is deprecated
++	 * and most users can detach their work accounts from their personal
++	 * accounts by assigning a password to the work account. */
++	community = fb_json_node_get_str(root,
++		"$.data.viewer.work_users[0].community.login_identifier", &err);
++
++	FB_API_ERROR_EMIT(api, err,
++		g_free(community);
++		json_node_free(root);
++		return;
++	);
++
++	priv->work_community_id = FB_ID_FROM_STR(community);
++
++	fb_api_auth(api, "X", "X", "personal_to_work_switch");
++
++	g_free(community);
++	json_node_free(root);
++}
++
++static PurpleHttpConnection *
++fb_api_work_peek(FbApi *api)
++{
++	FbHttpParams *prms;
++
++	prms = fb_http_params_new();
++	fb_http_params_set_int(prms, "doc_id", FB_API_WORK_COMMUNITY_PEEK);
++
++	return fb_api_http_req(api, FB_API_URL_GQL, "WorkCommunityPeekQuery",
++	                       "post", prms, fb_api_cb_work_peek);
++}
++
++
++static void
+ fb_api_cb_auth(PurpleHttpConnection *con, PurpleHttpResponse *res,
+                gpointer data)
+ {
+@@ -2143,7 +2276,14 @@
+ 
+ 	values = fb_json_values_new(root);
+ 	fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.access_token");
+-	fb_json_values_add(values, FB_JSON_TYPE_INT, TRUE, "$.uid");
++
++	/* extremely silly difference */
++	if (priv->is_work) {
++		fb_json_values_add(values, FB_JSON_TYPE_STR, TRUE, "$.uid");
++	} else {
++		fb_json_values_add(values, FB_JSON_TYPE_INT, TRUE, "$.uid");
++	}
++
+ 	fb_json_values_update(values, &err);
+ 
+ 	FB_API_ERROR_EMIT(api, err,
+@@ -2154,25 +2294,218 @@
+ 
+ 	g_free(priv->token);
+ 	priv->token = fb_json_values_next_str_dup(values, NULL);
+-	priv->uid = fb_json_values_next_int(values, 0);
+ 
+-	g_signal_emit_by_name(api, "auth");
++	if (priv->is_work) {
++		priv->uid = FB_ID_FROM_STR(fb_json_values_next_str(values, "0"));
++	} else {
++		priv->uid = fb_json_values_next_int(values, 0);
++	}
++
++	if (priv->need_work_switch) {
++		fb_api_work_peek(api);
++		priv->need_work_switch = FALSE;
++	} else {
++		g_signal_emit_by_name(api, "auth");
++	}
++
+ 	g_object_unref(values);
+ 	json_node_free(root);
+ }
+ 
+ void
+-fb_api_auth(FbApi *api, const gchar *user, const gchar *pass)
++fb_api_auth(FbApi *api, const gchar *user, const gchar *pass, const gchar *credentials_type)
+ {
++	FbApiPrivate *priv = api->priv;
+ 	FbHttpParams *prms;
+ 
+ 	prms = fb_http_params_new();
+ 	fb_http_params_set_str(prms, "email", user);
+ 	fb_http_params_set_str(prms, "password", pass);
++
++	if (credentials_type) {
++		fb_http_params_set_str(prms, "credentials_type", credentials_type);
++	}
++
++	if (priv->sso_verifier) {
++		fb_http_params_set_str(prms, "code_verifier", priv->sso_verifier);
++		g_free(priv->sso_verifier);
++		priv->sso_verifier = NULL;
++	}
++
++	if (priv->work_community_id) {
++		fb_http_params_set_int(prms, "community_id", priv->work_community_id);
++	}
++
++	if (priv->is_work && priv->token) {
++		fb_http_params_set_str(prms, "access_token", priv->token);
++	}
++
+ 	fb_api_http_req(api, FB_API_URL_AUTH, "authenticate", "auth.login",
+ 	                prms, fb_api_cb_auth);
+ }
+ 
++static void
++fb_api_cb_work_prelogin(PurpleHttpConnection *con, PurpleHttpResponse *res, gpointer data)
++{
++	FbApiPreloginData *pata = data;
++	FbApi *api = pata->api;
++	FbApiPrivate *priv = api->priv;
++	GError *err = NULL;
++	JsonNode *root;
++	gchar *status;
++	gchar *user = pata->user;
++	gchar *pass = pata->pass;
++
++	g_free(pata);
++
++	if (!fb_api_http_chk(api, con, res, &root)) {
++		return;
++	}
++
++	status = fb_json_node_get_str(root, "$.status", &err);
++
++	FB_API_ERROR_EMIT(api, err,
++		json_node_free(root);
++		return;
++	);
++
++	if (g_strcmp0(status, "can_login_password") == 0) {
++		fb_api_auth(api, user, pass, "work_account_password");
++
++	} else if (g_strcmp0(status, "can_login_via_linked_account") == 0) {
++		fb_api_auth(api, user, pass, "personal_account_password_with_work_username");
++		priv->need_work_switch = TRUE;
++
++	} else if (g_strcmp0(status, "can_login_sso") == 0) {
++		g_signal_emit_by_name(api, "work-sso-login");
++
++	} else if (g_strcmp0(status, "cannot_login") == 0) {
++		char *reason = fb_json_node_get_str(root, "$.cannot_login_reason", NULL);
++
++		if (g_strcmp0(reason, "non_business_email") == 0) {
++			fb_api_error(api, FB_API_ERROR_AUTH,
++			             "Cannot login with non-business email. "
++			             "Change the 'username' setting or disable 'work'");
++		} else {
++			char *title = fb_json_node_get_str(root, "$.error_title", NULL);
++			char *body = fb_json_node_get_str(root, "$.error_body", NULL);
++
++			fb_api_error(api, FB_API_ERROR_AUTH,
++			             "Work prelogin failed (%s - %s)", title, body);
++
++			g_free(title);
++			g_free(body);
++		}
++
++		g_free(reason);
++
++	} else if (g_strcmp0(status, "can_self_invite") == 0) {
++		fb_api_error(api, FB_API_ERROR_AUTH, "Unknown email. "
++		             "Change the 'username' setting or disable 'work'");
++	}
++
++	g_free(status);
++	json_node_free(root);
++}
++
++void
++fb_api_work_login(FbApi *api, gchar *user, gchar *pass)
++{
++	FbApiPrivate *priv = api->priv;
++	FbApiPreloginData *pata = g_new0(FbApiPreloginData, 1);
++	FbHttpParams *prms, *hdrs;
++	gchar *data;
++	PurpleHttpConnection *ret;
++	PurpleHttpRequest *req;
++	const char *url = FB_API_URL_WORK_PRELOGIN;
++
++	pata->api = api;
++	pata->user = user;
++	pata->pass = pass;
++
++	priv->is_work = TRUE;
++
++	// see mark k
++	req = purple_http_request_new(url);
++	purple_http_request_set_max_len(req, -1);
++	purple_http_request_set_method(req, "POST");
++
++	purple_http_request_header_set(req, "Authorization", "OAuth null");
++	purple_http_request_header_set(req, "User-Agent", FB_API_AGENT);
++	purple_http_request_header_set(req, "Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
++
++	prms = fb_http_params_new();
++	fb_http_params_set_str(prms, "email", user);
++	fb_http_params_set_str(prms, "access_token",
++	                       FB_WORK_API_KEY "|" FB_WORK_API_SECRET);
++
++	data = fb_http_params_close(prms, NULL);
++	purple_http_request_set_contents(req, data, -1);
++	ret = purple_http_request(priv->gc, req, fb_api_cb_work_prelogin, pata);
++	fb_http_conns_add(priv->cons, ret);
++	purple_http_request_unref(req);
++
++	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", ret);
++	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request URL: %s", url);
++	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request Data: %s", data);
++
++	g_free(data);
++}
++
++gchar *
++fb_api_work_gen_sso_url(FbApi *api, const gchar *user)
++{
++	FbApiPrivate *priv = api->priv;
++	gchar *challenge, *verifier, *req_id, *email;
++	gchar *ret;
++
++	fb_util_gen_sso_verifier(&challenge, &verifier, &req_id);
++
++	email = g_uri_escape_string(user, NULL, FALSE);
++
++	ret = g_strdup_printf(FB_API_SSO_URL, req_id, challenge, email);
++
++	g_free(req_id);
++	g_free(challenge);
++	g_free(email);
++
++	g_free(priv->sso_verifier);
++	priv->sso_verifier = verifier;
++
++	return ret;
++}
++
++void
++fb_api_work_got_nonce(FbApi *api, const gchar *url)
++{
++	gchar **split;
++	gchar *uid = NULL;
++	gchar *nonce = NULL;
++	int i;
++
++	if (!g_str_has_prefix(url, "fb-workchat-sso://sso/?")) {
++		return;
++	}
++
++	split = g_strsplit(strchr(url, '?'), "&", -1);
++
++	for (i = 0; split[i]; i++) {
++		gchar *eq = strchr(split[i], '=');
++
++		if (g_str_has_prefix(split[i], "uid=")) {
++			uid = g_strstrip(eq + 1);
++		} else if (g_str_has_prefix(split[i], "nonce=")) {
++			nonce = g_strstrip(eq + 1);
++		}
++	}
++
++	if (uid && nonce) {
++		fb_api_auth(api, uid, nonce, "work_sso_nonce");
++	}
++
++	g_strfreev(split);
++}
++
+ static gchar *
+ fb_api_user_icon_checksum(gchar *icon)
+ {
+@@ -2277,6 +2610,8 @@
+ 	                   "$.represented_profile.id");
+ 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+ 	                   "$.represented_profile.friendship_status");
++	fb_json_values_add(values, FB_JSON_TYPE_BOOL, FALSE,
++	                   "$.is_on_viewer_contact_list");
+ 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+ 	                   "$.structured_name.text");
+ 	fb_json_values_add(values, FB_JSON_TYPE_STR, FALSE,
+@@ -2289,12 +2624,15 @@
+ 	}
+ 
+ 	while (fb_json_values_update(values, &err)) {
++		gboolean in_contact_list;
++
+ 		str = fb_json_values_next_str(values, "0");
+ 		uid = FB_ID_FROM_STR(str);
+ 		str = fb_json_values_next_str(values, NULL);
++		in_contact_list = fb_json_values_next_bool(values, FALSE);
+ 
+-		if ((!purple_strequal(str, "ARE_FRIENDS") &&
+-		    (uid != priv->uid)) || (uid == 0))
++		if ((!in_contact_list && !purple_strequal(str, "ARE_FRIENDS") &&
++		     (uid != priv->uid)) || (uid == 0))
+ 		{
+ 			if (!is_array) {
+ 				break;
+diff -aur pidgin/libpurple/protocols/facebook/api.h pidgin3/libpurple/protocols/facebook/api.h
+--- a/libpurple/protocols/facebook/api.h
++++ b/libpurple/protocols/facebook/api.h
+@@ -98,6 +98,20 @@
+ #define FB_API_SECRET  "374e60f8b9bb6b8cbb30f78030438895"
+ 
+ /**
++ * FB_WORK_API_KEY:
++ *
++ * The Facebook workchat app API key.
++ */
++#define FB_WORK_API_KEY  "312713275593566"
++
++/**
++ * FB_WORK_API_SECRET:
++ *
++ * The Facebook workchat app API secret.
++ */
++#define FB_WORK_API_SECRET  "d2901dc6cb685df3b074b30b56b78d28"
++
++/**
+  * FB_ORCA_AGENT
+  *
+  * The part of the user agent that looks like the official client, since the
+@@ -137,6 +151,15 @@
+ #define FB_API_URL_AUTH  FB_API_BHOST "/method/auth.login"
+ 
+ /**
++ * FB_API_URL_WORK_PRELOGIN
++ *
++ * The URL for workchat pre-login information, indicating what auth method
++ * should be used
++ */
++
++#define FB_API_URL_WORK_PRELOGIN  FB_API_GHOST "/at_work/pre_login_info"
++
++/**
+  * FB_API_URL_GQL:
+  *
+  * The URL for GraphQL requests.
+@@ -172,6 +195,14 @@
+ #define FB_API_URL_TOPIC  FB_API_AHOST "/method/messaging.setthreadname"
+ 
+ /**
++ * FB_API_SSO_URL:
++ *
++ * Template for the URL shown to workchat users when trying to authenticate
++ * with SSO.
++ */
++#define FB_API_SSO_URL "https://m.facebook.com/work/sso/mobile?app_id=312713275593566&response_url=fb-workchat-sso%%3A%%2F%%2Fsso&request_id=%s&code_challenge=%s&email=%s"
++
++/**
+  * FB_API_QUERY_CONTACT:
+  *
+  * The query hash for the `UsersQuery`.
+@@ -319,6 +350,16 @@
+ #define FB_API_QUERY_XMA  10153919431161729
+ 
+ /**
++ * FB_API_WORK_COMMUNITY_PEEK:
++ *
++ * The docid with information about the work community of the currently
++ * authenticated user.
++ *
++ * Used when prelogin returns can_login_via_linked_account
++ */
++#define FB_API_WORK_COMMUNITY_PEEK 1295334753880530
++
++/**
+  * FB_API_CONTACTS_COUNT:
+  *
+  * The maximum amount of contacts to fetch in a single request. If this
+@@ -641,12 +682,49 @@
+  * @api: The #FbApi.
+  * @user: The Facebook user name, email, or phone number.
+  * @pass: The Facebook password.
++ * @credentials_type: Type of work account credentials, or NULL
+  *
+  * Sends an authentication request to Facebook. This will obtain
+  * session information, which is required for all other requests.
+  */
+ void
+-fb_api_auth(FbApi *api, const gchar *user, const gchar *pass);
++fb_api_auth(FbApi *api, const gchar *user, const gchar *pass, const gchar *credentials_type);
++
++/**
++ * fb_api_work_login:
++ * @api: The #FbApi.
++ * @user: The Facebook user name, email, or phone number.
++ * @pass: The Facebook password.
++ *
++ * Starts the workchat login sequence.
++ */
++void
++fb_api_work_login(FbApi *api, gchar *user, gchar *pass);
++
++/**
++ * fb_api_work_gen_sso_url:
++ * @api: The #FbApi.
++ * @user: The Facebook user email.
++ *
++ * Generates the URL to be shown to the user to get the SSO auth token. This
++ * url contains a challenge and the corresponding verifier is saved in the
++ * FbApi instance to be used later.
++ *
++ * Returns: a newly allocated string.
++ */
++gchar *
++fb_api_work_gen_sso_url(FbApi *api, const gchar *user);
++
++/**
++ * fb_api_work_got_nonce:
++ * @api: The #FbApi.
++ * @url: The fb-workchat-sso:// URL as entered by the user
++ *
++ * Parses the fb-workchat-sso:// URL that the user got redirected to and
++ * continues with work_sso_nonce auth
++ */
++void
++fb_api_work_got_nonce(FbApi *api, const gchar *url);
+ 
+ /**
+  * fb_api_contact:
+diff -aur pidgin/libpurple/protocols/facebook/facebook.c pidgin3/libpurple/protocols/facebook/facebook.c
+--- a/libpurple/protocols/facebook/facebook.c
++++ b/libpurple/protocols/facebook/facebook.c
+@@ -828,6 +828,59 @@
+ }
+ 
+ static void
++fb_cb_work_sso_input_cb(gpointer user_data, const gchar *nonce)
++{
++	FbApi *api;
++	FbData *fata = user_data;
++
++	api = fb_data_get_api(fata);
++
++	fb_api_work_got_nonce(api, nonce);
++}
++
++static void
++fb_cb_work_sso_cancel_cb(gpointer user_data)
++{
++	PurpleConnection *gc;
++	FbData *fata = user_data;
++
++	gc = fb_data_get_connection(fata);
++
++	purple_connection_error(gc, PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE,
++		_("User cancelled authorization"));
++}
++
++static void
++fb_cb_api_work_sso_login(FbApi *api, gpointer data)
++{
++	FbData *fata = data;
++	PurpleAccount *acct;
++	PurpleConnection *gc;
++	gchar *url;
++
++	gc = fb_data_get_connection(fata);
++	acct = purple_connection_get_account(gc);
++
++	url = fb_api_work_gen_sso_url(api, purple_account_get_username(acct));
++
++	purple_notify_uri(gc, url);
++	purple_request_input(gc, _("Authorization Code"), "SSO auth",
++		_("Open this URL in your browser to authenticate.\n"
++		"Respond to this message with the URL starting with 'fb-workchat-sso://' that it attempts to redirect to.\n"
++		"If your browser says 'Address not understood' (like firefox), copy it from the address bar.\n"
++		"Otherwise you might have to right click -> view source in the last page and find it there. Good luck!"),
++		url,
++		FALSE, FALSE, NULL, 
++		_("OK"), G_CALLBACK(fb_cb_work_sso_input_cb), 
++		_("Cancel"), G_CALLBACK(fb_cb_work_sso_cancel_cb), 
++		purple_connection_get_account(gc), NULL, NULL, fata);
++
++
++	g_free(url);
++}
++
++
++static void
+ fb_mark_read(FbData *fata, FbId id, gboolean thread)
+ {
+ 	FbApi *api;
+@@ -1056,6 +1109,10 @@
+ 	                 "typing",
+ 	                 G_CALLBACK(fb_cb_api_typing),
+ 	                 fata);
++	g_signal_connect(api,
++	                 "work-sso-login",
++	                 G_CALLBACK(fb_cb_api_work_sso_login),
++	                 fata);
+ 
+ 	purple_signal_connect(convh,
+ 	                      "conversation-updated",
+@@ -1073,7 +1130,11 @@
+ 		pass = purple_connection_get_password(gc);
+ 		purple_connection_update_progress(gc, _("Authenticating"),
+ 		                                  1, 4);
+-		fb_api_auth(api, user, pass);
++		if (purple_account_get_bool(acct, "work", FALSE)) {
++			fb_api_work_login(api, user, pass);
++		} else {
++			fb_api_auth(api, user, pass, NULL);
++		}
+ 		return;
+ 	}
+ 
+@@ -1678,6 +1739,11 @@
+ 	                                       "incoming messages"),
+ 	                                     "group-chat-open", TRUE);
+ 	opts = g_list_prepend(opts, opt);
++
++	opt = purple_account_option_bool_new(_("Login as a Workplace account"),
++	                                     "work", FALSE);
++	opts = g_list_prepend(opts, opt);
++
+ 	pinfo.protocol_options = g_list_reverse(opts);
+ 
+ 	inited = TRUE;
+diff -aur pidgin/libpurple/protocols/facebook/util.c pidgin3/libpurple/protocols/facebook/util.c
+--- a/libpurple/protocols/facebook/util.c
++++ b/libpurple/protocols/facebook/util.c
+@@ -564,3 +564,57 @@
+ 	g_object_unref(conv);
+ 	return ret;
+ }
++
++gchar *
++fb_util_urlsafe_base64_encode(const guchar *data, gsize len)
++{
++	gchar *out = g_base64_encode(data, len);
++	gchar *c;
++
++	for (c = out; *c; c++) {
++		if (*c == '+') {
++			*c = '-';
++		} else if (*c == '/') {
++			*c = '_';
++		} else if (*c == '=') {
++			*c = '\0';
++			break;
++		}
++	}
++
++	return out;
++}
++
++/* bitlbee compat */
++static void
++random_bytes(guint8 *buf, gsize len)
++{
++	int i;
++
++	for (i = 0; i < len; i++) {
++		buf[i] = (guint8) g_random_int_range(0, 256);
++	}
++}
++
++void
++fb_util_gen_sso_verifier(gchar **challenge, gchar **verifier, gchar **req_id)
++{
++	guint8 buf[32];
++	GChecksum *gc;
++	gsize digest_len = sizeof buf;
++
++	random_bytes(buf, sizeof buf);
++
++	*verifier = fb_util_urlsafe_base64_encode(buf, sizeof buf);
++
++	gc = g_checksum_new(G_CHECKSUM_SHA256);
++	g_checksum_update(gc, (guchar *) *verifier, -1);
++	g_checksum_get_digest(gc, buf, &digest_len);
++	g_checksum_free(gc);
++
++	*challenge = fb_util_urlsafe_base64_encode(buf, sizeof buf);
++
++	random_bytes(buf, 3);
++
++	*req_id = fb_util_urlsafe_base64_encode(buf, 3);
++}
+diff -aur pidgin/libpurple/protocols/facebook/util.h pidgin3/libpurple/protocols/facebook/util.h
+--- a/libpurple/protocols/facebook/util.h
++++ b/libpurple/protocols/facebook/util.h
+@@ -347,4 +347,30 @@
+ GByteArray *
+ fb_util_zlib_inflate(const GByteArray *bytes, GError **error);
+ 
++/**
++ * fb_util_urlsafe_base64_encode:
++ * @data: the binary data to encode.
++ * @len: the length of data
++ *
++ * Wrapper around g_base64_encode() which substitutes '-' instead of '+'
++ * and '_' instead of '/' and removes the padding
++ *
++ * Returns: A newly allocated string.
++ */
++
++gchar *
++fb_util_urlsafe_base64_encode(const guchar *data, gsize len);
++
++/**
++ * fb_util_gen_sso_verifier:
++ * @challenge: base64 of sha256 of verifier
++ * @verifier: base64 of random data
++ * @req_id: base64 of random data
++ *
++ * Generates the challenge/response parameters used for the workchat SSO auth.
++ * All parameters are output parameters.
++ */
++void
++fb_util_gen_sso_verifier(gchar **challenge, gchar **verifier, gchar **req_id);
++
+ #endif /* _FACEBOOK_UTIL_H_ */
