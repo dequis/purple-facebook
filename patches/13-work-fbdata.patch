@@ -1,0 +1,16 @@
+--- a/libpurple/protocols/facebook/data.c
++++ b/libpurple/protocols/facebook/data.c
+@@ -219,6 +219,13 @@
+ 		ret = FALSE;
+ 	}
+ 
++	if (purple_account_get_bool(acct, "work", FALSE)) {
++		g_value_init(&val, G_TYPE_BOOLEAN);
++		g_value_set_boolean(&val, TRUE);
++		g_object_set_property(G_OBJECT(priv->api), "work", &val);
++		g_value_unset(&val);
++	}
++
+ 	fb_api_rehash(priv->api);
+ 	return ret;
+ }
