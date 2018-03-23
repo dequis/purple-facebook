@@ -1,0 +1,51 @@
+--- a/libpurple/protocols/facebook/mqtt.c
++++ b/libpurple/protocols/facebook/mqtt.c
+@@ -361,26 +361,33 @@
+ 		g_byte_array_set_size(priv->rbuf, 0);
+ 
+ 		res = purple_ssl_read(priv->gsc, &byte, sizeof byte);
+-		g_byte_array_append(priv->rbuf, &byte, sizeof byte);
+ 
+-		if (res != sizeof byte) {
++		if (res < 0 && errno == EAGAIN) {
++			return;
++		} else if (res != 1) {
+ 			fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
+ 			              _("Failed to read fixed header"));
+ 			return;
+ 		}
+ 
++		g_byte_array_append(priv->rbuf, &byte, sizeof byte);
++
+ 		mult = 1;
+ 
+ 		do {
+ 			res = purple_ssl_read(priv->gsc, &byte, sizeof byte);
+-			g_byte_array_append(priv->rbuf, &byte, sizeof byte);
+ 
+-			if (res != sizeof byte) {
++			/* TODO: this case isn't handled yet */
++			if (0 && res < 0 && errno == EAGAIN) {
++				return;
++			} else if (res != 1) {
+ 				fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
+ 				              _("Failed to read packet size"));
+ 				return;
+ 			}
+ 
++			g_byte_array_append(priv->rbuf, &byte, sizeof byte);
++
+ 			priv->remz += (byte & 127) * mult;
+ 			mult *= 128;
+ 		} while ((byte & 128) != 0);
+@@ -390,7 +397,9 @@
+ 		size = MIN(priv->remz, sizeof buf);
+ 		rize = purple_ssl_read(priv->gsc, buf, size);
+ 
+-		if (rize < 1) {
++		if (rize < 0 && errno == EAGAIN) {
++			return;
++		} else if (rize < 1) {
+ 			fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
+ 			              _("Failed to read packet data"));
+ 			return;
