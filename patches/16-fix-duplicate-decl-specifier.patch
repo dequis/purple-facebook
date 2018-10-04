@@ -1,0 +1,13 @@
+Index: libpurple/protocols/facebook/http.c
+===================================================================
+--- a/libpurple/protocols/facebook/http.c
++++ b/libpurple/protocols/facebook/http.c
+@@ -381,7 +381,7 @@ fb_http_urlcmp(const gchar *url1, const
+ 	PurpleHttpURL *purl1;
+ 	PurpleHttpURL *purl2;
+ 
+-	static const const gchar * (*funcs[]) (const PurpleHttpURL *url) = {
++	static const gchar * (*funcs[]) (const PurpleHttpURL *url) = {
+ 		/* Always first so it can be skipped */
+ 		purple_http_url_get_protocol,
+ 
