@@ -37,8 +37,8 @@ diff -aur pidgin/libpurple/protocols/facebook/api.c pidgin3/libpurple/protocols/
 +struct _FbApiPreloginData
 +{
 +	FbApi *api;
-+	gchar *user;
-+	gchar *pass;
++	const gchar *user;
++	const gchar *pass;
 +};
 +
  static void
@@ -320,8 +320,8 @@ diff -aur pidgin/libpurple/protocols/facebook/api.c pidgin3/libpurple/protocols/
 +	GError *err = NULL;
 +	JsonNode *root;
 +	gchar *status;
-+	gchar *user = pata->user;
-+	gchar *pass = pata->pass;
++	const gchar *user = pata->user;
++	const gchar *pass = pata->pass;
 +
 +	g_free(pata);
 +
@@ -376,11 +376,11 @@ diff -aur pidgin/libpurple/protocols/facebook/api.c pidgin3/libpurple/protocols/
 +}
 +
 +void
-+fb_api_work_login(FbApi *api, gchar *user, gchar *pass)
++fb_api_work_login(FbApi *api, const gchar *user, const gchar *pass)
 +{
 +	FbApiPrivate *priv = api->priv;
 +	FbApiPreloginData *pata = g_new0(FbApiPreloginData, 1);
-+	FbHttpParams *prms, *hdrs;
++	FbHttpParams *prms;
 +	gchar *data;
 +	PurpleHttpConnection *ret;
 +	PurpleHttpRequest *req;
@@ -597,7 +597,7 @@ diff -aur pidgin/libpurple/protocols/facebook/api.h pidgin3/libpurple/protocols/
 + * Starts the workchat login sequence.
 + */
 +void
-+fb_api_work_login(FbApi *api, gchar *user, gchar *pass);
++fb_api_work_login(FbApi *api, const gchar *user, const gchar *pass);
 +
 +/**
 + * fb_api_work_gen_sso_url:
@@ -757,7 +757,7 @@ diff -aur pidgin/libpurple/protocols/facebook/util.c pidgin3/libpurple/protocols
 +static void
 +random_bytes(guint8 *buf, gsize len)
 +{
-+	int i;
++	gsize i;
 +
 +	for (i = 0; i < len; i++) {
 +		buf[i] = (guint8) g_random_int_range(0, 256);
