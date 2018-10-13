@@ -757,7 +757,7 @@ diff -aur pidgin/libpurple/protocols/facebook/util.c pidgin3/libpurple/protocols
 +static void
 +random_bytes(guint8 *buf, gsize len)
 +{
-+	int i;
++	gsize i;
 +
 +	for (i = 0; i < len; i++) {
 +		buf[i] = (guint8) g_random_int_range(0, 256);
