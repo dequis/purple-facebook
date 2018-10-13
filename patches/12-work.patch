@@ -380,7 +380,7 @@ diff -aur pidgin/libpurple/protocols/facebook/api.c pidgin3/libpurple/protocols/
 +{
 +	FbApiPrivate *priv = api->priv;
 +	FbApiPreloginData *pata = g_new0(FbApiPreloginData, 1);
-+	FbHttpParams *prms, *hdrs;
++	FbHttpParams *prms;
 +	gchar *data;
 +	PurpleHttpConnection *ret;
 +	PurpleHttpRequest *req;
