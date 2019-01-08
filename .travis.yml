@@ -1,5 +1,7 @@
 language: c
 
+dist: xenial
+
 notifications:
   email: false
 
@@ -32,12 +34,14 @@ before_install:
       libjson-glib-dev
       libpurple-dev
       osc
-  - mkdir -p ~/.ssh
-  - openssl aes-256-cbc
-      -K $encrypted_1a8668021c4a_key
-      -iv $encrypted_1a8668021c4a_iv
-      -in .travis/key -out ~/.ssh/id_rsa -d
-  - chmod 600 ~/.ssh/id_rsa
+  - if [ "x$TRAVIS_EVENT_TYPE" != "xpull_request" ]; then
+      mkdir -p ~/.ssh;
+      openssl aes-256-cbc
+        -K $encrypted_1a8668021c4a_key
+        -iv $encrypted_1a8668021c4a_iv
+        -in .travis/key -out ~/.ssh/id_rsa -d;
+      chmod 600 ~/.ssh/id_rsa;
+    fi
 
 install:
   - .travis/win32-install.sh
@@ -53,9 +57,13 @@ script:
   - .travis/win32-build.sh
 
 after_success:
-  - .travis/win32-deploy.sh
-  - .travis/obs.sh
+  - if [ "x$TRAVIS_EVENT_TYPE" != "xpull_request" ]; then
+      .travis/win32-deploy.sh;
+      .travis/obs.sh;
+    fi
 
 after_script:
-  - shred ~/.ssh/id_rsa
-  - rm -f ~/.ssh/id_rsa
+  - if [ "x$TRAVIS_EVENT_TYPE" != "xpull_request" ]; then
+      shred ~/.ssh/id_rsa;
+      rm -f ~/.ssh/id_rsa;
+    fi
