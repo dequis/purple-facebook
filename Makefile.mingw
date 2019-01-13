@@ -1,4 +1,4 @@
-PLUGIN_VERSION = 0.9.5-$(shell cat VERSION)
+PLUGIN_VERSION = $(shell cat RELEASE_VERSION)
 PURPLE_VERSION = 2.10.11
 
 TREE_TOP = ../../../..

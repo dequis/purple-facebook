@@ -6,7 +6,7 @@
 set -e
 
 GITREV=$(git rev-parse --short=7 HEAD)
-FULLVERS="$(date +%Y%m%d)~${GITREV}~$(cat VERSION)~${TRAVIS_BUILD_NUMBER}"
+FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${TRAVIS_BUILD_NUMBER}"
 FULLDATE=$(date -R)
 REPONAME=$(basename "${TRAVIS_REPO_SLUG}")
 
