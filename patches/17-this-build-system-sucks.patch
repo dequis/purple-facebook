@@ -6,7 +6,7 @@ diff -Naur pidgin/libpurple/protocols/facebook/api.h pidgin2/libpurple/protocols
   * The HTTP User-Agent header.
   */
 -#define FB_API_AGENT  "Facebook plugin / Purple / 0.9.5 " FB_ORCA_AGENT
-+#define FB_API_AGENT  "Facebook plugin / Purple / 0.9.6 " FB_ORCA_AGENT
++#define FB_API_AGENT  "Facebook plugin / Purple / " PACKAGE_VERSION " " FB_ORCA_AGENT
  
  /**
   * FB_API_MQTT_AGENT
