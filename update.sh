@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 URL="https://bitbucket.org/pidgin/main"
 HASHG=$(_TMP_=$(type hg 2>&1); echo $?)
 
