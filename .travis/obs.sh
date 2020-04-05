@@ -7,6 +7,7 @@ set -e
 
 GITREV=$(git rev-parse --short=7 HEAD)
 FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${TRAVIS_BUILD_NUMBER}"
+FULLVERS_RPM="$(echo ${FULLVERS} | sed 's/-/~/g')"
 FULLDATE=$(date -R)
 REPONAME=$(basename "${TRAVIS_REPO_SLUG}")
 
@@ -23,7 +24,7 @@ sed -ri \
 sed -ri \
     -e "s/(^%setup -q.*)/\1 -n %\{name\}/" \
     -e "s/(^Source0:.*)\-(.*)/\1_\2/" \
-    -e "s/(^Version:).*/\1 ${FULLVERS}/" \
+    -e "s/(^Version:).*/\1 ${FULLVERS_RPM}/" \
     dist/*.spec
 
 cat <<EOF > debian/changelog
