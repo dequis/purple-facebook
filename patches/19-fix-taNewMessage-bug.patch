@@ -14,7 +14,7 @@
 +
 +		FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, 0));
 +		FB_API_TCHK(type == FB_THRIFT_TYPE_STRING);
-+		FB_API_TCHK(id == 2);
++		// FB_API_TCHK(id == 2);
 +		FB_API_TCHK(fb_thrift_read_str(thft, NULL));
 +		FB_API_TCHK(fb_thrift_read_stop(thft));
 +	}
