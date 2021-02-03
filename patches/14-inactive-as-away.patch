@@ -1,0 +1,44 @@
+--- a/libpurple/protocols/facebook/facebook.c
++++ b/libpurple/protocols/facebook/facebook.c
+@@ -299,6 +299,10 @@
+ 			fb_data_image_add(fata, user->icon, fb_cb_icon,
+ 			                  bdy, NULL);
+ 		}
++
++		if (purple_account_get_bool(acct, "inactive-as-away", FALSE)) {
++			purple_protocol_got_user_status(acct, uid, purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY), NULL);
++		}
+ 	}
+ 
+ 	fb_data_image_queue(fata);
+@@ -351,6 +355,10 @@
+ 		purple_blist_add_buddy(bdy, NULL, grp, NULL);
+ 
+ 		purple_buddy_set_server_alias(bdy, user->name);
++
++		if (purple_account_get_bool(acct, "inactive-as-away", FALSE)) {
++			purple_protocol_got_user_status(acct, uid, purple_primitive_get_id_from_type(PURPLE_STATUS_AWAY), NULL);
++		}
+ 	}
+ 
+ 	for (l = removed; l != NULL; l = l->next) {
+@@ -631,7 +639,7 @@
+ 		if (pres->active) {
+ 			pstat = PURPLE_STATUS_AVAILABLE;
+ 		} else {
+-			pstat = PURPLE_STATUS_OFFLINE;
++			pstat = purple_account_get_bool(acct, "inactive-as-away", FALSE) ? PURPLE_STATUS_AWAY : PURPLE_STATUS_OFFLINE;
+ 		}
+ 
+ 		FB_ID_TO_STR(pres->uid, uid);
+@@ -1678,6 +1686,10 @@
+ 	                                       "incoming messages"),
+ 	                                     "group-chat-open", TRUE);
+ 	opts = g_list_prepend(opts, opt);
++
++	opt = purple_account_option_bool_new(_("Show inactive buddies as away"),
++	                                     "inactive-as-away", FALSE);
++	opts = g_list_prepend(opts, opt);
+ 	pinfo.protocol_options = g_list_reverse(opts);
+ 
+ 	inited = TRUE;
