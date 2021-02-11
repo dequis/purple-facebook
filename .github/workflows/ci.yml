@@ -57,5 +57,5 @@ jobs:
         OBSUSER: ${{ secrets.OBSUSER }}
         OBSPASS: ${{ secrets.OBSPASS }}
       run: |
-        .travis/obs.sh
+        .obs/obs.sh
 
