@@ -8,18 +8,18 @@ jobs:
   build:
     runs-on: ubuntu-20.04
 
-      steps:
-      - uses: actions/checkout@v2
-      - name: Dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommmends clang git make
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommmends clang git make
 
-      - name: purple-facebook
-        run: |
-          CFLAGS="-Werror" .autogen.sh --enable-warnings
-          make all clean
-      - name: scan-build
-        run: |
-          scan-build -k --status-bugs make all clean
-                
+    - name: purple-facebook
+      run: |
+        CFLAGS="-Werror" .autogen.sh --enable-warnings
+        make all clean
+    - name: scan-build
+      run: |
+        scan-build -k --status-bugs make all clean
+              
