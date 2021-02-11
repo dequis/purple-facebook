@@ -13,7 +13,7 @@ jobs:
     - name: Dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends clang git make libjson-glib-dev libpurple-dev
+        sudo apt-get install -y --no-install-recommends clang git make libjson-glib-dev libpurple-dev clang-tools
 
     - name: purple-facebook
       run: |
