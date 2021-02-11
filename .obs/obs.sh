@@ -29,7 +29,7 @@ credentials_mgr_class=osc.credentials.PlaintextConfigFileCredentialsManager
 EOF
 
 mkdir -p m4
-osc checkout "home:${OBSUSER}" "${REPONAME}" -o /tmp/obs
+osc checkout "home:jgeboski" "${REPONAME}" -o /tmp/obs
 
 (
     cd /tmp/obs
