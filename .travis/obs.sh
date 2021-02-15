@@ -9,8 +9,9 @@ GITREV=$(git rev-parse --short=7 HEAD)
 FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${TRAVIS_BUILD_NUMBER}"
 FULLVERS_RPM="$(echo ${FULLVERS} | sed 's/-/~/g')"
 FULLDATE=$(date -R)
-REPONAME=$(basename "${TRAVIS_REPO_SLUG}")
 BUILD_DIR=$(pwd)
+#REPONAME=$(basename "${TRAVIS_REPO_SLUG}")
+REPONAME=$(basename "${BUILD_DIR}")
 
 git reset -q --hard
 git clean -dfqx
@@ -36,7 +37,11 @@ ${REPONAME} (${FULLVERS}) UNRELEASED; urgency=medium
  -- Travis CI <travis@travis-ci.org>  ${FULLDATE}
 EOF
 
+echo asd
 cat debian/changelog
+echo ${TRAVIS_REPO_SLUG}
+echo ${BUILD_DIR}
+echo dsa
 
 cat <<EOF > ~/.oscrc
 [general]
