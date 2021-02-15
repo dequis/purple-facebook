@@ -51,11 +51,11 @@ jobs:
           | sudo apt-key add -
 
         sudo apt-get update -y
-        sudo apt-get install -y --no-install-recommends osc mercurial
+        sudo apt-get install -y --no-install-recommends osc mercurial libjson-glib-dev
     - name: Send job to OBS
       env:
         OBSUSER: ${{ secrets.OBSUSER }}
         OBSPASS: ${{ secrets.OBSPASS }}
       run: |
-        .obs/obs.sh
+        .travis/obs.sh
 
