@@ -5,8 +5,9 @@
 #] || exit
 set -e
 
-GITREV=$(git rev-parse --short=7 HEAD)
-FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${TRAVIS_BUILD_NUMBER}"
+#GITREV=$(git rev-parse --short=7 HEAD)
+#FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${GITHUB_RUN_NUMBER}"
+FULLVERS="$(date +%Y%m%d)~$(git rev-parse --short=7 HEAD)~${GITHUB_RUN_NUMBER}"
 FULLVERS_RPM="$(echo ${FULLVERS} | sed 's/-/~/g')"
 FULLDATE=$(date -R)
 BUILD_DIR=$(pwd)
@@ -39,8 +40,6 @@ EOF
 
 echo asd
 cat debian/changelog
-echo ${TRAVIS_REPO_SLUG}
-echo ${BUILD_DIR}
 echo dsa
 
 cat <<EOF > ~/.oscrc
