@@ -36,6 +36,8 @@ ${REPONAME} (${FULLVERS}) UNRELEASED; urgency=medium
  -- Travis CI <travis@travis-ci.org>  ${FULLDATE}
 EOF
 
+cat debian/changelog
+
 cat <<EOF > ~/.oscrc
 [general]
 apiurl = https://api.opensuse.org
