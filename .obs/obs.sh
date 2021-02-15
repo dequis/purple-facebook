@@ -10,7 +10,7 @@ BUILD_DIR=$(pwd)
 git reset -q --hard
 git clean -dfqx
 
-./configure.sh
+./autogen.sh
 
 cat <<EOF > debian/changelog
 ${REPONAME} (${FULLVERS}) UNRELEASED; urgency=medium
