@@ -10,6 +10,7 @@ FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${TRAVIS_BUILD_NUMBER
 FULLVERS_RPM="$(echo ${FULLVERS} | sed 's/-/~/g')"
 FULLDATE=$(date -R)
 REPONAME=$(basename "${TRAVIS_REPO_SLUG}")
+BUILD_DIR=$(pwd)
 
 git reset -q --hard
 git clean -dfqx
@@ -44,13 +45,13 @@ pass = ${OBSPASS}
 EOF
 
 mkdir -p m4
-osc checkout "home:${OBSUSER}" "${REPONAME}" -o /tmp/obs
+osc checkout "home:jgeboski" "${REPONAME}" -o /tmp/obs
 
 (
     cd /tmp/obs
     rm -f *.{dsc,tar.gz}
-    dpkg-source -I -b "${TRAVIS_BUILD_DIR}"
-    cp "${TRAVIS_BUILD_DIR}/dist/_service" .
+    dpkg-source -I -b "${BUILD_DIR}"
+    cp "${BUILD_DIR}/dist/_service" .
 
     osc addremove -r
     osc commit -m "Updated to ${FULLVERS}"
