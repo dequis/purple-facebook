@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Dependencies
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends clang git make libjson-glib-dev libpurple-dev clang-tools
+
+    - name: purple-facebook
+      run: |
+        ./autogen.sh --enable-warnings
+        make all clean
+    - name: scan-build
+      run: |
+        scan-build -k --status-bugs make all clean
+              
+
+  obs:
+    if: ${{github.ref == 'refs/head/master' && github.event_name == 'push'}}
+    runs-on: ubuntu-20.04
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Dependencies
+      run: |
+        echo "deb http://download.opensuse.org/repositories/openSUSE:/Tools/xUbuntu_$(lsb_release -rs) ./" \
+          | sudo tee /etc/apt/sources.list.d/suse.list
+
+        ## this key expired literally three days ago:
+        ##
+        ##   pub   rsa2048 2018-09-25 [SC] [expired: 2020-12-03]
+        ##         FCADAFC81273B9E7F184F2B0826659A9013E5B65
+        ##   uid           openSUSE:Tools OBS Project <openSUSE:Tools@build.opensuse.org>
+        #
+        #curl -s "http://download.opensuse.org/repositories/openSUSE:/Tools/xUbuntu_$(lsb_release -rs)/Release.key" \
+        #  | sudo apt-key add -
+        #
+        ## and for Mysterious Reasons this other key exists with the same fingerprint,
+        ## but expiring three years later:
+        curl -s "https://download.opensuse.org/repositories/openSUSE:/Tools/openSUSE_Tumbleweed/repodata/repomd.xml.key" \
+          | sudo apt-key add -
+
+        sudo apt-get update -y
+        sudo apt-get install -y --no-install-recommends osc mercurial libjson-glib-dev
+    - name: Send job to OBS
+      env:
+        OBSUSER: ${{ secrets.OBSUSER }}
+        OBSPASS: ${{ secrets.OBSPASS }}
+      run: |
+        .travis/obs.sh
+

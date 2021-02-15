@@ -1,15 +1,17 @@
 #!/bin/bash
 
-[ "${TRAVIS_PULL_REQUEST}" == "false" -a \
-  "${TRAVIS_BRANCH}" == "${MY_DEPLOY_BRANCH}" \
-] || exit
+#[ "${TRAVIS_PULL_REQUEST}" == "false" -a \
+#  "${TRAVIS_BRANCH}" == "${MY_DEPLOY_BRANCH}" \
+#] || exit
 set -e
 
-GITREV=$(git rev-parse --short=7 HEAD)
-FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${TRAVIS_BUILD_NUMBER}"
+#GITREV=$(git rev-parse --short=7 HEAD)
+#FULLVERS="$(date +%Y%m%d)-$(cat RELEASE_VERSION)-${GITREV}-${GITHUB_RUN_NUMBER}"
+FULLVERS="$(date +%Y%m%d)~$(git rev-parse --short=7 HEAD)~${GITHUB_RUN_NUMBER}"
 FULLVERS_RPM="$(echo ${FULLVERS} | sed 's/-/~/g')"
 FULLDATE=$(date -R)
-REPONAME=$(basename "${TRAVIS_REPO_SLUG}")
+BUILD_DIR=$(pwd)
+REPONAME=$(basename "${BUILD_DIR}")
 
 git reset -q --hard
 git clean -dfqx
@@ -35,6 +37,7 @@ ${REPONAME} (${FULLVERS}) UNRELEASED; urgency=medium
  -- Travis CI <travis@travis-ci.org>  ${FULLDATE}
 EOF
 
+
 cat <<EOF > ~/.oscrc
 [general]
 apiurl = https://api.opensuse.org
@@ -44,13 +47,13 @@ pass = ${OBSPASS}
 EOF
 
 mkdir -p m4
-osc checkout "home:${OBSUSER}" "${REPONAME}" -o /tmp/obs
+osc checkout "home:jgeboski" "${REPONAME}" -o /tmp/obs
 
 (
     cd /tmp/obs
     rm -f *.{dsc,tar.gz}
-    dpkg-source -I -b "${TRAVIS_BUILD_DIR}"
-    cp "${TRAVIS_BUILD_DIR}/dist/_service" .
+    dpkg-source -I -b "${BUILD_DIR}"
+    cp "${BUILD_DIR}/dist/_service" .
 
     osc addremove -r
     osc commit -m "Updated to ${FULLVERS}"
