@@ -1,8 +1,8 @@
 #!/bin/bash
 
-[ "${TRAVIS_PULL_REQUEST}" == "false" -a \
-  "${TRAVIS_BRANCH}" == "${MY_DEPLOY_BRANCH}" \
-] || exit
+#[ "${TRAVIS_PULL_REQUEST}" == "false" -a \
+#  "${TRAVIS_BRANCH}" == "${MY_DEPLOY_BRANCH}" \
+#] || exit
 set -e
 
 GITREV=$(git rev-parse --short=7 HEAD)
