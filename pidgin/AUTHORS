@@ -1,0 +1,146 @@
+Pidgin and Finch: The Pimpin' Penguin IM Clients That're Good for the Soul
+==========================================================================
+
+For a complete list of all contributors, see the COPYRIGHT file.
+
+We've got an IRC room now too, #pidgin on irc.freenode.net. Come check us out.
+
+Current Developers:
+------------------
+Daniel 'datallah' Atallah - Developer
+Paul 'darkrain42' Aurich - Developer
+Ethan 'Paco-Paco' Blanton - Developer
+Sadrul Habib Chowdhury - Developer
+Gary 'grim' Kramlich - Maintainer
+Richard 'rlaager' Laager - Developer
+Marcus 'malu' Lundblad - Developer
+Sulabh 'sulabh_m' Mahajan - Developer
+Richard 'wabz' Nelson - Developer
+Etan 'deryni' Reisner - Developer
+Michael 'Maiku' Ruprecht - Developer, voice and video
+Elliott 'QuLogic' Sales de Andrade - Developer
+Evan Schoenberg - Developer
+Kevin 'SimGuy' Stange - Developer & Webmaster
+Will 'resiak' Thompson - Developer
+Stu 'nosnilmot' Tomlinson - Developer
+Jorge 'Masca' Villaseñor - Developer
+Tomasz Wasilczyk - Developer
+
+Crazy Patch Writers:
+-------------------
+Jakub 'haakon' Adam
+James 'jgeboski' Geboski
+Krzysztof Klinikowski
+Eion Robb
+Ankit Vani
+
+Retired Developers:
+------------------
+John 'rekkanoryo' Bailey - Developer
+Herman Bloggs - Win32 Port
+Thomas Butter - Developer
+Ka-Hing Cheung - Developer
+Mark 'KingAnt' Doliner - maintainer
+Jim Duchek <jim@linuxpimps.com> - maintainer
+Sean Egan - Developer
+Rob Flynn <gaim@robflynn.com> - maintainer
+Adam Fritzler - libfaim maintainer
+Christian 'ChipX86' Hammond - Developer & Webmaster
+Casey Harkins - Developer
+Ivan Komarov - Developer
+Syd Logan - hacker and designated driver [lazy bum]
+Christopher 'siege' O'Brien - Developer
+Bartosz Oler - Developer
+Tim 'marv' Ringenbach - Developer
+Luke 'LSchiere' Schierer - Support
+Megan 'Cae' Schneider - support/QA
+Jim Seymour - XMPP developer
+Mark Spencer <markster@marko.net> - original author
+Nathan 'faceprint' Walp - Developer
+Eric Warmenhoven <eric@warmenhoven.org> - lead developer
+
+Retired Crazy Patch Writers:
+---------------------------
+Felipe 'shx' Contreras
+Decklin Foster
+Dennis 'EvilDennisR' Ristuccia - Senior Contributor/QA
+Peter 'Bleeter' Lawler
+Robert 'Robot101' McQueen
+Benjamin Miller
+Peter 'Fmoo' Ruibal
+Gabriel 'Nix' Schulhof
+
+Artists:
+-------
+Hylke Bons - Icons
+
+Other Contributions:
+-------------------
+Much thanks to Evan Martin <martine@cs.washington.edu> for writing
+GtkSpell <http://gtkspell.sourceforge.net> responsible for the
+"Highlight misspelled words" feature and for gtk-nativewin
+<http://bunny.darktech.org/cvs/gtk-nativewin/> the default GTK+-2.0
+engine originally used in our win32 port.
+
+** ORIGINAL LOGO DESIGNED BY: Naru Sundar **
+
+Peter Teichiman <peter@helixcode.com>
+Larry Ewing
+Jeramey A. Crawford
+	Thanks to these boys.  Peter and Larry managed to stomp
+	out a large list of Mem Leaks.  Jeramey found the remaining
+	onees and pointed me to those.  Props to the boys at
+	Helix Code.  Thanks guys.
+
+Nathan Walp
+	A healthy amount of patches for the Jabber plugin
+
+Neil Sanchala
+	Wrote most of the Zephyr plugin
+
+Arkadiusz Miskiewicz
+	Wrote the Gadu-Gadu plugin
+
+David Prater    <IM: dRaven43>          draven@tcsx.net
+	Log and Colour Button Images
+
+Sébastien Carpe <IM: Seb Carpe>
+	Base HTTP Proxy Support
+
+Ari Pollak      <IM: Ari Pollak>	compwiz.dhs.org
+	Resize conversation window patch
+
+Decklin Foster
+	Many GUI improvements, other nifty additions and fixes
+
+David <IM: CrazyDavy>
+	The neato-bigger text box
+
+S D Erle
+	Writing a cool perl script to translate WinAIM lists to gaim
+
+BMiller
+	A good collection of stuff. %n for away messages, import winaim
+	lists, pic/text/pic+text for buttons, among others
+
+Lance Rocker
+	Improved HTML formatting in logs, plus lots of debugging on *BSD.
+
+ergofobe:
+	GNOME Url handler patch
+
+Justin M. Ward <justin@yossman.net>:
+	Alphabetical Away Messages patch
+
+G. Sumner Hayes <IM: SumnerFool> Security Patches
+
+Brian Ryner for a little make file patch :)
+
+Ryan C. Gordon - I still think you look like Silent Bob.
+
+Elliot Tobin <elliot@bha.udel.edu>
+
+Thanks to Jeroen van der Vegt for the initial smiley plugin and images.
+
+The OpenQ Team
+	Wrote the QQ plugin dropped in 2.8.0 (see libpurple/qq/AUTHORS in 2.7.11)

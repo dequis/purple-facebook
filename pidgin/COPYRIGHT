@@ -1,0 +1,643 @@
+Pidgin, Finch, and libpurple
+
+This file is intended to be a comprehensive list of contributors to
+this project.  If you have contributed to this project then you deserve
+to be on this list.  Contact us (see: AUTHORS) and we'll add you.
+
+Many open source projects list contributor names at the top of each
+source file containing their contribution.  However, we've found
+that it is difficult to keep this list accurate, especially when old
+code is removed or existing code is moved to a different file.  So
+instead we chose to list a generic message at the top of each source
+file that points here.
+
+If concerns are raised as to the copyright holder of a particular
+piece of code, then that code should be traced through our version
+control system to see from where it came and who has modified it.
+
+Copyright (C) 1998-2014 by the following:
+
+Mark
+Saleem Abdulrasool
+Jakub Adam
+Dave Ahlswede
+Haval A. Ahmed
+Sorokin Alexei
+Thijs Alkemade
+Manuel Amador
+Matt Amato
+Josef Andrysek
+Flavius Anton
+Geoffrey Antos
+Daniel Atallah
+Paul Aurich
+Patrick Aussems
+Anibal Avelar
+Ali Albazaz
+Kosta Arvanitis
+Christopher Ayoup
+Alex Badea
+John Bailey
+Arunan Balasubramaniam
+R. Tyler Ballance
+Chris Banal
+Luca Barbato
+Levi Bard
+Mark Barfield
+Ryan Barrett
+Kevin Barry
+Lukas Barth
+Derek Battams
+Martin Bayard
+Curtis Beattie
+Stefan Becker
+Carlos Bederian
+Dave Bell
+Matthew W.S. Bell
+Igor Belyi
+David Benjamin
+Brian Bernas
+Vivien Bernet-Rollande
+Paul Betts
+Runa Bhattacharjee
+Jonas Birmé
+George-Cristian Bîrzan
+Eric Blade
+Ethan Blanton
+Joshua Blanton
+Rainer Blessing
+Herman Bloggs
+David Blue
+Jason Boerner
+Hylke Bons
+Graham Booker
+Paolo Borelli
+Julien Bossart
+Craig Boston
+Éric Boumaour
+Chris Boyle
+Stanislav Brabec
+Bartosz Brachaczek
+Quentin Brandon
+Derrick J Brashear
+Mauro Sérgio Ferreira Brasil
+Luke Bratch
+Matt Brenneke
+Jeremy Brooks
+Jonathan Brossard
+Jeffery Brown
+Philip Brown
+Dan Bruce
+Guillaume Brunerie
+Norbert Buchmuller
+Johannes Buchner
+Sean Burke
+Gabriel Burt
+Thomas Butter
+Trevor Caira
+Andrea Canciani
+Damien Carbery
+Michael Carlson
+Rodrigo Tobar Carrizo
+Keegan Carruthers-Smith
+Ludovico Cavedon
+Steve Cavilia
+Julien Cegarra
+Matěj Cepl
+Cerulean Studios, LLC
+Jonathan Champ
+Markos Chandras
+Matthew Chapman
+Christophe Chapuis
+Tirtha Chatterjee
+Patrick Cheung
+Ka-Hing Cheung
+Sadrul Habib Chowdhury
+Brian Chu
+Howard Chu
+Arturo Cisneros, Jr.
+Vincas Ciziunas
+Jonathan Clark
+Joe Clarke
+Eoin Coffey
+Jason Cohen
+Todd Cohen
+Graham Cole
+Jono Cole
+Lorenzo Colitti
+Collabora Ltd.
+Jeff Connelly
+Chris Connett
+Nathan Conrad
+Felipe Contreras
+Alex Converse
+Irving Cordova
+Glauber de Oliveira Costa
+Adam Cowell
+Palmer Cox
+Jeramey Crawford
+Olivier Crete
+Michael Culbertson
+Steven Danna
+Simon Danner
+Chris Davies
+Josh Davis
+Martijn Dekker
+Florian Delizy
+Jiri Denemark
+Vinicius Depizzol
+Marc Dequènes
+Philip Derrin
+Taso N. Devetzis
+Balwinder Singh Dheeman
+Chandrakant Dhutadmal
+Andrew Dieffenbach
+Ingmārs Dīriņš
+Finlay Dobbie
+Mark Doliner
+Nuno Donato
+Jim Duchek
+Alex Duggan
+Tom Dyas
+Marc E.
+Andrew Echols
+John Eckerdal
+Sean Egan <seanegan@gmail.com>
+William Ehlhardt
+Markus Elfring
+Nelson Elhage
+Ignacio J. Elia
+Kai Engert
+Brian Enigma
+Mattias Eriksson
+Pat Erley
+Stefan Esser
+Steffen Eschenbacher
+Marc Etcheverry
+David Everly
+Larry Ewing
+Facebook, Inc.
+Fartash Faghri
+Gábor Farkas
+Jesse Farmer
+Gavan Fantom (gavan)
+Leonardo Fernandes
+David Fiander
+Michael Fiedler
+Ryan Flegel
+Rob Flynn <gaim@robflynn.com>
+Rob Foehl (rwf)
+Chris Foote
+Alan Ford
+Nathan Fredrickson
+Chris J. Friesen
+Free Software Foundation
+Decklin Foster
+Francesco Fracassi
+Adam Fritzler
+Takao Fujiwara
+Max G.
+Martin von Gagern
+François Gagné
+Andrew Gaul
+Evgueni V. Gavrilov
+Ignacy Gawedzki
+James Geboski
+Georgi Georgiev
+Brian Geppert
+Emanuele Giaquinta
+Thomas Gibson-Robinson
+Ike Gingerich
+Gustavo Giráldez
+Richard Gobeille
+Ian Goldberg
+Jon Goldberg
+Matthew Goldstein
+Michael Golden
+Issa Gorissen
+Charlie Gordon
+Ryan C. Gordon
+Konrad Gräfe
+Miah Gregory
+David Grohmann
+Christian Grothoff
+Vladislav Guberinić
+Gideon N. Guillen
+Aman Gupta
+Ashish Gupta
+Christian Hammond
+Erick Hamness
+Fred Hampton
+John Hanauer
+Phil Hannent
+Casey Harkins
+Andy Harrison
+Andrew Hart (arhart)
+Anders Hasselqvist
+Rene Hausleitner
+Will Hawkins
+G. Sumner Hayes
+Michael R. Head
+Nick Hebner
+Mike Heffner
+Justin Heiner
+Moos Heintzen
+Benjamin Herrenschmidt
+Fernando Herrera
+hjheins
+Hil
+Casey Ho
+Andrew Hoffman
+Iain Holmes
+Joshua Honeycutt
+Jeffrey Honig
+Nigel Horne
+Jensen Hornick
+Juanjo Molinero Horno
+Dustin Howett
+Nathanael Hoyle
+Greg Hudson
+Magnus Hult
+Karsten Huneycutt
+Andrew Hunt
+Kevin Hunter
+Rian Hunter
+Thomas Huriaux
+Instant Messaging Freedom, Inc.
+Vitaliy Ischenko
+Intel Corporation
+Andrew Ivanov
+Momchil Ivanov
+Scott Jackson
+Hans Petter Jansson
+David Jedelsky
+Henry Jen
+Benjamin Kahn
+Jan Kaluza
+Yuriy Kaminskiy
+Anders Kaseorg
+Praveen Karadakal
+Tomáš Kebert
+John Kelm
+Jochen Kemnade
+Yann Kerherve
+Akmal Khushvakov
+Gordian Klein
+Marten Klencke
+Krzysztof Klinikowski
+KNTRO
+Akuke Kok
+Kir Kolyshkin
+Ivan Komarov
+F.W. Kong
+Konstantin Korikov
+Cole Kowalski
+Nikita Kozlov
+Matt Kramer
+Gary Kramlich
+Jan Kratochvil
+Andrej Krivulčík
+Patrik Kullman
+Sangeeta Kumari
+Tuomas Kuosmanen
+Tero Kuusela
+Richard Laager
+Jacky Lam
+Scott Lamb
+Dennis Lambe Jr.
+Joe LaPenna
+Steve Láposi
+Daniel Larsson
+Julia Lawall
+Peter Lawler
+Vadim Lebedev
+Ho-seok Lee
+Jean-Yves Lefort
+Moses Lei
+Ambrose C. Li
+Nicolas Lichtmaier
+Wesley Lin
+Shaun Lindsay
+Artem Litvinovich
+Josh Littlefield
+Daniel Ljungborg
+Syd Logan
+Lokheed
+Norberto Lopes
+Shlomi Loubaton
+Pieter Loubser
+Brian Lu
+Uli Luckas
+Matthew Luckie
+Marcus Lundblad
+Mike Lundy
+Jason Lynch
+Iain MacDonnell
+Lucio Maciel
+Brian Macke
+Paolo Maggi
+Sulabh Mahajan
+Willian T. Mahan
+Jonathan Maltz
+Rok Mandeljc
+Tobias Markmann
+Kris Marsh
+Fidel Martinez
+Lalo Martins
+John Matthews
+Simo Mattila
+Robert Matusewicz
+Michal Matyska
+Rudolfs Mazurs
+Ryan McCabe
+Peter McCurdy
+Kurt McKee
+James McLaughlin
+Torrey McMahon
+Greg McNew
+Robert McQueen
+Mihály Mészáros
+Robert Mibus
+David Michael
+Lars T. Mikkelsen
+Mantas Mikulėnas
+Benjamin Miller
+Kevin Miller
+Paul Miller
+Arkadiusz Miskiewicz
+David Mohr
+Kartik Mohta
+Andrew Molloy
+Tomasz Mon
+Michael Monreal
+Laurent Montaron
+Marco Monteiro
+Benjamin Moody
+John Moody
+Tim Mooney
+Sergio Moretto
+Nader Morshed
+Keith Moyer
+Andrei Mozzhuhin
+Christian Muise
+MXit Lifestyle (Pty) Ltd.
+Alexander Nartov
+Richard Nelson
+Dennis Nezic
+Matthew A. Nicholson
+Andreas Nilsson
+Allan Nordhøy
+Henning Norén
+Szilard Novaki
+Novell
+Padraig O'Briain
+Christopher O'Brien (siege)
+Peter O'Gorman
+Jon Oberheide
+Marcos García Ochoa
+Yusuke Odate
+Ruediger Oertel
+Gudmundur Bjarni Olafsson
+Bartosz Oler
+Oliver
+The openSUSE Project
+Jürgen Orschiedt
+Stefan Ott
+Shawn Outman
+Nathan Owens (pianocomp81)
+John Oyler
+Matt Pandina
+Laszlo Pandy
+Giulio 'Twain28' Pascali
+Ricardo Fernandez Pascual
+Riley Patterson
+Havoc Pennington
+Ted Percival
+Hugo Pereira Da Costa
+Eduardo Pérez
+Matt Perry
+Ani Peter
+Luke Petre
+Diego Petten
+Nathan Peterson
+Dmitry Petroff
+Sebastián E. Peyrott
+Amitakhya Phukan
+Andrea Piccinelli
+Mateusz Piękos
+Celso Pinto
+Joao Luís Marques Pinto
+Aleksander Piotrowski
+Julien Pivotto
+Robey Pointer
+Eric Polino <aluink@gmail.com>
+Ari Pollak
+Stephen Pope
+Cristi Posoiu
+Alexei Potashnik
+Nathan Poznick
+Jory A. Pratt
+David Preece
+Brent Priddy
+Justin Pryzby
+Florian Quèze
+Ignacio Casal Quinteiro
+Federicco Mena Quintero
+Yosef Radchenko
+David Raeman
+R. Ramkumar
+Rajesh Ranjan
+Mart Raudsepp
+Etan Reisner
+David Reiss
+Luoh Ren-Shan
+Noa Resare
+Tim Retout
+Daniele Ricci
+Kristian Rietveld
+Pekka Riikonen
+Tim Ringenbach
+Dennis Ristuccia
+Lee Roach
+Eion Robb
+Kahlil Robinson
+Rhett Robinson
+Luciano Miguel Ferreira Rocha
+Andrew Rodland
+Miguel Rodríguez (migrax)
+Adi Roiban
+Martin Rosinski
+Bob Rossi
+Jason Roth
+Jean-Francois Roy
+Peter Ruibal
+Michael Ruprecht
+Sam S.
+Thanumalayan S.
+Jonathan Sailor
+Elliott Sales de Andrade
+Catalin Salgau
+Tomasz Sałaciński <tsalacinski@gmail.com>
+Pradyumna Sampath
+Arvind Samptur
+Tom Samstag
+Neil Sanchala
+Laurent Sansonetti
+Andrew Sayman
+Alceste Scalas
+Carsten Schaar
+Toby Schaffer
+Jonathan Schleifer <js-pidgin@webkeks.org>
+Luke Schierer
+Sebastian Schmidt <yath@yath.de>
+Ralph Schmieder
+David Schmitt
+Heiko Schmitt
+Mark Schneider
+Evan Schoenberg
+Gabriel Schulhof
+Eric Michael Schwelm
+Federico Schwindt
+Torrey Searle
+Peter Seebach
+Don Seiler
+Mihai Serban
+Leonardo Serra
+Matteo Settenvini
+Colin Seymour
+Jim Seymour
+Javeed Shaikh
+Joe Shaw
+Scott Shedden
+Dossy Shiobara
+Michael Shkutkov
+Shreevatsa R
+Dylan Simon <dylan@dylex.net>
+Ettore Simone
+Renato Silva
+John Silvestri
+Mukund Sivaraman
+Craig Slusher
+Alex Smith
+Brad Smith
+Malcolm Smith
+David Smock
+Phil Snowberger
+Eddie Sohn (tr1sk)
+Sony Computer Entertainment America, Inc.
+Andy Spencer
+Mark Spencer
+Peter Speybrouck
+Lex Spoon
+Chris Stafford
+Kevin Stange
+Ferdinand Stehle
+Joshua Stein
+Jakub Steiner
+Richard Stellingwerff
+Charlie Stockman
+David Stoddard
+Adam Strzelecki
+Andreas Stührk
+Oleg Sukhodolsky
+Sun Microsystems
+Marcus Sundberg
+Mårten Svantesson (fursten)
+Amir Szekely (kichik)
+Gábor Szuromi (kukkerman)
+Jakub Szypulka
+Robert T.
+Greg Taeger
+Rob Taft
+Peter Tang
+Brian Tarricone
+Peter Teichman
+Philip Tellis
+Michael Terry
+Arun A. Tharuvai
+Cestonaro Thilo
+Will Thompson
+Douglas Thrift (douglaswth)
+Niels Thykier
+Mark Tiefenbruck
+Andrew Tinney
+Jeffery To
+Krzysztof Tobola (kreez)
+Warren Togami
+Stu Tomlinson
+Bill Tompkins
+Gal Topper
+Chris Toshok
+Ken Tossell
+Marcus Trautwig
+Tom Tromey
+Todd Troxell
+Brad Turcotte
+Kyle Turman
+Jon Turney
+Junichi Uekawa
+Max Ulidtko
+Dmitry Utkin
+Igor Vlasenko
+István Váradi
+ILDAR Valeev
+Cédric Valmary
+Martijn van Beers
+Gideon van Melle
+Arjan van de Ven
+Philip Van Hoof
+Ankit Vani
+Kristof Vansant
+James Vega
+David Vermeille
+Sid Vicious
+Andrew Victor
+Jorge Villaseñor (Masca)
+Bjoern Voigt
+Peter Volkov
+Marius Wachtler
+Wan Hing Wah
+Philip Walford
+Nathan Walp
+Jonty Wareing
+Eric Warmenhoven
+Adam J. Warrington
+Denis Washington
+Tomasz Wasilczyk
+Zsombor Welker
+Andrew Wellington
+Adam Wendt
+Simon Wenner
+Dave West
+Zac West
+Daniel Westermann-Clark
+Andrew Whewell
+Stephen Whitmore
+Simon Wilkinson
+Dan Willemsen
+Dan Williams
+Justin Williams (Jaywalker)
+Jason Willis
+Alex Willmer
+Matt Wilson
+Dan Winship
+Michal Witkowski
+Scott Wolchok
+Rogier Wolff
+The Written Word, Inc.
+Kevin Wu Won
+Pui Lam Wong
+Justin Wood
+Ximian
+Ma Xuan
+Yonas Yanfa
+Jared Yanovich
+Timmy Yee
+Li Yuan
+Yuriy Yevgrafov
+Jan Zachorowski
+Nickolai Zeldovich
+Tom Zickel
+Marco Ziech
+Piotr Zielinski
+Jeroen Zwartepoorte
