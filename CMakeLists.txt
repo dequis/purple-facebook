@@ -23,6 +23,14 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 include_directories(${GLIB_INCLUDE_DIRS})
 link_directories(${GLIB_LIBRARY_DIRS})
+#get gobject
+pkg_search_module(GIO REQUIRED gio-2.0)
+include_directories(${GIO_INCLUDE_DIRS})
+link_directories(${GIO_LIBRARY_DIRS})
+#get gio
+pkg_search_module(GOBJECT REQUIRED gobject-2.0)
+include_directories(${GOBJECT_INCLUDE_DIRS})
+link_directories(${GOBJECT_LIBRARY_DIRS})
 #get json-glib
 pkg_search_module(JSON-GLIB REQUIRED json-glib-1.0)
 include_directories(${JSON-GLIB_INCLUDE_DIRS})
@@ -88,8 +96,14 @@ add_definitions(-DPACKAGE_URL=\"${PACKAGE_URL}\")
 target_link_libraries(facebook
         ${GLIB_LIBRARIES}
         ${JSON-GLIB_LIBRARIES}
+        ${GIO_LIBRARIES}
+        ${GOBJECT_LIBRARIES}
         ${PURPLE_LIBRARIES}
         ${ZLIB_LIBRARIES})
+
+if(WIN32)
+    target_link_libraries(facebook ws2_32)
+endif()
 
 link_directories(
         ${PURPLE_LIBRARY_DIRS}
