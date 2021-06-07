@@ -1,8 +1,0 @@
-#!/usr/bin/make -f
-
-override_dh_auto_install:
-	dh_auto_install
-	find debian -name '*.la' -print -delete
-
-%:
-	dh $@ --with autoreconf

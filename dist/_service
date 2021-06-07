@@ -1,6 +1,0 @@
-<services>
-  <service name="extract_file">
-    <param name="archive">*.tar.gz</param>
-    <param name="files">*/dist/*.spec</param>
-  </service>
-</services>
