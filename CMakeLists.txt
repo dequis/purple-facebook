@@ -104,7 +104,3 @@ target_link_libraries(facebook
 if(WIN32)
     target_link_libraries(facebook ws2_32)
 endif()
-
-link_directories(
-        ${PURPLE_LIBRARY_DIRS}
-)
