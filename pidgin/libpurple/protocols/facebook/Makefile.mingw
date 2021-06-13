@@ -42,6 +42,7 @@ LIB_PATHS +=		-L$(GTK_TOP)/lib \
 ##  SOURCES, OBJECTS
 ##
 C_SRC =	\
+			marshal.c \
 			api.c \
 			data.c \
 			facebook.c \
@@ -49,7 +50,9 @@ C_SRC =	\
 			json.c \
 			mqtt.c \
 			thrift.c \
-			util.c
+			util.c \
+			../../http.c \
+			../../purple-socket.c
 
 OBJECTS = $(C_SRC:%.c=%.o)
 
@@ -62,7 +65,6 @@ LIBS =	\
 			-lgobject-2.0 \
 			-lws2_32 \
 			-lintl \
-			-lgplugin \
 			-ljson-glib-1.0 \
 			-lz \
 			-lpurple
@@ -76,19 +78,27 @@ include $(PIDGIN_COMMON_RULES)
 
 all: $(TARGET).dll
 
-install: all $(DLL_INSTALL_DIR)
+install: all
 	cp $(TARGET).dll $(DLL_INSTALL_DIR)
 
 $(OBJECTS): $(PURPLE_CONFIG_H)
 
-$(TARGET).dll: $(PURPLE_DLL).a $(OBJECTS)
+$(TARGET).dll: $(OBJECTS)
 	$(CC) -shared $(OBJECTS) $(LIB_PATHS) $(LIBS) $(DLL_LD_FLAGS) -o $(TARGET).dll
+
+marshal.c: marshaller.list marshal.h
+	@echo "#include \"marshal.h\"" > $@
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --body marshaller.list >> $@
+
+marshal.h: marshaller.list
+	@$(GLIB_GENMARSHAL) --prefix=fb_marshal --header marshaller.list > $@
+
 
 ##
 ## CLEAN RULES
 ##
 clean:
-	rm -f $(OBJECTS)
+	rm -f $(OBJECTS) marshal.c marshal.h
 	rm -f $(TARGET).dll
 
 include $(PIDGIN_COMMON_TARGETS)

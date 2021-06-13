@@ -381,7 +381,7 @@ fb_http_urlcmp(const gchar *url1, const gchar *url2, gboolean protocol)
 	PurpleHttpURL *purl1;
 	PurpleHttpURL *purl2;
 
-	static const const gchar * (*funcs[]) (const PurpleHttpURL *url) = {
+	static const gchar * (*funcs[]) (const PurpleHttpURL *url) = {
 		/* Always first so it can be skipped */
 		purple_http_url_get_protocol,
 

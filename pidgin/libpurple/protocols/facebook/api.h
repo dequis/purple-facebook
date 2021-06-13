@@ -104,14 +104,14 @@
  * server started checking this.
  */
 
-#define FB_ORCA_AGENT "[FBAN/Orca-Android;FBAV/109.0.0.17.70;FBPN/com.facebook.orca;FBLC/en_US;FBBV/52182662]"
+#define FB_ORCA_AGENT "[FBAN/Orca-Android;FBAV/537.0.0.31.101;FBPN/com.facebook.orca;FBLC/en_US;FBBV/52182662]"
 
 /**
  * FB_API_AGENT:
  *
  * The HTTP User-Agent header.
  */
-#define FB_API_AGENT  "Facebook plugin / Purple / 0.9.5 " FB_ORCA_AGENT
+#define FB_API_AGENT  "Facebook plugin / Purple / " PACKAGE_VERSION " " FB_ORCA_AGENT
 
 /**
  * FB_API_MQTT_AGENT

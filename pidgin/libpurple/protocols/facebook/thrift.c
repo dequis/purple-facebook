@@ -21,6 +21,7 @@
 
 #include <string.h>
 
+#include "glibcompat.h"
 #include "thrift.h"
 
 struct _FbThriftPrivate
@@ -32,7 +33,7 @@ struct _FbThriftPrivate
 	guint lastbool;
 };
 
-G_DEFINE_TYPE(FbThrift, fb_thrift, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE(FbThrift, fb_thrift, G_TYPE_OBJECT, G_ADD_PRIVATE(FbThrift));
 
 static void
 fb_thrift_dispose(GObject *obj)

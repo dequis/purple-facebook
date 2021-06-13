@@ -373,8 +373,8 @@ fb_cb_api_error(FbApi *api, GError *error, gpointer data)
 
 	gc = fb_data_get_connection(fata);
 
-	if (error->domain == G_IO_ERROR) {
-		purple_connection_g_error(gc, error);
+	if (error->domain == FB_MQTT_SSL_ERROR) {
+		purple_connection_ssl_error(gc, error->code);
 		return;
 	}
 
@@ -500,7 +500,7 @@ fb_cb_image(FbDataImage *img, GError *error)
 	id = purple_image_store_add_weak(pimg);
 
 	g_free(msg->text);
-	msg->text = g_strdup_printf("<img src=\""
+	msg->text = g_strdup_printf("<img id=\""
 	                            PURPLE_IMAGE_STORE_PROTOCOL
 	                            "%u\">", id);
 	msg->flags |= FB_API_MESSAGE_FLAG_DONE;
@@ -966,7 +966,7 @@ fb_blist_chat_init(PurpleBlistNode *node, gpointer data)
 	GSList *select = NULL;
 	PurpleConnection *gc;
 
-	if (!PURPLE_IS_BUDDY(node)) {
+	if (!PURPLE_BLIST_NODE_IS_BUDDY(node)) {
 		return;
 	}
 
@@ -1160,7 +1160,7 @@ fb_client_blist_node_menu(PurpleBlistNode *node)
 	PurpleConnection *gc;
 	PurpleMenuAction *act;
 
-	if (!PURPLE_IS_BUDDY(node)) {
+	if (!PURPLE_BLIST_NODE_IS_BUDDY(node)) {
 		return NULL;
 	}
 
@@ -1208,7 +1208,8 @@ fb_server_set_status(PurpleAccount *acct, PurpleStatus *status)
 }
 
 static gint
-fb_im_send(PurpleConnection *gc, PurpleMessage *msg)
+fb_im_send(PurpleConnection *gc, const gchar *who, const gchar *tmsg,
+           PurpleMessageFlags flags)
 {
 	const gchar *name;
 	const gchar *text;
@@ -1216,6 +1217,8 @@ fb_im_send(PurpleConnection *gc, PurpleMessage *msg)
 	FbData *fata;
 	FbId uid;
 	gchar *sext;
+
+	PurpleMessage *msg = purple_message_new_outgoing(who, tmsg, flags);
 
 	fata = purple_connection_get_protocol_data(gc);
 	api = fb_data_get_api(fata);
@@ -1355,7 +1358,8 @@ fb_chat_invite(PurpleConnection *gc, gint id, const gchar *msg,
 }
 
 static gint
-fb_chat_send(PurpleConnection *gc, gint id, PurpleMessage *msg)
+fb_chat_send(PurpleConnection *gc, gint id, const gchar *tmsg,
+             PurpleMessageFlags flags)
 {
 	const gchar *name;
 	const gchar *text;
@@ -1365,6 +1369,8 @@ fb_chat_send(PurpleConnection *gc, gint id, PurpleMessage *msg)
 	gchar *sext;
 	PurpleAccount *acct;
 	PurpleChatConversation *chat;
+
+	PurpleMessage *msg = purple_message_new_outgoing(NULL, tmsg, flags);
 
 	acct = purple_connection_get_account(gc);
 	fata = purple_connection_get_protocol_data(gc);
@@ -1534,14 +1540,119 @@ fb_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args,
 }
 
 static void
-facebook_protocol_init(PurpleProtocol *protocol)
+fb_cmds_register(void)
+{
+	PurpleCmdId id;
+
+	static PurpleCmdFlag cflags =
+		PURPLE_CMD_FLAG_CHAT |
+		PURPLE_CMD_FLAG_PROTOCOL_ONLY;
+
+	g_return_if_fail(fb_cmds == NULL);
+
+	id = purple_cmd_register("kick", "s", PURPLE_CMD_P_PROTOCOL, cflags,
+				 "prpl-facebook", fb_cmd_kick,
+				 _("kick: Kick someone from the chat"),
+				 NULL);
+	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
+
+	id = purple_cmd_register("leave", "", PURPLE_CMD_P_PROTOCOL, cflags,
+				 "prpl-facebook", fb_cmd_leave,
+				 _("leave: Leave the chat"),
+				 NULL);
+	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
+}
+
+static void
+fb_cmds_unregister_free(gpointer data)
+{
+	PurpleCmdId id = GPOINTER_TO_UINT(data);
+	purple_cmd_unregister(id);
+}
+
+static void
+fb_cmds_unregister(void)
+{
+	g_slist_free_full(fb_cmds, fb_cmds_unregister_free);
+}
+
+static gboolean
+plugin_load(PurplePlugin *plugin)
+{
+	fb_cmds_register();
+	_purple_socket_init();
+	purple_http_init();
+	return TRUE;
+}
+
+static gboolean
+plugin_unload(PurplePlugin *plugin)
+{
+	fb_cmds_unregister();
+	purple_http_uninit();
+	_purple_socket_uninit();
+	return TRUE;
+}
+
+G_MODULE_EXPORT gboolean
+purple_init_plugin(PurplePlugin *plugin);
+
+G_MODULE_EXPORT gboolean
+purple_init_plugin(PurplePlugin *plugin)
 {
 	GList *opts = NULL;
 	PurpleAccountOption *opt;
 
-	protocol->id      = FB_PROTOCOL_ID;
-	protocol->name    = "Facebook";
-	protocol->options = OPT_PROTO_CHAT_TOPIC;
+	static gboolean inited = FALSE;
+	static PurplePluginInfo info;
+	static PurplePluginProtocolInfo pinfo;
+
+	(void) fb_protocol;
+	plugin->info = &info;
+
+	if (G_LIKELY(inited)) {
+		return purple_plugin_register(plugin);
+	}
+
+	memset(&info, 0, sizeof info);
+	memset(&pinfo, 0, sizeof pinfo);
+
+	info.magic = PURPLE_PLUGIN_MAGIC;
+	info.major_version = PURPLE_MAJOR_VERSION;
+	info.minor_version = PURPLE_MINOR_VERSION;
+	info.type = PURPLE_PLUGIN_PROTOCOL;
+	info.priority = PURPLE_PRIORITY_DEFAULT;
+	info.id = FB_PROTOCOL_ID;
+	info.name = "Facebook";
+	info.version = PACKAGE_VERSION;
+	info.summary = N_("Facebook Protocol Plugin");
+	info.description = N_("Facebook Protocol Plugin");
+	info.homepage = PACKAGE_URL;
+	info.load = plugin_load;
+	info.unload = plugin_unload;
+	info.extra_info = &pinfo;
+
+	pinfo.options = OPT_PROTO_CHAT_TOPIC;
+	pinfo.list_icon = fb_list_icon;
+	pinfo.tooltip_text = fb_client_tooltip_text;
+	pinfo.status_types = fb_status_types;
+	pinfo.blist_node_menu = fb_client_blist_node_menu;
+	pinfo.chat_info = fb_chat_info;
+	pinfo.chat_info_defaults = fb_chat_info_defaults;
+	pinfo.login = fb_login;
+	pinfo.close = fb_close;
+	pinfo.send_im = fb_im_send;
+	pinfo.send_typing = fb_im_send_typing;
+	pinfo.set_status = fb_server_set_status;
+	pinfo.join_chat = fb_chat_join;
+	pinfo.get_chat_name = fb_chat_get_name;
+	pinfo.chat_invite = fb_chat_invite;
+	pinfo.chat_send = fb_chat_send;
+	pinfo.set_chat_topic = fb_chat_set_topic;
+	pinfo.roomlist_get_list = fb_roomlist_get_list;
+	pinfo.roomlist_cancel = fb_roomlist_cancel;
+	pinfo.offline_message = fb_client_offline_message;
+	pinfo.struct_size = sizeof pinfo;
 
 	opt = purple_account_option_int_new(_("Buddy list sync interval"),
 	                                    "sync-interval", 5);
@@ -1567,147 +1678,8 @@ facebook_protocol_init(PurpleProtocol *protocol)
 	                                       "incoming messages"),
 	                                     "group-chat-open", TRUE);
 	opts = g_list_prepend(opts, opt);
-	protocol->account_options = g_list_reverse(opts);
+	pinfo.protocol_options = g_list_reverse(opts);
+
+	inited = TRUE;
+	return purple_plugin_register(plugin);
 }
-
-static void
-facebook_protocol_class_init(PurpleProtocolClass *klass)
-{
-	klass->login        = fb_login;
-	klass->close        = fb_close;
-	klass->status_types = fb_status_types;
-	klass->list_icon    = fb_list_icon;
-}
-
-static void
-facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
-{
-	iface->tooltip_text    = fb_client_tooltip_text;
-	iface->blist_node_menu = fb_client_blist_node_menu;
-	iface->offline_message = fb_client_offline_message;
-}
-
-static void
-facebook_protocol_server_iface_init(PurpleProtocolServerIface *iface)
-{
-	iface->set_status = fb_server_set_status;
-}
-
-static void
-facebook_protocol_im_iface_init(PurpleProtocolIMIface *iface)
-{
-	iface->send        = fb_im_send;
-	iface->send_typing = fb_im_send_typing;
-}
-
-static void
-facebook_protocol_chat_iface_init(PurpleProtocolChatIface *iface)
-{
-	iface->info          = fb_chat_info;
-	iface->info_defaults = fb_chat_info_defaults;
-	iface->join          = fb_chat_join;
-	iface->get_name      = fb_chat_get_name;
-	iface->invite        = fb_chat_invite;
-	iface->send          = fb_chat_send;
-	iface->set_topic     = fb_chat_set_topic;
-}
-
-static void
-facebook_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *iface)
-{
-	iface->get_list = fb_roomlist_get_list;
-	iface->cancel   = fb_roomlist_cancel;
-}
-
-PURPLE_DEFINE_TYPE_EXTENDED(
-	FacebookProtocol, facebook_protocol, PURPLE_TYPE_PROTOCOL, 0,
-
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  facebook_protocol_client_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  facebook_protocol_server_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  facebook_protocol_im_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-	                                  facebook_protocol_chat_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-	                                  facebook_protocol_roomlist_iface_init)
-);
-
-static void
-fb_cmds_register(void)
-{
-	PurpleCmdId id;
-
-	static PurpleCmdFlag cflags =
-		PURPLE_CMD_FLAG_CHAT |
-		PURPLE_CMD_FLAG_PROTOCOL_ONLY;
-
-	g_return_if_fail(fb_cmds == NULL);
-
-	id = purple_cmd_register("kick", "s", PURPLE_CMD_P_PROTOCOL, cflags,
-				 fb_protocol->id, fb_cmd_kick,
-				 _("kick: Kick someone from the chat"),
-				 NULL);
-	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
-
-	id = purple_cmd_register("leave", "", PURPLE_CMD_P_PROTOCOL, cflags,
-				 fb_protocol->id, fb_cmd_leave,
-				 _("leave: Leave the chat"),
-				 NULL);
-	fb_cmds = g_slist_prepend(fb_cmds, GUINT_TO_POINTER(id));
-}
-
-static void
-fb_cmds_unregister_free(gpointer data)
-{
-	PurpleCmdId id = GPOINTER_TO_UINT(data);
-	purple_cmd_unregister(id);
-}
-
-static void
-fb_cmds_unregister(void)
-{
-	g_slist_free_full(fb_cmds, fb_cmds_unregister_free);
-}
-
-static PurplePluginInfo *
-plugin_query(GError **error)
-{
-	return purple_plugin_info_new(
-		"id",          FB_PROTOCOL_ID,
-		"name",        "Facebook Protocol",
-		"version",     DISPLAY_VERSION,
-		"category",    N_("Protocol"),
-		"summary",     N_("Facebook Protocol Plugin"),
-		"description", N_("Facebook Protocol Plugin"),
-		"website",     PURPLE_WEBSITE,
-		"abi-version", PURPLE_ABI_VERSION,
-		"flags",       PURPLE_PLUGIN_INFO_FLAGS_INTERNAL |
-		               PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD,
-		NULL
-	);
-}
-
-static gboolean
-plugin_load(PurplePlugin *plugin, GError **error)
-{
-	facebook_protocol_register_type(plugin);
-	fb_protocol = purple_protocols_add(FACEBOOK_TYPE_PROTOCOL, error);
-
-	if (fb_protocol == NULL) {
-		return FALSE;
-	}
-
-	fb_cmds_register();
-	return TRUE;
-}
-
-static gboolean
-plugin_unload(PurplePlugin *plugin, GError **error)
-{
-	fb_cmds_unregister();
-	return purple_protocols_remove(fb_protocol, error);
-}
-
-PURPLE_PLUGIN_INIT(facebook, plugin_query, plugin_load, plugin_unload);
