@@ -21,3 +21,4 @@ Makefile
 Makefile.in
 pidgin
 win32-install-dir
+.idea
