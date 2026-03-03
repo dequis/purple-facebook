@@ -28,6 +28,7 @@
 #include "api.h"
 #include "http.h"
 #include "json.h"
+#include "marshal.h"
 #include "thrift.h"
 #include "util.h"
 
@@ -91,7 +92,7 @@ fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg);
 void
 fb_api_contacts_delta(FbApi *api, const gchar *delta_cursor);
 
-G_DEFINE_TYPE(FbApi, fb_api, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE(FbApi, fb_api, G_TYPE_OBJECT, G_ADD_PRIVATE(FbApi));
 
 static void
 fb_api_set_property(GObject *obj, guint prop, const GValue *val,
@@ -291,7 +292,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__VOID,
 	             G_TYPE_NONE,
 	             0);
 
@@ -306,7 +308,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__VOID,
 	             G_TYPE_NONE,
 	             0);
 
@@ -322,7 +325,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -342,7 +346,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER_BOOLEAN,
 	             G_TYPE_NONE,
 	             2, G_TYPE_POINTER, G_TYPE_BOOLEAN);
 
@@ -358,7 +363,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER_POINTER,
 	             G_TYPE_NONE,
 	             2, G_TYPE_POINTER, G_TYPE_POINTER);
 
@@ -374,7 +380,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -389,7 +396,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -404,7 +412,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -419,7 +428,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -435,7 +445,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -452,7 +463,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__INT64,
 	             G_TYPE_NONE,
 	             1, FB_TYPE_ID);
 
@@ -468,7 +480,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -484,7 +497,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 
@@ -499,7 +513,8 @@ fb_api_class_init(FbApiClass *klass)
 	             G_TYPE_FROM_CLASS(klass),
 	             G_SIGNAL_ACTION,
 	             0,
-	             NULL, NULL, NULL,
+	             NULL, NULL,
+	             fb_marshal_VOID__POINTER,
 	             G_TYPE_NONE,
 	             1, G_TYPE_POINTER);
 }
@@ -1487,6 +1502,23 @@ static GSList *
 fb_api_cb_publish_ms_event(FbApi *api, JsonNode *root, GSList *events, FbApiEventType type, GError **error);
 
 static void
+fb_api_cb_publish_mst(FbThrift *thft, GError **error)
+{
+	if (fb_thrift_read_isstop(thft)) {
+		FB_API_TCHK(fb_thrift_read_stop(thft));
+	} else {
+		FbThriftType type;
+		gint16 id;
+
+		FB_API_TCHK(fb_thrift_read_field(thft, &type, &id, 0));
+		FB_API_TCHK(type == FB_THRIFT_TYPE_STRING);
+		// FB_API_TCHK(id == 2);
+		FB_API_TCHK(fb_thrift_read_str(thft, NULL));
+		FB_API_TCHK(fb_thrift_read_stop(thft));
+	}
+}
+
+static void
 fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 {
 	const gchar *data;
@@ -1516,9 +1548,13 @@ fb_api_cb_publish_ms(FbApi *api, GByteArray *pload)
 
 	/* Read identifier string (for Facebook employees) */
 	thft = fb_thrift_new(pload, 0);
-	fb_thrift_read_str(thft, NULL);
+	fb_api_cb_publish_mst(thft, &err);
 	size = fb_thrift_get_pos(thft);
 	g_object_unref(thft);
+
+	FB_API_ERROR_EMIT(api, err,
+		return;
+	);
 
 	g_return_if_fail(size < pload->len);
 	data = (gchar *) pload->data + size;
@@ -1829,10 +1865,10 @@ fb_api_cb_publish_pt(FbThrift *thft, GSList **press, GError **error)
 		pres->active = i32 != 0;
 		*press = g_slist_prepend(*press, pres);
 
-		fb_util_debug_info("Presence: %" FB_ID_FORMAT " (%d)",
-		                   i64, i32 != 0);
+		fb_util_debug_info("Presence: %" FB_ID_FORMAT " (%d) id: %d",
+		                   i64, i32 != 0, id);
 
-		while (id <= 5) {
+		while (id <= 6) {
 			if (fb_thrift_read_isstop(thft)) {
 				break;
 			}
@@ -1879,7 +1915,9 @@ fb_api_cb_publish_pt(FbThrift *thft, GSList **press, GError **error)
 	}
 
 	/* Read the field stop */
-	FB_API_TCHK(fb_thrift_read_stop(thft));
+	if (fb_thrift_read_isstop(thft)) {
+		FB_API_TCHK(fb_thrift_read_stop(thft));
+	}
 }
 
 static void
@@ -2409,7 +2447,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			priv->contacts_delta = g_strdup(is_delta ? cursor : delta_cursor);
 		}
 
-		if (users) {
+		if (users || (complete && !is_delta)) {
 			g_signal_emit_by_name(api, "contacts", users, complete);
 		}
 

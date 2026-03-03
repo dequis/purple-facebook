@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "json.h"
+#include "glibcompat.h"
 #include "util.h"
 
 typedef struct _FbJsonValue FbJsonValue;
@@ -50,7 +51,7 @@ struct _FbJsonValuesPrivate
 	GError *error;
 };
 
-G_DEFINE_TYPE(FbJsonValues, fb_json_values, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE(FbJsonValues, fb_json_values, G_TYPE_OBJECT, G_ADD_PRIVATE(FbJsonValues));
 
 static void
 fb_json_values_dispose(GObject *obj)

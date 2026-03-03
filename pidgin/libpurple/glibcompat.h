@@ -71,6 +71,30 @@ purple_g_stat(const gchar *filename, GStatBufW32 *buf)
 /******************************************************************************
  * g_assert_* macros
  *****************************************************************************/
+
+#if !GLIB_CHECK_VERSION(2, 32, 0)
+static inline GByteArray * g_byte_array_new_take(guint8 *data, gsize len)
+{
+	GByteArray *array;
+
+	array = g_byte_array_new();
+	g_byte_array_append(array, data, len);
+	g_free(data);
+
+	return array;
+}
+
+static inline void g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
+{
+	g_queue_foreach(queue, (GFunc)free_func, NULL);
+	g_queue_free(queue);
+}
+#endif
+
+#if !GLIB_CHECK_VERSION(2, 30, 0)
+#define G_VALUE_INIT {0, {{0}}}
+#endif
+
 #if !GLIB_CHECK_VERSION(2, 38, 0)
 #define g_assert_true(expr)             G_STMT_START { \
                                              if G_LIKELY (expr) ; else \
@@ -86,6 +110,9 @@ purple_g_stat(const gchar *filename, GStatBufW32 *buf)
                                                g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
                                                                     "'" #expr "' should be NULL"); \
                                         } G_STMT_END
+#define G_ADD_PRIVATE(TypeName)         G_STMT_START { } G_STMT_END
+#else
+#define g_type_class_add_private(k,s)   G_STMT_START { } G_STMT_END
 #endif
 
 #if !GLIB_CHECK_VERSION(2, 40, 0)

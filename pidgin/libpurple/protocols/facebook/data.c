@@ -59,8 +59,8 @@ static const gchar *fb_props_strs[] = {
 	"token"
 };
 
-G_DEFINE_TYPE(FbData, fb_data, G_TYPE_OBJECT);
-G_DEFINE_TYPE(FbDataImage, fb_data_image, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_CODE(FbData, fb_data, G_TYPE_OBJECT, G_ADD_PRIVATE(FbData));
+G_DEFINE_TYPE_WITH_CODE(FbDataImage, fb_data_image, G_TYPE_OBJECT, G_ADD_PRIVATE(FbDataImage));
 
 static void
 fb_data_dispose(GObject *obj)
