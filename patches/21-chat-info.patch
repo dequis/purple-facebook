@@ -1,0 +1,12 @@
+--- a/libpurple/protocols/facebook/facebook.c
++++ b/libpurple/protocols/facebook/facebook.c
+@@ -1250,7 +1250,7 @@
+ }
+ 
+ static GList *
+-fb_chat_info()
++fb_chat_info(PurpleConnection *)
+ {
+ 	GList *pces = NULL;
+ 	PurpleProtocolChatEntry *pce;
+
