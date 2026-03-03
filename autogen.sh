@@ -6,8 +6,6 @@ test -z "$srcdir" && srcdir=.
 cwd=$(pwd)
 cd "$srcdir"
 
-./update.sh || exit $?
-
 mkdir -p m4
 autoreconf --verbose --force --install || exit $?
 
