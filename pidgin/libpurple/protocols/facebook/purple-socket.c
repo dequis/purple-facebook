@@ -236,7 +236,7 @@ purple_socket_connect(PurpleSocket *ps, PurpleSocketConnectCb cb,
 
 	g_return_val_if_fail(ps != NULL, FALSE);
 
-	if (ps->gc && purple_connection_is_disconnecting(ps->gc)) {
+	if (ps->gc && ps->gc->account && ps->gc->account->disconnecting) {
 		purple_debug_error("socket", "connection is being destroyed");
 		ps->state = PURPLE_SOCKET_STATE_ERROR;
 		return FALSE;

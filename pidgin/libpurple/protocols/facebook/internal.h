@@ -43,6 +43,8 @@
 # include <unistd.h>
 #endif
 
+#include "connection.h"
+
 void
 _purple_socket_cancel_with_connection(PurpleConnection *gc);
 

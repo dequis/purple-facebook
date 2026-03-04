@@ -33,7 +33,7 @@
 
 #include <glib.h>
 
-#include <libpurple/http.h>
+#include <purple-http.h>
 
 /**
  * FB_HTTP_ERROR:

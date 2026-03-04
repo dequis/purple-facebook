@@ -19,28 +19,18 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
+#include "glibcompat.h"
+#include "purple-compat.h"
+
 #include "internal.h"
 
 #include "account.h"
 #include "accountopt.h"
-#include "blistnode.h"
-#include "buddy.h"
 #include "buddyicon.h"
-#include "buddylist.h"
 #include "cmds.h"
 #include "connection.h"
 #include "conversation.h"
-#include "conversations.h"
-#include "conversationtypes.h"
-#include "glibcompat.h"
-#include "image.h"
-#include "image-store.h"
-#include "message.h"
 #include "notify.h"
-#include "plugins.h"
-#include "presence.h"
-#include "protocol.h"
-#include "protocols.h"
 #include "request.h"
 #include "roomlist.h"
 #include "server.h"
