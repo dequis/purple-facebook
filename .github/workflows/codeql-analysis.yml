@@ -1,0 +1,43 @@
+---
+name: "CodeQL"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@c793b717bc78562f491db7b0e93a3a178b099162  # v4.32.5
+        with:
+          languages: c-cpp
+
+      - name: Build project
+        run: |
+          sudo apt-get update -yy
+          sudo apt-get install -yy \
+            build-essential \
+            gettext \
+            libjson-glib-dev \
+            libpurple-dev \
+            meson \
+            zlib1g-dev
+          meson setup build
+          ninja -C build all
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/init@c793b717bc78562f491db7b0e93a3a178b099162  # v4.32.5
