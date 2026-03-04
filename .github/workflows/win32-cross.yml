@@ -1,0 +1,129 @@
+name: Cross compile for Windows
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+env:
+  PIDGIN_VERSION: 2.14.14
+  GLIB_VERSION: 2.28.8
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Make cross directory
+        run: mkdir -p $RUNNER_TEMP
+
+      - name: Write cross file
+        run: |
+          cat << EOF | tee $RUNNER_TEMP/cross-file.ini
+          [binaries]
+          c = '/usr/bin/i686-w64-mingw32-gcc'
+          ar = '/usr/bin/i686-w64-mingw32-gcc-ar'
+          strip = '/usr/bin/i686-w64-mingw32-strip'
+          pkg-config = ['/usr/bin/pkg-config', '--define-prefix']
+          windres = '/usr/bin/i686-w64-mingw32-windres'
+
+          [host_machine]
+          system = 'windows'
+          cpu_family = 'x86'
+          cpu = 'i686'
+          endian = 'little'
+
+          [properties]
+          sys_root = '$RUNNER_TEMP'
+          pidgin_top = sys_root / 'pidgin'
+          win32_dev = sys_root / 'win32-dev'
+          pkg_config_libdir = [win32_dev / 'lib/pkgconfig', pidgin_top / 'libpurple/data/']
+          c_args = ['-I' + win32_dev / 'include']
+          c_link_args = ['-L' + win32_dev / 'lib']
+          EOF
+
+      - name: Install native packages
+        run: |
+          sudo apt update -yy
+          sudo apt install -yy --no-install-recommends \
+            codespell \
+            gcc-mingw-w64-i686-win32 \
+            meson \
+            pkg-config
+
+      - name: Load Pidgin from cache
+        id: pidgin-cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ${{ runner.temp }}/pidgin
+          key: pidgin-${{ env.PIDGIN_VERSION }}
+
+      - name: Download Pidgin
+        if: steps.pidgin-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -L https://sourceforge.net/projects/pidgin/files/Pidgin/$PIDGIN_VERSION/pidgin-$PIDGIN_VERSION.tar.bz2/download -o pidgin.tar.bz2
+          mkdir -p $RUNNER_TEMP/pidgin
+          tar -xf pidgin.tar.bz2 --strip-components=1 --directory=$RUNNER_TEMP/pidgin
+          curl -L https://sourceforge.net/projects/pidgin/files/Pidgin/$PIDGIN_VERSION/pidgin-$PIDGIN_VERSION-win32-bin.zip/download -o pidgin-win32bin.zip
+          unzip -j pidgin-win32bin.zip pidgin-*-win32bin/libpurple.dll -d $RUNNER_TEMP/pidgin/libpurple/
+
+      - name: Create purple.pc
+        run : |
+          cat << 'EOF' | tee $RUNNER_TEMP/pidgin/libpurple/data/purple.pc
+          prefix=${{ runner.temp }}/pidgin/libpurple
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}
+          includedir=${prefix}
+          datarootdir=${prefix}/share
+          datadir=${datarootdir}
+          sysconfdir=${prefix}/etc
+
+          plugindir=${libdir}/purple-2
+
+          Name: libpurple
+          Description: libpurple is a GLib-based instant messenger library.
+          Version: ${{ env.PIDGIN_VERSION }}
+          Requires: glib-2.0
+          Cflags: -I${prefix} -I${prefix}/win32
+          Libs: -L${libdir} -lpurple
+          EOF
+
+      - name: Load Win32 deps from cache
+        id: win32-cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        with:
+          path: ${{ runner.temp }}/win32-dev
+          key: win32-dev
+
+      - name: Setup WinPidgin build
+        if: steps.win32-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -L http://ftp.gnome.org/pub/gnome/binaries/win32/glib/2.28/glib-dev_2.28.8-1_win32.zip -o glib-dev.zip
+          unzip glib-dev.zip -d $RUNNER_TEMP/win32-dev
+          curl -L http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/gettext-runtime-dev_0.18.1.1-2_win32.zip -o gettext-runtime.zip
+          unzip gettext-runtime.zip -d $RUNNER_TEMP/win32-dev
+          curl -L http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/zlib-dev_1.2.5-2_win32.zip -o zlib-dev.zip
+          unzip zlib-dev.zip -d $RUNNER_TEMP/win32-dev
+          curl -L https://github.com/dequis/purple-facebook/releases/download/downloads/json-glib-0.14.tar.gz -o json-glib.tar.gz
+          tar --extract --file json-glib.tar.gz --directory $RUNNER_TEMP/win32-dev
+
+      - name: Setup Meson Build
+        run: meson setup --cross-file $RUNNER_TEMP/cross-file.ini --prefix=/usr -Duse-purple-prefix=false build
+
+      - name: Build Project
+        run: meson compile -C build
+
+      - name: Install build results
+        run: DESTDIR=$PWD/dist meson install -C build
+
+      - name: archive
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+            name: "Win32 cross compiled"
+            path: |
+              ./dist/
+              !./dist/**/*.dll.a

@@ -1,0 +1,43 @@
+---
+name: Test building on Linux
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Prepare build environment
+        run: |
+          sudo apt-get update -yy
+          sudo apt-get install -yy --no-install-recommends \
+            build-essential \
+            gettext \
+            libjson-glib-dev \
+            libpurple-dev \
+            meson \
+            zlib1g-dev
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup Meson build
+        run: meson setup build
+
+      - name: Build project
+        run: ninja -C build all
+
+      - name: Install build results
+        run: DESTDIR=$PWD/dist ninja -C build install
+
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: "Linux"
+          path: ./dist
