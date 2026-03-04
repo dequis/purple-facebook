@@ -381,7 +381,7 @@ fb_data_set_unread(FbData *fata, FbId id, gboolean unread)
 		return;
 	}
 
-	key = g_memdup(&id, sizeof id);
+	key = g_memdup2(&id, sizeof id);
 	g_hash_table_replace(priv->unread, key, GINT_TO_POINTER(unread));
 }
 
@@ -523,7 +523,7 @@ fb_data_image_dup_image(FbDataImage *img, gsize *size)
 		return NULL;
 	}
 
-	return g_memdup(priv->image, priv->size);
+	return g_memdup2(priv->image, priv->size);
 }
 
 const gchar *
