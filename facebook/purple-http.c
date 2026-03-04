@@ -1146,7 +1146,7 @@ static gboolean _purple_http_recv_body(PurpleHttpConnection *hc,
 	return _purple_http_recv_body_data(hc, buf, len);
 }
 
-static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
+static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, G_GNUC_UNUSED gint fd)
 {
 	int len;
 	gchar buf[4096];
@@ -1339,7 +1339,7 @@ static gboolean _purple_http_recv_loopbody(PurpleHttpConnection *hc, gint fd)
 	return got_anything;
 }
 
-static void _purple_http_recv(gpointer _hc, gint fd, PurpleInputCondition cond)
+static void _purple_http_recv(gpointer _hc, gint fd, G_GNUC_UNUSED PurpleInputCondition cond)
 {
 	PurpleHttpConnection *hc = _hc;
 
@@ -1374,7 +1374,7 @@ static void _purple_http_send_got_data(PurpleHttpConnection *hc,
 	hc->request->contents_length = estimated_length;
 }
 
-static void _purple_http_send(gpointer _hc, gint fd, PurpleInputCondition cond)
+static void _purple_http_send(gpointer _hc, G_GNUC_UNUSED gint fd, G_GNUC_UNUSED PurpleInputCondition cond)
 {
 	PurpleHttpConnection *hc = _hc;
 	int written, write_len;
@@ -3264,7 +3264,7 @@ void purple_http_init(void)
 	purple_http_cancelling_gc = g_hash_table_new(g_direct_hash, g_direct_equal);
 }
 
-static void purple_http_foreach_conn_cancel(gpointer _hc, gpointer user_data)
+static void purple_http_foreach_conn_cancel(gpointer _hc, G_GNUC_UNUSED gpointer user_data)
 {
 	PurpleHttpConnection *hc = _hc;
 	purple_http_conn_cancel(hc);

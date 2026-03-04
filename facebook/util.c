@@ -327,7 +327,7 @@ fb_util_request_buddy_ok(gpointer *mata, PurpleRequestFields *fields)
 }
 
 static void
-fb_util_request_buddy_cancel(gpointer *mata, PurpleRequestFields *fields)
+fb_util_request_buddy_cancel(gpointer *mata, G_GNUC_UNUSED PurpleRequestFields *fields)
 {
 	FbUtilRequestBuddyFunc func = mata[1];
 	gpointer data = mata[2];
