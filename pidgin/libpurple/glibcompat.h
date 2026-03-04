@@ -33,6 +33,8 @@
 
 #include <glib.h>
 
+#include <purple.h>
+
 /* glib's definition of g_stat+GStatBuf seems to be broken on mingw64-w32 (and
  * possibly other 32-bit windows), so instead of relying on it,
  * we'll define our own.
@@ -135,5 +137,23 @@ static inline void g_queue_free_full(GQueue *queue, GDestroyNotify free_func)
                                                                     "assertion failed (" #m1 " == " #m2 ")"); \
                                         } G_STMT_END
 #endif
+
+/* Backport the static inline version of g_memdup2 if we don't have g_memdup2.
+ * see https://mail.gnome.org/archives/desktop-devel-list/2021-February/msg00000.html
+ * for more information.
+ */
+#if !GLIB_CHECK_VERSION(2, 67, 3) && !PURPLE_VERSION_CHECK(2, 14, 2)
+static inline gpointer
+g_memdup2(gconstpointer mem, gsize byte_size) {
+    gpointer new_mem = NULL;
+
+    if(mem && byte_size != 0) {
+        new_mem = g_malloc (byte_size);
+        memcpy (new_mem, mem, byte_size);
+    }
+
+    return new_mem;
+}
+#endif /* !GLIB_CHECK_VERSION(2, 67, 3) */
 
 #endif /* _GLIBCOMPAT_H_ */

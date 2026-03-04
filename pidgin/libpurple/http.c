@@ -2664,7 +2664,7 @@ void purple_http_request_set_contents(PurpleHttpRequest *request,
 
 	if (length == -1)
 		length = strlen(contents);
-	request->contents = g_memdup(contents, length);
+	request->contents = g_memdup2(contents, length);
 	request->contents_length = length;
 }
 

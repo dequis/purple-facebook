@@ -951,7 +951,7 @@ fb_blist_chat_create(GSList *buddies, gpointer data)
 	for (l = buddies; l != NULL; l = l->next) {
 		name = purple_buddy_get_name(l->data);
 		uid = FB_ID_FROM_STR(name);
-		did = g_memdup(&uid, sizeof uid);
+		did = g_memdup2(&uid, sizeof uid);
 		uids = g_slist_prepend(uids, did);
 	}
 
