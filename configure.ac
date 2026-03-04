@@ -99,9 +99,7 @@ AS_IF(
     )]
 )
 
-PLUGIN_CFLAGS="-I`pwd`/$srcdir/include -I`pwd`/$srcdir/pidgin "
-PLUGIN_CFLAGS="${PLUGIN_CFLAGS} -I`pwd`/$srcdir/pidgin/libpurple"
-PLUGIN_CFLAGS="$PLUGIN_CFLAGS -DPURPLE_PLUGINS -include purple-compat.h"
+PLUGIN_CFLAGS="-DPURPLE_PLUGINS"
 AC_SUBST([PLUGIN_CFLAGS])
 
 AM_CONDITIONAL([STATIC_FACEBOOK], false)

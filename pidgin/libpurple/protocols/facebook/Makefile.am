@@ -24,11 +24,11 @@ FACEBOOKSOURCES = \
 	thrift.h \
 	util.c \
 	util.h \
-	../../glibcompat.h \
-	../../http.c \
-	../../http.h \
-	../../purple-socket.h \
-	../../purple-socket.c
+	glibcompat.h \
+	purple-http.c \
+	purple-http.h \
+	purple-socket.h \
+	purple-socket.c
 
 CLEANFILES = \
 	marshal.c \
