@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -Im4
-SUBDIRS = pidgin/libpurple/protocols/facebook
+SUBDIRS = facebook
 
 EXTRA_DIST = \
 	autogen.sh \

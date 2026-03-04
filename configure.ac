@@ -106,5 +106,5 @@ AM_CONDITIONAL([STATIC_FACEBOOK], false)
 AC_SUBST([PLUGIN_LDFLAGS], [-avoid-version])
 AC_SUBST([PURPLE_LIBS],    ["$GLIB_LIBS $JSON_LIBS $PURPLE_LIBS $ZLIB_LIBS"])
 
-AC_CONFIG_FILES([Makefile pidgin/libpurple/protocols/facebook/Makefile])
+AC_CONFIG_FILES([Makefile facebook/Makefile])
 AC_OUTPUT
