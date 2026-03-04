@@ -310,7 +310,7 @@ fb_cb_api_contacts(FbApi *api, GSList *users, gboolean complete, gpointer data)
 }
 
 static void
-fb_cb_api_contacts_delta(FbApi *api, GSList *added, GSList *removed, gpointer data)
+fb_cb_api_contacts_delta(G_GNUC_UNUSED FbApi *api, GSList *added, GSList *removed, gpointer data)
 {
 	FbApiUser *user;
 	FbData *fata = data;
@@ -355,7 +355,7 @@ fb_cb_api_contacts_delta(FbApi *api, GSList *added, GSList *removed, gpointer da
 }
 
 static void
-fb_cb_api_error(FbApi *api, GError *error, gpointer data)
+fb_cb_api_error(G_GNUC_UNUSED FbApi *api, GError *error, gpointer data)
 {
 	FbData *fata = data;
 	PurpleConnection *gc;
@@ -601,7 +601,7 @@ fb_cb_api_messages(FbApi *api, GSList *msgs, gpointer data)
 }
 
 static void
-fb_cb_api_presences(FbApi *api, GSList *press, gpointer data)
+fb_cb_api_presences(G_GNUC_UNUSED FbApi *api, GSList *press, gpointer data)
 {
 	const gchar *statid;
 	FbApiPresence *pres;
@@ -631,7 +631,7 @@ fb_cb_api_presences(FbApi *api, GSList *press, gpointer data)
 }
 
 static void
-fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
+fb_cb_api_thread(G_GNUC_UNUSED FbApi *api, FbApiThread *thrd, gpointer data)
 {
 	const gchar *name;
 	FbApiUser *user;
@@ -688,7 +688,7 @@ fb_cb_api_thread(FbApi *api, FbApiThread *thrd, gpointer data)
 }
 
 static void
-fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
+fb_cb_api_thread_create(G_GNUC_UNUSED FbApi *api, FbId tid, gpointer data)
 {
 	FbData *fata = data;
 	gchar sid[FB_ID_STRMAX];
@@ -705,7 +705,7 @@ fb_cb_api_thread_create(FbApi *api, FbId tid, gpointer data)
 }
 
 static void
-fb_cb_api_thread_kicked(FbApi *api, FbApiThread *thrd, gpointer data)
+fb_cb_api_thread_kicked(G_GNUC_UNUSED FbApi *api, FbApiThread *thrd, gpointer data)
 {
 	FbData *fata = data;
 	gchar tid[FB_ID_STRMAX];
@@ -738,7 +738,7 @@ fb_cb_api_thread_kicked(FbApi *api, FbApiThread *thrd, gpointer data)
 }
 
 static void
-fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
+fb_cb_api_threads(G_GNUC_UNUSED FbApi *api, GSList *thrds, gpointer data)
 {
 	const gchar *alias;
 	FbApiUser *user;
@@ -801,7 +801,7 @@ fb_cb_api_threads(FbApi *api, GSList *thrds, gpointer data)
 }
 
 static void
-fb_cb_api_typing(FbApi *api, FbApiTyping *typg, gpointer data)
+fb_cb_api_typing(G_GNUC_UNUSED FbApi *api, FbApiTyping *typg, gpointer data)
 {
 	FbData *fata = data;
 	gchar uid[FB_ID_STRMAX];
@@ -1089,7 +1089,7 @@ fb_close(PurpleConnection *gc)
 }
 
 static GList *
-fb_status_types(PurpleAccount *acct)
+fb_status_types(G_GNUC_UNUSED PurpleAccount *acct)
 {
 	PurpleStatusType *type;
 	GList *types = NULL;
@@ -1115,14 +1115,14 @@ fb_status_types(PurpleAccount *acct)
 }
 
 static const char *
-fb_list_icon(PurpleAccount *account, PurpleBuddy *buddy)
+fb_list_icon(G_GNUC_UNUSED PurpleAccount *account, G_GNUC_UNUSED PurpleBuddy *buddy)
 {
 	return "facebook";
 }
 
 static void
 fb_client_tooltip_text(PurpleBuddy *buddy, PurpleNotifyUserInfo *info,
-                       gboolean full)
+                       G_GNUC_UNUSED gboolean full)
 {
 	const gchar *name;
 	PurplePresence *pres;
@@ -1167,7 +1167,7 @@ fb_client_blist_node_menu(PurpleBlistNode *node)
 }
 
 static gboolean
-fb_client_offline_message(const PurpleBuddy *buddy)
+fb_client_offline_message(G_GNUC_UNUSED const PurpleBuddy *buddy)
 {
 	return TRUE;
 }
@@ -1255,7 +1255,7 @@ fb_chat_info(PurpleConnection *)
 }
 
 static GHashTable *
-fb_chat_info_defaults(PurpleConnection *gc, const gchar *name)
+fb_chat_info_defaults(G_GNUC_UNUSED PurpleConnection *gc, const gchar *name)
 {
 	GHashTable *data;
 
@@ -1315,7 +1315,7 @@ fb_chat_get_name(GHashTable *data)
 }
 
 static void
-fb_chat_invite(PurpleConnection *gc, gint id, const gchar *msg,
+fb_chat_invite(PurpleConnection *gc, gint id, G_GNUC_UNUSED const gchar *msg,
                const gchar *who)
 {
 	const gchar *name;
@@ -1458,8 +1458,8 @@ fb_roomlist_cancel(PurpleRoomlist *list)
 }
 
 static PurpleCmdRet
-fb_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args,
-            gchar **error, gpointer data)
+fb_cmd_kick(PurpleConversation *conv, G_GNUC_UNUSED const gchar *cmd, gchar **args,
+            gchar **error, G_GNUC_UNUSED gpointer data)
 {
 	const gchar *name;
 	FbApi *api;
@@ -1500,8 +1500,8 @@ fb_cmd_kick(PurpleConversation *conv, const gchar *cmd, gchar **args,
 }
 
 static PurpleCmdRet
-fb_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args,
-             gchar **error, gpointer data)
+fb_cmd_leave(PurpleConversation *conv, G_GNUC_UNUSED const gchar *cmd, G_GNUC_UNUSED gchar **args,
+             G_GNUC_UNUSED gchar **error, G_GNUC_UNUSED gpointer data)
 {
 	const gchar *name;
 	FbApi *api;
@@ -1567,7 +1567,7 @@ fb_cmds_unregister(void)
 }
 
 static gboolean
-plugin_load(PurplePlugin *plugin)
+plugin_load(G_GNUC_UNUSED PurplePlugin *plugin)
 {
 	fb_cmds_register();
 	_purple_socket_init();
@@ -1576,7 +1576,7 @@ plugin_load(PurplePlugin *plugin)
 }
 
 static gboolean
-plugin_unload(PurplePlugin *plugin)
+plugin_unload(G_GNUC_UNUSED PurplePlugin *plugin)
 {
 	fb_cmds_unregister();
 	purple_http_uninit();
