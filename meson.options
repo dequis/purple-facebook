@@ -1,0 +1,6 @@
+option(
+  'use-purple-prefix',
+  type : 'boolean',
+  value : true,
+  description : 'Install everything to the purple prefix and plugin directory')
+
