@@ -193,7 +193,7 @@ _purple_socket_connected_raw(gpointer _ps, gint fd, const gchar *error_message)
 
 static void
 _purple_socket_connected_tls(gpointer _ps, PurpleSslConnection *tls_connection,
-	PurpleInputCondition cond)
+	G_GNUC_UNUSED PurpleInputCondition cond)
 {
 	PurpleSocket *ps = _ps;
 
@@ -218,7 +218,7 @@ _purple_socket_connected_tls(gpointer _ps, PurpleSslConnection *tls_connection,
 }
 
 static void
-_purple_socket_connected_tls_error(PurpleSslConnection *ssl_connection,
+_purple_socket_connected_tls_error(G_GNUC_UNUSED PurpleSslConnection *ssl_connection,
 	PurpleSslErrorType error, gpointer _ps)
 {
 	PurpleSocket *ps = _ps;

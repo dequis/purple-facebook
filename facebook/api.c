@@ -887,7 +887,7 @@ fb_api_cb_http_bool(PurpleHttpConnection *con, PurpleHttpResponse *res,
 }
 
 static void
-fb_api_cb_mqtt_error(FbMqtt *mqtt, GError *error, gpointer data)
+fb_api_cb_mqtt_error(G_GNUC_UNUSED FbMqtt *mqtt, GError *error, gpointer data)
 {
 	FbApi *api = data;
 	FbApiPrivate *priv = api->priv;
@@ -1177,7 +1177,7 @@ fb_api_cb_publish_mark(FbApi *api, GByteArray *pload)
 }
 
 static GSList *
-fb_api_event_parse(FbApi *api, FbApiEvent *event, GSList *events,
+fb_api_event_parse(G_GNUC_UNUSED FbApi *api, FbApiEvent *event, GSList *events,
                    JsonNode *root, GError **error)
 {
 	const gchar *str;
@@ -1382,7 +1382,7 @@ fb_api_cb_publish_ms_r(FbApi *api, GByteArray *pload)
 }
 
 static gchar *
-fb_api_xma_parse(FbApi *api, const gchar *body, JsonNode *root, GError **error)
+fb_api_xma_parse(G_GNUC_UNUSED FbApi *api, const gchar *body, JsonNode *root, GError **error)
 {
 	const gchar *str;
 	const gchar *url;
@@ -1736,7 +1736,7 @@ beach:
 }
 
 static GSList *
-fb_api_cb_publish_ms_event(FbApi *api, JsonNode *root, GSList *events, FbApiEventType type, GError **error)
+fb_api_cb_publish_ms_event(G_GNUC_UNUSED FbApi *api, JsonNode *root, GSList *events, FbApiEventType type, GError **error)
 {
 	FbApiEvent *event;
 	FbJsonValues *values = NULL;
@@ -1941,7 +1941,7 @@ fb_api_cb_publish_p(FbApi *api, GByteArray *pload)
 }
 
 static void
-fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
+fb_api_cb_mqtt_publish(G_GNUC_UNUSED FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
                        gpointer data)
 {
 	FbApi *api = data;
@@ -2346,7 +2346,7 @@ fb_api_cb_contacts_nodes(FbApi *api, JsonNode *root, GSList *users)
 
 /* base64(contact:<our id>:<their id>:<whatever>) */
 static GSList *
-fb_api_cb_contacts_parse_removed(FbApi *api, JsonNode *node, GSList *users)
+fb_api_cb_contacts_parse_removed(G_GNUC_UNUSED FbApi *api, JsonNode *node, GSList *users)
 {
 	gsize len;
 	char **split;

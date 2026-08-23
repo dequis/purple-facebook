@@ -344,7 +344,7 @@ fb_mqtt_ping(FbMqtt *mqtt)
 }
 
 static void
-fb_mqtt_cb_read(gpointer data, gint fd, PurpleInputCondition cond)
+fb_mqtt_cb_read(gpointer data, G_GNUC_UNUSED gint fd, G_GNUC_UNUSED PurpleInputCondition cond)
 {
 	FbMqtt *mqtt = data;
 	FbMqttMessage *msg;
@@ -528,7 +528,7 @@ fb_mqtt_read(FbMqtt *mqtt, FbMqttMessage *msg)
 }
 
 static void
-fb_mqtt_cb_write(gpointer data, gint fd, PurpleInputCondition cond)
+fb_mqtt_cb_write(gpointer data, G_GNUC_UNUSED gint fd, G_GNUC_UNUSED PurpleInputCondition cond)
 {
 	FbMqtt *mqtt = data;
 	FbMqttPrivate *priv = mqtt->priv;
@@ -586,8 +586,8 @@ fb_mqtt_write(FbMqtt *mqtt, FbMqttMessage *msg)
 }
 
 static void
-fb_mqtt_cb_open(gpointer data, PurpleSslConnection *ssl,
-                PurpleInputCondition cond)
+fb_mqtt_cb_open(gpointer data, G_GNUC_UNUSED PurpleSslConnection *ssl,
+                G_GNUC_UNUSED PurpleInputCondition cond)
 {
 	FbMqtt *mqtt = data;
 	FbMqttPrivate *priv = mqtt->priv;
@@ -599,7 +599,7 @@ fb_mqtt_cb_open(gpointer data, PurpleSslConnection *ssl,
 }
 
 static void
-fb_mqtt_cb_open_error(PurpleSslConnection *ssl, PurpleSslErrorType error,
+fb_mqtt_cb_open_error(G_GNUC_UNUSED PurpleSslConnection *ssl, PurpleSslErrorType error,
                       gpointer data)
 {
 	const gchar *str;

@@ -1,35 +1,49 @@
-FACEBOOKSOURCES = [
-	'api.c',
-	'api.h',
-	'data.c',
-	'data.h',
-	'facebook.h',
-	'facebook.c',
-	'http.c',
-	'http.h',
-	'id.h',
-	'json.c',
-	'json.h',
-	'mqtt.c',
-	'mqtt.h',
-	'thrift.c',
-	'thrift.h',
-	'util.c',
-	'util.h'
+facebook_sources = [
+  'api.c',
+  'api.h',
+  'data.c',
+  'data.h',
+  'facebook.c',
+  'facebook.h',
+  'glibcompat.h',
+  'http.c',
+  'http.h',
+  'id.h',
+  'json.c',
+  'json.h',
+  'mqtt.c',
+  'mqtt.h',
+  'purple-compat.h',
+  'purple-http.c',
+  'purple-http.h',
+  'purple-socket.c',
+  'purple-socket.h',
+  'thrift.c',
+  'thrift.h',
+  'util.c',
+  'util.h',
 ]
 
-if STATIC_FACEBOOK
-	facebook_prpl = static_library('facebook', FACEBOOKSOURCES,
-	    c_args : '-DPURPLE_STATIC_PRPL',
-	    dependencies : [json, libpurple_dep, glib])
-elif DYNAMIC_FACEBOOK
-	facebook_prpl = shared_library('facebook', FACEBOOKSOURCES,
-	    dependencies : [json, libpurple_dep, glib],
-	    install : true, install_dir : PURPLE_PLUGINDIR)
-endif
+facebook_built_sources = []
 
-# Used to produce docs.
-facebook_inc = include_directories('.')
-facebook_dep = declare_dependency(
-    link_with : facebook_prpl,
-    dependencies : [json, libpurple_dep, glib])
+gnome = import('gnome')
+facebook_built_sources = gnome.genmarshal(
+  'marshal',
+  sources: ['marshaller.list'],
+  prefix: 'fb_marshal',
+)
+
+shared_library(
+  'facebook',
+  facebook_sources,
+  facebook_built_sources,
+  dependencies: facebook_dependencies,
+  install: true,
+  install_dir: facebook_install_directory,
+  c_args : [
+    '-DPACKAGE_VERSION="@0@"'.format(meson.project_version()),
+    '-DPACKAGE_URL="https://github.com/dequis/purple-facebook"',
+    '-DGLIB_DISABLE_DEPRECATION_WARNINGS',
+  ]
+)
+
