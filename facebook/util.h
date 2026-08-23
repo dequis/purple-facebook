@@ -33,7 +33,7 @@
 
 #include <glib.h>
 
-#include <libpurple/util.h>
+#include <util.h>
 
 #include "account.h"
 #include "debug.h"
